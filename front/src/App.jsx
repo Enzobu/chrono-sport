@@ -1138,29 +1138,48 @@ function App() {
                   />
                 </CardHeader>
                 <CardContent>
-                  <div className="overflow-x-auto rounded-md border border-zinc-800">
-                    <div className="min-w-[620px]">
-                      <div className="grid grid-cols-[1.2fr_1fr_1fr_auto] gap-3 border-b border-zinc-800 bg-zinc-900/70 px-3 py-2 text-xs uppercase tracking-wide text-zinc-400">
-                        <span>Type</span>
-                        <span>Duree (s)</span>
-                        <span>Repos (s)</span>
-                        <span></span>
-                      </div>
-                      {exercise.sets.map((set, setIndex) => (
-                        <div
-                          key={`set-${setIndex}`}
-                          className="grid grid-cols-[1.2fr_1fr_1fr_auto] gap-3 border-b border-zinc-900 px-3 py-2 last:border-b-0"
-                        >
-                          <select
-                            value={set.type}
-                            onChange={(event) =>
-                              updateSetField(exerciseIndex, setIndex, 'type', event.target.value)
-                            }
-                            className="h-9 rounded-md border border-zinc-700 bg-zinc-950 px-2 text-sm text-white"
-                          >
-                            <option value="entrainement">entrainement</option>
-                            <option value="echauffement">echauffement</option>
-                          </select>
+                  <div className="rounded-md border border-zinc-800">
+                    <div className="hidden grid-cols-[1.2fr_1fr_1fr_auto] gap-3 border-b border-zinc-800 bg-zinc-900/70 px-3 py-2 text-xs uppercase tracking-wide text-zinc-400 md:grid">
+                      <span>Type</span>
+                      <span>Duree (s)</span>
+                      <span>Repos (s)</span>
+                      <span></span>
+                    </div>
+                    {exercise.sets.map((set, setIndex) => (
+                      <div
+                        key={`set-${setIndex}`}
+                        className="grid gap-3 border-b border-zinc-900 px-3 py-3 last:border-b-0 md:grid-cols-[1.2fr_1fr_1fr_auto] md:items-end md:py-2"
+                      >
+                        <label className="space-y-1 text-xs text-zinc-400 md:space-y-0 md:text-[0px]">
+                          <span className="md:hidden">Type</span>
+                          <div className="grid h-9 grid-cols-2 rounded-md border border-zinc-700 bg-zinc-950 p-1">
+                            <button
+                              type="button"
+                              onClick={() => updateSetField(exerciseIndex, setIndex, 'type', 'entrainement')}
+                              className={`rounded text-xs font-medium transition ${
+                                set.type === 'entrainement'
+                                  ? 'bg-zinc-200 text-zinc-900'
+                                  : 'text-zinc-300 hover:bg-zinc-900'
+                              }`}
+                            >
+                              entrainement
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => updateSetField(exerciseIndex, setIndex, 'type', 'echauffement')}
+                              className={`rounded text-xs font-medium transition ${
+                                set.type === 'echauffement'
+                                  ? 'bg-zinc-200 text-zinc-900'
+                                  : 'text-zinc-300 hover:bg-zinc-900'
+                              }`}
+                            >
+                              echauffement
+                            </button>
+                          </div>
+                        </label>
+
+                        <label className="space-y-1 text-xs text-zinc-400 md:space-y-0 md:text-[0px]">
+                          <span className="md:hidden">Duree (s)</span>
                           <input
                             type="number"
                             min={1}
@@ -1168,8 +1187,12 @@ function App() {
                             onChange={(event) =>
                               updateSetField(exerciseIndex, setIndex, 'time', event.target.value)
                             }
-                            className="h-9 rounded-md border border-zinc-700 bg-zinc-950 px-2 text-sm text-white"
+                            className="h-9 w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 text-sm text-white"
                           />
+                        </label>
+
+                        <label className="space-y-1 text-xs text-zinc-400 md:space-y-0 md:text-[0px]">
+                          <span className="md:hidden">Repos (s)</span>
                           <input
                             type="number"
                             min={0}
@@ -1177,8 +1200,11 @@ function App() {
                             onChange={(event) =>
                               updateSetField(exerciseIndex, setIndex, 'wait', event.target.value)
                             }
-                            className="h-9 rounded-md border border-zinc-700 bg-zinc-950 px-2 text-sm text-white"
+                            className="h-9 w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 text-sm text-white"
                           />
+                        </label>
+
+                        <div className="flex justify-end md:block">
                           <Button
                             variant="ghost"
                             size="sm"
@@ -1188,8 +1214,8 @@ function App() {
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    ))}
                   </div>
 
                   <div className="mt-3">
