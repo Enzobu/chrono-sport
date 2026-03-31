@@ -1,8 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Audio } from 'expo-av'
-import { StatusBar } from 'expo-status-bar'
+import { StatusBar as ExpoStatusBar } from 'expo-status-bar'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { SafeAreaView, StyleSheet, View } from 'react-native'
+import { SafeAreaView, StyleSheet } from 'react-native'
 import { authRequest } from './src/api/auth'
 import {
   createSession,
@@ -704,7 +704,7 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.root}>
-      <StatusBar style="light" />
+      <ExpoStatusBar style="light" backgroundColor={colors.bg} translucent={false} />
 
       {screen === 'auth' ? (
         <AuthScreen
