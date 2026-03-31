@@ -1,15 +1,20 @@
 {
   "expo": {
-    "name": "Minuteur Sport",
-    "slug": "minuteur-sport-mobile",
+    "name": "Chrono-Sport",
+    "slug": "chrono-sport-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
+    "icon": "./assets/icon.png",
     "assetBundlePatterns": [
       "**/*"
     ],
     "android": {
-      "package": "com.minuteursport.mobile"
+      "package": "com.chronosport.mobile",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#0b0b0c"
+      }
     }
   }
 }

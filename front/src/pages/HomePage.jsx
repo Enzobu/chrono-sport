@@ -33,7 +33,7 @@ export function HomePage({
           </Button>
         </div>
         <Badge variant="outline" className="w-fit border-white/20 bg-white/5 uppercase tracking-[0.18em]">
-          Minuteur Sport
+          Chrono-Sport
         </Badge>
         <h1 className="text-4xl font-semibold tracking-tight text-white sm:text-5xl">
           Choisis ta seance

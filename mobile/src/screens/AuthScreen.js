@@ -15,7 +15,7 @@ export function AuthScreen({
   return (
     <View style={styles.wrapper}>
       <View style={styles.card}>
-        <Text style={styles.badge}>Minuteur Sport</Text>
+        <Text style={styles.badge}>Chrono-Sport</Text>
         <Text style={styles.title}>{authMode === 'login' ? 'Connexion' : 'Inscription'}</Text>
         <Text style={styles.subtitle}>Connecte-toi pour retrouver tes seances.</Text>
 

@@ -44,7 +44,7 @@ if (getRNMinorVersion() >= 75) {
   }
 }
 
-rootProject.name = 'Minuteur Sport'
+rootProject.name = 'Chrono-Sport'
 
 dependencyResolutionManagement {
   versionCatalogs {

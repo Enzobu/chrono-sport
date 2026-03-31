@@ -1,4 +1,4 @@
-package com.minuteursport.mobile
+package com.chronosport.mobile
 
 import android.os.Build
 import android.os.Bundle
