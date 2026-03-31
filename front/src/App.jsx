@@ -11,6 +11,7 @@ import { ToastBanner } from './components/ToastBanner'
 import { createDefaultExercise, createDefaultSet, mapApiSessionsToClient } from './lib/sessions'
 import {
   createTimeline,
+  formatHoursMinutes,
   formatHoursMinutesSeconds,
   formatMinutesSeconds,
 } from './lib/timer'
