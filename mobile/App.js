@@ -1,5 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import * as Application from 'expo-application'
 import { Audio } from 'expo-av'
+import * as Battery from 'expo-battery'
+import * as IntentLauncher from 'expo-intent-launcher'
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AppState, PermissionsAndroid, Platform, SafeAreaView, StyleSheet } from 'react-native'
@@ -65,8 +68,62 @@ export default function App() {
   const [toast, setToast] = useState(null)
 
   const soundRef = useRef(null)
+  const lastTickAtRef = useRef(null)
+  const batteryPromptedRef = useRef(false)
+
+  const ensureNotificationPermission = async () => {
+    if (Platform.OS !== 'android' || Platform.Version < 33) {
+      return true
+    }
+
+    const alreadyGranted = await PermissionsAndroid.check(
+      PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+    )
+
+    if (alreadyGranted) {
+      return true
+    }
+
+    const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS)
+    return result === PermissionsAndroid.RESULTS.GRANTED
+  }
 
   const showToast = (type, message) => setToast({ type, message, id: Date.now() })
+
+  const ensureBatteryOptimizationDisabled = async () => {
+    if (Platform.OS !== 'android') {
+      return true
+    }
+
+    try {
+      const isBatteryOptimizationEnabled = await Battery.isBatteryOptimizationEnabledAsync()
+      if (!isBatteryOptimizationEnabled) {
+        return true
+      }
+
+      if (batteryPromptedRef.current) {
+        return false
+      }
+
+      batteryPromptedRef.current = true
+      showToast('error', 'Desactive l optimisation batterie pour un chrono fiable.')
+
+      const packageName = Application.applicationId
+      if (packageName) {
+        await IntentLauncher.startActivityAsync(
+          'android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS',
+          { data: `package:${packageName}` },
+        )
+      } else {
+        await IntentLauncher.startActivityAsync('android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS')
+      }
+
+      return false
+    } catch (error) {
+      console.error('Battery optimization check failed', error)
+      return false
+    }
+  }
 
   useEffect(() => {
     AsyncStorage.getItem('auth_token').then((token) => {
@@ -82,8 +139,8 @@ export default function App() {
       return
     }
 
-    PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS).catch(() => {
-      // no-op
+    ensureNotificationPermission().catch(() => {
+      console.error('Notification permission request failed')
     })
   }, [])
 
@@ -319,7 +376,7 @@ export default function App() {
     setTimerSnapshotProvider(() => ({
       sessionName: selectedSessionName ?? 'Seance',
       phase: isFinished ? 'Termine' : currentPhase?.label || 'Seance',
-      remaining: isFinished ? '00:00' : formatMinutesSeconds(remaining),
+      remaining: isFinished ? '00:00' : formatMinutesSeconds(Math.max(0, remaining)),
     }))
   }, [selectedSessionName, isFinished, currentPhase, remaining])
 
@@ -327,13 +384,20 @@ export default function App() {
     const syncService = async () => {
       try {
         if (isRunning && !isFinished && timeline.length) {
+          const permissionGranted = await ensureNotificationPermission()
+          if (!permissionGranted) {
+            return
+          }
+
+          await ensureBatteryOptimizationDisabled()
+
           await ensureBackgroundChronoRunning()
           await refreshBackgroundChronoNotification()
           return
         }
         await stopBackgroundChrono()
-      } catch {
-        // no-op
+      } catch (error) {
+        console.error('Background timer service sync failed', error)
       }
     }
 
@@ -342,21 +406,28 @@ export default function App() {
 
   useEffect(() => {
     refreshBackgroundChronoNotification().catch(() => {
-      // no-op
+      console.error('Background notification refresh failed')
     })
   }, [selectedSessionName, currentPhase, remaining, isFinished])
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextState) => {
       if (nextState !== 'active' && isRunning && !isFinished && timeline.length) {
-        ensureBackgroundChronoRunning().catch(() => {
-          // no-op
-        })
+        ensureNotificationPermission()
+          .then((permissionGranted) => {
+            if (!permissionGranted) {
+              return
+            }
+            return ensureBatteryOptimizationDisabled().then(() => ensureBackgroundChronoRunning())
+          })
+          .catch(() => {
+            console.error('Background timer service start failed')
+          })
         return
       }
 
       refreshBackgroundChronoNotification().catch(() => {
-        // no-op
+        console.error('Background notification refresh failed')
       })
     })
 
@@ -366,10 +437,19 @@ export default function App() {
   useEffect(() => {
     return () => {
       stopBackgroundChrono().catch(() => {
-        // no-op
+        console.error('Background timer service stop failed')
       })
     }
   }, [])
+
+  useEffect(() => {
+    if (isRunning && !isFinished && timeline.length) {
+      lastTickAtRef.current = Date.now()
+      return
+    }
+
+    lastTickAtRef.current = null
+  }, [isRunning, isFinished, timeline.length, currentIndex])
 
   const confirmContent = useMemo(() => {
     if (pendingAction === 'delete-session') {
@@ -416,36 +496,73 @@ export default function App() {
   }, [hasStarted, startedAt, isFinished])
 
   useEffect(() => {
-    if (!isRunning || isFinished || !timeline.length || remaining <= 0) {
+    if (!isRunning || isFinished || !timeline.length) {
       return undefined
     }
 
-    const id = setTimeout(() => setRemaining((prev) => prev - 1), 1000)
-    return () => clearTimeout(id)
-  }, [isRunning, isFinished, remaining, timeline.length])
+    const id = setInterval(() => {
+      const now = Date.now()
+      if (!lastTickAtRef.current) {
+        lastTickAtRef.current = now
+        return
+      }
+
+      const elapsedSeconds = Math.floor((now - lastTickAtRef.current) / 1000)
+      if (elapsedSeconds <= 0) {
+        return
+      }
+
+      lastTickAtRef.current += elapsedSeconds * 1000
+      setRemaining((prev) => prev - elapsedSeconds)
+    }, 250)
+
+    return () => clearInterval(id)
+  }, [isRunning, isFinished, timeline.length])
 
   useEffect(() => {
     if (!isRunning || isFinished || remaining > 0 || !timeline.length) {
       return
     }
 
-    const nextIndex = currentIndex + 1
-    const fromStep = timeline[currentIndex]
-    const toStep = timeline[nextIndex]
+    let overflow = Math.abs(remaining)
+    let nextIndex = currentIndex
+    let nextRemaining = 0
+    let reachedEnd = false
 
-    if (!toStep) {
+    while (!reachedEnd) {
+      const fromStep = timeline[nextIndex]
+      const toStep = timeline[nextIndex + 1]
+
+      if (!toStep) {
+        reachedEnd = true
+        break
+      }
+
+      if (fromStep?.kind === 'rest' && toStep.kind === 'work') {
+        playDing()
+      }
+
+      nextIndex += 1
+
+      if (overflow < toStep.duration) {
+        nextRemaining = toStep.duration - overflow
+        overflow = 0
+        break
+      }
+
+      overflow -= toStep.duration
+      nextRemaining = 0
+    }
+
+    if (reachedEnd) {
       setIsRunning(false)
       setIsFinished(true)
       setRemaining(0)
       return
     }
 
-    if (fromStep?.kind === 'rest' && toStep.kind === 'work') {
-      playDing()
-    }
-
     setCurrentIndex(nextIndex)
-    setRemaining(toStep.duration)
+    setRemaining(nextRemaining)
   }, [isRunning, isFinished, remaining, timeline, currentIndex])
 
   const playDing = async () => {
@@ -831,7 +948,7 @@ export default function App() {
         <TimerScreen
           sessionName={selectedSessionName}
           phaseLabel={isFinished ? 'Termine' : currentPhase?.label || 'Seance'}
-          timerLabel={isFinished ? 'Seance terminee' : formatMinutesSeconds(remaining)}
+          timerLabel={isFinished ? 'Seance terminee' : formatMinutesSeconds(Math.max(0, remaining))}
           exerciseLabel={displayedExercise}
           progressPct={progressPct}
           totalRemainingLabel={formatHoursMinutesSeconds(totalRemaining)}

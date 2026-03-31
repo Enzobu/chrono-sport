@@ -64,3 +64,10 @@ npm run build:android:production
 
 - `preview` produit un APK installable direct.
 - `production` produit un AAB (Play Store).
+
+## Timer en arriere-plan (Android)
+
+- L'app utilise un service Android en premier plan avec notification persistante pendant une seance active.
+- Sur Android 13+, accepte la permission de notification au premier lancement (sinon la notif peut etre masquee).
+- Si l'optimisation batterie est active, l'app ouvre l'ecran Android pour demander l'exemption.
+- Pour une fiabilite maximale, laisse l'app en mode batterie "Non restreint".
