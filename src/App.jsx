@@ -1,6 +1,25 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { ArrowLeft, Gauge, Play, Pause, SkipForward, RotateCcw, Dumbbell } from 'lucide-react'
 import sessionsData from './data/sessions.json'
-import './App.css'
+import { Badge } from './components/ui/badge'
+import { Button } from './components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from './components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from './components/ui/dialog'
+import { Progress } from './components/ui/progress'
+import { Separator } from './components/ui/separator'
 
 function formatSeconds(seconds) {
   const safeSeconds = Math.max(0, seconds)
@@ -49,6 +68,7 @@ function createTimeline(session) {
         duration: Number(set.time) || 0,
         exerciseName,
         setNumber: setIndex + 1,
+        setTotal: sets.length,
       }
 
       if (isLastBlock || !(Number(set.wait) > 0)) {
@@ -63,6 +83,7 @@ function createTimeline(session) {
           duration: Number(set.wait),
           exerciseName,
           setNumber: setIndex + 1,
+          setTotal: sets.length,
         },
       ]
     })
@@ -103,6 +124,22 @@ function App() {
     return Math.max(0, remaining) + afterCurrent
   }, [timeline, isFinished, currentIndex, remaining])
 
+  const progressPct = useMemo(() => {
+    if (!timeline.length) {
+      return 0
+    }
+
+    if (isFinished) {
+      return 100
+    }
+
+    if (!hasStarted) {
+      return 0
+    }
+
+    return ((currentIndex + 1) / timeline.length) * 100
+  }, [timeline, isFinished, hasStarted, currentIndex])
+
   const elapsedSinceStart = useMemo(() => {
     if (!startedAt) {
       return 0
@@ -121,10 +158,10 @@ function App() {
         return 'A venir : fin de seance'
       }
 
-      return `A venir : ${nextPhase.exerciseName} - serie ${nextPhase.setNumber}`
+      return `A venir : ${nextPhase.exerciseName} - ${nextPhase.setNumber}/${nextPhase.setTotal}`
     }
 
-    return `${currentPhase.exerciseName} - serie ${currentPhase.setNumber}`
+    return `${currentPhase.exerciseName} - ${currentPhase.setNumber}/${currentPhase.setTotal}`
   }, [currentPhase, nextPhase, isFinished])
 
   const isGuardActive = Boolean(selectedSessionName && hasStarted && !isFinished)
@@ -133,7 +170,7 @@ function App() {
   const modalContent = useMemo(() => {
     if (pendingAction === 'leave-session') {
       return {
-        title: 'Quitter la seance ? ',
+        title: 'Quitter la seance ?',
         message: 'Ta progression en cours sera perdue.',
         confirmLabel: 'Quitter',
       }
@@ -141,7 +178,7 @@ function App() {
 
     if (pendingAction === 'reset-session') {
       return {
-        title: 'Reinitialiser la seance ? ',
+        title: 'Reinitialiser la seance ?',
         message: 'Le chrono va repartir de zero.',
         confirmLabel: 'Reinitialiser',
       }
@@ -371,10 +408,6 @@ function App() {
     closeConfirmModal()
   }
 
-  const goBack = () => {
-    requestAction('leave-session')
-  }
-
   const toggleRun = () => {
     if (!timeline.length) {
       return
@@ -400,10 +433,6 @@ function App() {
     setIsRunning((prev) => !prev)
   }
 
-  const resetSession = () => {
-    requestAction('reset-session')
-  }
-
   const skipCurrentPhase = () => {
     if (!timeline.length || isFinished) {
       return
@@ -415,91 +444,175 @@ function App() {
 
   if (!selectedSessionName) {
     return (
-      <main className="app page-list">
-        <header className="hero">
-          <p className="kicker">Minuteur Sport</p>
-          <h1>Choisis ta seance</h1>
-          <p className="subtitle">Lance tes blocs travail/repos automatiquement.</p>
-        </header>
+      <main className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:py-14">
+        <div className="mb-10 space-y-4">
+          <Badge variant="outline" className="w-fit border-white/20 bg-white/5 uppercase tracking-[0.18em]">
+            Minuteur Sport
+          </Badge>
+          <h1 className="text-4xl font-semibold tracking-tight text-white sm:text-5xl">
+            Choisis ta seance
+          </h1>
+          <p className="max-w-2xl text-sm text-zinc-400 sm:text-base">
+            Interface full black, minimaliste, style dashboard V0 / shadcn.
+          </p>
+        </div>
 
-        <section className="session-grid">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {Object.keys(sessions).map((sessionName) => {
             const exercisesCount = Object.keys(sessions[sessionName]).length
+
             return (
-              <button
+              <Card
                 key={sessionName}
-                className="session-card"
-                onClick={() => openSession(sessionName)}
+                className="group border-white/10 bg-black/60 shadow-[0_0_0_1px_rgba(255,255,255,0.02)_inset] backdrop-blur transition hover:-translate-y-0.5 hover:border-white/20"
               >
-                <h2>{sessionName}</h2>
-                <p>{exercisesCount} exercices</p>
-              </button>
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center justify-between text-white capitalize">
+                    <span>{sessionName}</span>
+                    <Dumbbell className="h-4 w-4 text-zinc-300" />
+                  </CardTitle>
+                  <CardDescription className="text-zinc-500">
+                    {exercisesCount} exercices
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button className="w-full bg-white text-black hover:bg-zinc-100" onClick={() => openSession(sessionName)}>
+                    Lancer la seance
+                  </Button>
+                </CardContent>
+              </Card>
             )
           })}
-        </section>
+        </div>
       </main>
     )
   }
 
   return (
     <>
-      <main className="app page-timer">
-        <button className="back-button" onClick={goBack}>
-          Retour aux seances
-        </button>
+      <main className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-6 sm:px-6 lg:py-10">
+        <Button
+          variant="outline"
+          className="w-fit border-white/15 bg-black/40 text-zinc-200 hover:bg-white/10 hover:text-white"
+          onClick={() => requestAction('leave-session')}
+        >
+          <ArrowLeft className="h-4 w-4" /> Retour aux seances
+        </Button>
 
-        <section className="timer-panel">
-          <p className="kicker">Seance {selectedSessionName}</p>
-          <h1>{isFinished ? 'Seance terminee' : formatSeconds(remaining)}</h1>
-          {currentPhase && !isFinished ? (
-            <>
-              <p className="phase-label">{currentPhase.label}</p>
-              <p className="phase-meta">Exercice : {displayedExercise}</p>
-              <p className="phase-progress">
-                Etape {Math.min(currentIndex + 1, timeline.length)} / {timeline.length}
-              </p>
-            </>
-          ) : (
-            <p className="phase-label">Bravo, tout est termine.</p>
-          )}
+        <div className="grid gap-4 lg:grid-cols-[1.8fr_1fr]">
+          <Card className="border-white/10 bg-black/60 shadow-[0_0_0_1px_rgba(255,255,255,0.03)_inset] backdrop-blur">
+            <CardHeader className="space-y-6 pb-4">
+              <div className="flex items-center justify-between">
+                <Badge
+                  variant="outline"
+                  className={
+                    currentPhase?.kind === 'rest'
+                      ? 'border-zinc-700 bg-zinc-900 text-zinc-200'
+                      : 'border-white/20 bg-white/10 text-white'
+                  }
+                >
+                  {isFinished ? 'Termine' : currentPhase?.label || 'Seance'}
+                </Badge>
+                <Badge variant="outline" className="border-zinc-700 text-zinc-300">
+                  Seance {selectedSessionName}
+                </Badge>
+              </div>
+              <CardTitle className="text-center font-mono text-6xl font-semibold tracking-tight text-white sm:text-7xl">
+                {isFinished ? 'Seance terminee' : formatSeconds(remaining)}
+              </CardTitle>
+              <CardDescription className="text-center text-sm text-zinc-300 sm:text-base">
+                Exercice : {displayedExercise}
+              </CardDescription>
+            </CardHeader>
 
-          <div className="actions">
-            <button className="btn btn-primary" onClick={toggleRun}>
-              {isFinished ? 'Relancer' : isRunning ? 'Pause' : 'Lancer'}
-            </button>
-            <button className="btn btn-skip" onClick={skipCurrentPhase}>
-              Skip
-            </button>
-            <button className="btn btn-ghost" onClick={resetSession}>
-              Reinitialiser
-            </button>
-          </div>
-        </section>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm text-zinc-400">
+                  <span>Progression de la seance</span>
+                  <span>{Math.round(progressPct)}%</span>
+                </div>
+                <Progress className="h-2 bg-zinc-900" value={progressPct} />
+              </div>
 
-        <div className="stats">
-          <p className="total-time">
-            Temps restant global : {formatTimerValue(totalRemaining)}
-          </p>
-          <p className="total-time">Depuis le debut : {formatElapsed(elapsedSinceStart)}</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button onClick={toggleRun} className="min-w-28 bg-white text-black hover:bg-zinc-100">
+                  {isFinished ? (
+                    <>
+                      <Play className="h-4 w-4" /> Relancer
+                    </>
+                  ) : isRunning ? (
+                    <>
+                      <Pause className="h-4 w-4" /> Pause
+                    </>
+                  ) : (
+                    <>
+                      <Play className="h-4 w-4" /> Lancer
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="bg-zinc-900 text-zinc-100 hover:bg-zinc-800"
+                  onClick={skipCurrentPhase}
+                >
+                  <SkipForward className="h-4 w-4" /> Skip
+                </Button>
+                <Button
+                  variant="outline"
+                  className="border-zinc-700 bg-black text-zinc-200 hover:bg-zinc-900"
+                  onClick={() => requestAction('reset-session')}
+                >
+                  <RotateCcw className="h-4 w-4" /> Reinitialiser
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-white/10 bg-black/60 shadow-[0_0_0_1px_rgba(255,255,255,0.03)_inset] backdrop-blur">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg text-white">
+                <Gauge className="h-4 w-4 text-zinc-300" /> Statistiques
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 text-sm">
+              <div>
+                <p className="text-zinc-500">Temps restant global</p>
+                <p className="text-2xl font-semibold text-white">
+                  {formatTimerValue(totalRemaining)}
+                </p>
+              </div>
+              <Separator className="bg-zinc-800" />
+              <div>
+                <p className="text-zinc-500">Depuis le debut</p>
+                <p className="text-2xl font-semibold text-white">
+                  {formatElapsed(elapsedSinceStart)}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </main>
 
-      {isConfirmOpen ? (
-        <div className="confirm-overlay" role="dialog" aria-modal="true">
-          <div className="confirm-modal">
-            <h2>{modalContent.title}</h2>
-            <p>{modalContent.message}</p>
-            <div className="confirm-actions">
-              <button className="btn btn-ghost" onClick={closeConfirmModal}>
-                Annuler
-              </button>
-              <button className="btn btn-primary" onClick={executePendingAction}>
-                {modalContent.confirmLabel}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <Dialog open={isConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-white">{modalContent.title}</DialogTitle>
+            <DialogDescription className="text-zinc-400">{modalContent.message}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="border-zinc-700 bg-black text-zinc-200 hover:bg-zinc-900"
+              onClick={closeConfirmModal}
+            >
+              Annuler
+            </Button>
+            <Button className="bg-white text-black hover:bg-zinc-100" onClick={executePendingAction}>
+              {modalContent.confirmLabel}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

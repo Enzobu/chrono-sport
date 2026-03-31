@@ -1,44 +1,45 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Sora:wght@500;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
-  --bg: #07090d;
-  --bg-soft: #0d1118;
-  --panel: #131924;
-  --panel-light: #1b2535;
-  --line: #2b364b;
-  --line-strong: #3a4a63;
-  --text-main: #f4f6fb;
-  --text-soft: #9eaac0;
-  --muted: #7c879a;
-  --accent: #79d6b3;
-
-  --body-font: 'Manrope', sans-serif;
-  --heading-font: 'Sora', sans-serif;
+  --background: 240 10% 3.9%;
+  --foreground: 0 0% 98%;
+  --card: 240 10% 3.9%;
+  --card-foreground: 0 0% 98%;
+  --popover: 240 10% 3.9%;
+  --popover-foreground: 0 0% 98%;
+  --primary: 0 0% 98%;
+  --primary-foreground: 240 5.9% 10%;
+  --secondary: 240 3.7% 15.9%;
+  --secondary-foreground: 0 0% 98%;
+  --muted: 240 3.7% 15.9%;
+  --muted-foreground: 240 5% 64.9%;
+  --accent: 240 3.7% 15.9%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 240 3.7% 15.9%;
+  --input: 240 3.7% 15.9%;
+  --ring: 240 4.9% 83.9%;
+  --radius: 0.85rem;
 }
 
-* {
-  box-sizing: border-box;
-}
+@layer base {
+  * {
+    @apply border-border;
+  }
 
-html,
-body,
-#root {
-  min-height: 100svh;
-}
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    background-image:
+      radial-gradient(circle at 12% -10%, rgba(255, 255, 255, 0.08), transparent 30%),
+      radial-gradient(circle at 86% 0%, rgba(255, 255, 255, 0.05), transparent 35%),
+      linear-gradient(180deg, #090909 0%, #050505 100%);
+    min-height: 100svh;
+  }
 
-body {
-  margin: 0;
-  color: var(--text-main);
-  font-family: var(--body-font);
-  background:
-    radial-gradient(circle at 18% -10%, rgba(121, 214, 179, 0.25), transparent 35%),
-    radial-gradient(circle at 85% 20%, rgba(95, 126, 196, 0.22), transparent 28%),
-    linear-gradient(180deg, var(--bg-soft), var(--bg));
-}
-
-button,
-input,
-select,
-textarea {
-  font: inherit;
+  #root {
+    min-height: 100svh;
+  }
 }
