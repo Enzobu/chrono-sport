@@ -23,34 +23,18 @@ import { Separator } from './components/ui/separator'
 
 function formatSeconds(seconds) {
   const safeSeconds = Math.max(0, seconds)
-  const mins = Math.floor(safeSeconds / 60)
-  const secs = safeSeconds % 60
-  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+  const totalMinutes = Math.floor(safeSeconds / 60)
+  const hours = Math.floor(totalMinutes / 60)
+  const mins = totalMinutes % 60
+  return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`
 }
 
 function formatTimerValue(seconds) {
-  const safeSeconds = Math.max(0, seconds)
-
-  if (safeSeconds >= 3600) {
-    const hours = Math.floor(safeSeconds / 3600)
-    const mins = Math.floor((safeSeconds % 3600) / 60)
-    return `${String(hours).padStart(2, '0')}h${String(mins).padStart(2, '0')}min`
-  }
-
-  return formatSeconds(safeSeconds)
+  return formatSeconds(seconds)
 }
 
 function formatElapsed(seconds) {
-  const safeSeconds = Math.max(0, seconds)
-  const hours = Math.floor(safeSeconds / 3600)
-  const mins = Math.floor((safeSeconds % 3600) / 60)
-  const secs = safeSeconds % 60
-
-  if (hours > 0) {
-    return `${String(hours).padStart(2, '0')}h${String(mins).padStart(2, '0')}min`
-  }
-
-  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+  return formatSeconds(seconds)
 }
 
 function createTimeline(session) {
@@ -504,6 +488,10 @@ function App() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {Object.keys(sessions).map((sessionName) => {
             const exercisesCount = Object.keys(sessions[sessionName]).length
+            const sessionDuration = createTimeline(sessions[sessionName]).reduce(
+              (sum, step) => sum + step.duration,
+              0,
+            )
 
             return (
               <Card
@@ -516,7 +504,7 @@ function App() {
                     <Dumbbell className="h-4 w-4 text-zinc-300" />
                   </CardTitle>
                   <CardDescription className="text-zinc-500">
-                    {exercisesCount} exercices
+                    {exercisesCount} exercices - {formatTimerValue(sessionDuration)}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
