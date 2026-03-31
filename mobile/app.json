@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "name": "Minuteur Sport",
+    "slug": "minuteur-sport-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "android": {
+      "package": "com.minuteursport.mobile"
+    }
+  }
+}
