@@ -1,174 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { authRequest } from './api/auth'
 import {
-  ArrowLeft,
-  Gauge,
-  Play,
-  Pause,
-  SkipForward,
-  RotateCcw,
-  Dumbbell,
-  Plus,
-  Trash2,
-  Save,
-  Pencil,
-} from 'lucide-react'
-import { Badge } from './components/ui/badge'
-import { Button } from './components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from './components/ui/card'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from './components/ui/dialog'
-import { Progress } from './components/ui/progress'
-import { Separator } from './components/ui/separator'
-
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001'
-
-async function safeJson(response) {
-  try {
-    return await response.json()
-  } catch {
-    return {}
-  }
-}
-
-function formatHoursMinutes(seconds) {
-  const safeSeconds = Math.max(0, seconds)
-  const totalMinutes = Math.floor(safeSeconds / 60)
-  const hours = Math.floor(totalMinutes / 60)
-  const mins = totalMinutes % 60
-  return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`
-}
-
-function formatMinutesSeconds(seconds) {
-  const safeSeconds = Math.max(0, seconds)
-  const mins = Math.floor(safeSeconds / 60)
-  const secs = safeSeconds % 60
-  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
-}
-
-function formatTimerValue(seconds) {
-  return formatHoursMinutes(seconds)
-}
-
-function formatElapsed(seconds) {
-  return formatHoursMinutes(seconds)
-}
-
-function createTimeline(session) {
-  const exerciseEntries = Object.entries(session)
-
-  return exerciseEntries.flatMap(([exerciseName, sets], exerciseIndex) => {
-    const isLastExercise = exerciseIndex === exerciseEntries.length - 1
-
-    return sets.flatMap((set, setIndex) => {
-      const isLastSet = setIndex === sets.length - 1
-      const isLastBlock = isLastExercise && isLastSet
-      const setType = set.type === 'echauffement' ? 'echauffement' : 'entrainement'
-      const work = {
-        kind: 'work',
-        label: 'Travail',
-        duration: Number(set.time) || 0,
-        exerciseName,
-        setNumber: setIndex + 1,
-        setTotal: sets.length,
-        setType,
-      }
-
-      if (isLastBlock || !(Number(set.wait) > 0)) {
-        return [work]
-      }
-
-      return [
-        work,
-        {
-          kind: 'rest',
-          label: 'Repos',
-          duration: Number(set.wait),
-          exerciseName,
-          setNumber: setIndex + 1,
-          setTotal: sets.length,
-          setType,
-        },
-      ]
-    })
-  })
-}
-
-function mapApiSessionsToClient(apiSessions) {
-  return (apiSessions ?? []).reduce((acc, session) => {
-    const exercises = (session.exercises ?? []).reduce((exerciseAcc, exercise) => {
-      exerciseAcc[exercise.name] = (exercise.sets ?? []).map((set) => ({
-        type: set.type,
-        time: Number(set.time) || 0,
-        wait: Number(set.wait) || 0,
-      }))
-      return exerciseAcc
-    }, {})
-
-    acc[session.name] = exercises
-    return acc
-  }, {})
-}
-
-async function fetchSessionsFromApi(token) {
-  const sessionsResponse = await fetch(`${API_URL}/sessions`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  })
-
-  if (sessionsResponse.status === 401) {
-    throw new Error('401')
-  }
-
-  if (!sessionsResponse.ok) {
-    throw new Error('Impossible de recuperer les seances')
-  }
-
-  const payload = await safeJson(sessionsResponse)
-  return payload.sessions ?? []
-}
-
-function createDefaultSet() {
-  return {
-    type: 'entrainement',
-    time: 60,
-    wait: 180,
-  }
-}
-
-function createDefaultExercise() {
-  return {
-    name: '',
-    sets: [createDefaultSet()],
-  }
-}
-
-function ToastBanner({ toast }) {
-  if (!toast) {
-    return null
-  }
-
-  const baseClass =
-    'fixed bottom-4 right-4 z-[60] rounded-md border px-4 py-3 text-sm shadow-lg backdrop-blur'
-  const colorClass =
-    toast.type === 'success'
-      ? 'border-emerald-800 bg-emerald-950/90 text-emerald-100'
-      : 'border-red-800 bg-red-950/90 text-red-100'
-
-  return <div className={`${baseClass} ${colorClass}`}>{toast.message}</div>
-}
+  createSession as createSessionApi,
+  deleteSession as deleteSessionApi,
+  fetchSessionsFromApi,
+  updateSession as updateSessionApi,
+} from './api/sessions'
+import { ConfirmDialog } from './components/ConfirmDialog'
+import { ToastBanner } from './components/ToastBanner'
+import { createDefaultExercise, createDefaultSet, mapApiSessionsToClient } from './lib/sessions'
+import { createTimeline, formatHoursMinutes, formatMinutesSeconds } from './lib/timer'
+import { AuthPage } from './pages/AuthPage'
+import { CreateSessionPage } from './pages/CreateSessionPage'
+import { HomePage } from './pages/HomePage'
+import { TimerPage } from './pages/TimerPage'
 
 function App() {
   const [authToken, setAuthToken] = useState(() => localStorage.getItem('auth_token') ?? '')
@@ -177,16 +22,19 @@ function App() {
   const [authPassword, setAuthPassword] = useState('')
   const [isAuthLoading, setIsAuthLoading] = useState(false)
   const [authError, setAuthError] = useState('')
+
   const [sessionItems, setSessionItems] = useState([])
   const [sessions, setSessions] = useState({})
   const [isLoadingSessions, setIsLoadingSessions] = useState(true)
   const [sessionsError, setSessionsError] = useState('')
+
   const [isCreateMode, setIsCreateMode] = useState(false)
   const [editingSessionId, setEditingSessionId] = useState(null)
   const [draftSessionName, setDraftSessionName] = useState('')
   const [draftExercises, setDraftExercises] = useState([createDefaultExercise()])
   const [draftError, setDraftError] = useState('')
   const [isSavingDraft, setIsSavingDraft] = useState(false)
+
   const [selectedSessionName, setSelectedSessionName] = useState(null)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [remaining, setRemaining] = useState(0)
@@ -195,15 +43,15 @@ function App() {
   const [hasStarted, setHasStarted] = useState(false)
   const [startedAt, setStartedAt] = useState(null)
   const [nowTimestamp, setNowTimestamp] = useState(Date.now())
+
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
   const [pendingAction, setPendingAction] = useState(null)
   const [sessionPendingDelete, setSessionPendingDelete] = useState(null)
+
   const [toast, setToast] = useState(null)
   const audioContextRef = useRef(null)
 
-  const showToast = (type, message) => {
-    setToast({ type, message, id: Date.now() })
-  }
+  const showToast = (type, message) => setToast({ type, message, id: Date.now() })
 
   useEffect(() => {
     if (!toast) {
@@ -217,18 +65,12 @@ function App() {
     return () => window.clearTimeout(timeoutId)
   }, [toast])
 
-  const refreshSessions = async (token, { showLoading = false } = {}) => {
+  const refreshSessions = async (token) => {
     if (!token) {
-      setSessions({})
       setSessionItems([])
+      setSessions({})
       return
     }
-
-    if (showLoading) {
-      setIsLoadingSessions(true)
-    }
-
-    setSessionsError('')
 
     const apiSessions = await fetchSessionsFromApi(token)
     setSessionItems(apiSessions)
@@ -238,16 +80,18 @@ function App() {
   useEffect(() => {
     let cancelled = false
 
-    const fetchSessions = async () => {
+    const load = async () => {
       if (!authToken) {
         setIsLoadingSessions(false)
-        setSessions({})
         setSessionItems([])
+        setSessions({})
         setSessionsError('')
         return
       }
 
       setIsLoadingSessions(true)
+      setSessionsError('')
+
       try {
         await refreshSessions(authToken)
       } catch (error) {
@@ -255,8 +99,8 @@ function App() {
           localStorage.removeItem('auth_token')
           if (!cancelled) {
             setAuthToken('')
-            setSessions({})
             setSessionItems([])
+            setSessions({})
             setSessionsError('Session expiree, reconnecte-toi.')
           }
           return
@@ -272,8 +116,7 @@ function App() {
       }
     }
 
-    fetchSessions()
-
+    load()
     return () => {
       cancelled = true
     }
@@ -285,22 +128,7 @@ function App() {
     setAuthError('')
 
     try {
-      const endpoint = authMode === 'register' ? 'register' : 'login'
-      const response = await fetch(`${API_URL}/auth/${endpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: authEmail.trim(),
-          password: authPassword,
-        }),
-      })
-
-      const payload = await safeJson(response)
-
-      if (!response.ok || !payload.token) {
-        throw new Error(payload.message || 'Echec de connexion')
-      }
-
+      const payload = await authRequest(authMode, authEmail, authPassword)
       localStorage.setItem('auth_token', payload.token)
       setAuthToken(payload.token)
       setAuthPassword('')
@@ -311,11 +139,18 @@ function App() {
     }
   }
 
+  const resetDraft = () => {
+    setEditingSessionId(null)
+    setDraftSessionName('')
+    setDraftExercises([createDefaultExercise()])
+    setDraftError('')
+  }
+
   const logout = () => {
     localStorage.removeItem('auth_token')
     setAuthToken('')
-    setSessions({})
     setSessionItems([])
+    setSessions({})
     setIsCreateMode(false)
     setEditingSessionId(null)
     setSelectedSessionName(null)
@@ -324,17 +159,10 @@ function App() {
     setIsRunning(false)
   }
 
-  const resetDraft = () => {
-    setEditingSessionId(null)
-    setDraftSessionName('')
-    setDraftExercises([createDefaultExercise()])
-    setDraftError('')
-  }
-
   const openCreateMode = () => {
     resetDraft()
-    setIsCreateMode(true)
     setSelectedSessionName(null)
+    setIsCreateMode(true)
   }
 
   const closeCreateMode = () => {
@@ -384,9 +212,7 @@ function App() {
     )
   }
 
-  const addExercise = () => {
-    setDraftExercises((prev) => [...prev, createDefaultExercise()])
-  }
+  const addExercise = () => setDraftExercises((prev) => [...prev, createDefaultExercise()])
 
   const removeExercise = (exerciseIndex) => {
     setDraftExercises((prev) => prev.filter((_, index) => index !== exerciseIndex))
@@ -410,10 +236,7 @@ function App() {
         }
 
         const nextSets = exercise.sets.filter((_, idx) => idx !== setIndex)
-        return {
-          ...exercise,
-          sets: nextSets.length ? nextSets : [createDefaultSet()],
-        }
+        return { ...exercise, sets: nextSets.length ? nextSets : [createDefaultSet()] }
       }),
     )
   }
@@ -455,7 +278,6 @@ function App() {
     if (!draftSessionName.trim()) {
       return 'Le nom de la seance est obligatoire.'
     }
-
     if (!draftExercises.length) {
       return 'Ajoute au moins un exercice.'
     }
@@ -464,11 +286,6 @@ function App() {
       if (!exercise.name.trim()) {
         return 'Chaque exercice doit avoir un nom.'
       }
-
-      if (!exercise.sets.length) {
-        return `L'exercice ${exercise.name} doit avoir au moins une serie.`
-      }
-
       for (const set of exercise.sets) {
         if (set.time < 1 || set.wait < 0) {
           return 'Chaque serie doit avoir une duree >= 1 et un repos >= 0.'
@@ -485,7 +302,6 @@ function App() {
       setDraftError(validationError)
       return
     }
-
     if (!authToken) {
       setDraftError('Tu dois etre connecte.')
       return
@@ -507,27 +323,10 @@ function App() {
         })),
       }
 
-      const isEdit = Boolean(editingSessionId)
-      const response = await fetch(
-        isEdit ? `${API_URL}/sessions/${editingSessionId}` : `${API_URL}/sessions`,
-        {
-          method: isEdit ? 'PUT' : 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${authToken}`,
-          },
-          body: JSON.stringify(payload),
-        },
-      )
-
-      const responsePayload = await safeJson(response)
-      if (!response.ok) {
-        throw new Error(
-          responsePayload.message ||
-            (isEdit
-              ? 'Impossible de modifier la seance'
-              : 'Impossible de creer la seance'),
-        )
+      if (editingSessionId) {
+        await updateSessionApi(authToken, editingSessionId, payload)
+      } else {
+        await createSessionApi(authToken, payload)
       }
 
       await refreshSessions(authToken)
@@ -553,37 +352,21 @@ function App() {
     }
 
     try {
-      const response = await fetch(`${API_URL}/sessions/${sessionPendingDelete.id}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
-      })
-
-      if (response.status === 401) {
-        throw new Error('401')
-      }
-
-      if (!response.ok) {
-        const payload = await safeJson(response)
-        throw new Error(payload.message || 'Impossible de supprimer la seance')
-      }
-
+      await deleteSessionApi(authToken, sessionPendingDelete.id)
       await refreshSessions(authToken)
       showToast('success', `Seance ${sessionPendingDelete.name} supprimee.`)
     } catch (error) {
       if (error?.message?.includes('401')) {
         localStorage.removeItem('auth_token')
         setAuthToken('')
-        setSessions({})
         setSessionItems([])
+        setSessions({})
         setSessionsError('Session expiree, reconnecte-toi.')
       } else {
         setSessionsError(error.message || 'Erreur lors de la suppression')
       }
     }
 
-    setSessionPendingDelete(null)
     closeConfirmModal()
   }
 
@@ -603,11 +386,9 @@ function App() {
     if (!timeline.length || isFinished) {
       return 0
     }
-
     const afterCurrent = timeline
       .slice(currentIndex + 1)
       .reduce((sum, step) => sum + step.duration, 0)
-
     return Math.max(0, remaining) + afterCurrent
   }, [timeline, isFinished, currentIndex, remaining])
 
@@ -615,15 +396,12 @@ function App() {
     if (!timeline.length) {
       return 0
     }
-
     if (isFinished) {
       return 100
     }
-
     if (!hasStarted) {
       return 0
     }
-
     return ((currentIndex + 1) / timeline.length) * 100
   }, [timeline, isFinished, hasStarted, currentIndex])
 
@@ -634,13 +412,11 @@ function App() {
 
   const completedWorkKeys = useMemo(() => {
     const done = new Set()
-
     timeline.forEach((step, index) => {
       if (step.kind === 'work' && index < effectiveProgressIndex) {
         done.add(`${step.exerciseName}::${step.setNumber}`)
       }
     })
-
     return done
   }, [timeline, effectiveProgressIndex])
 
@@ -648,7 +424,6 @@ function App() {
     if (!exerciseNames.length) {
       return 0
     }
-
     if (isFinished) {
       return exerciseNames.length
     }
@@ -671,7 +446,6 @@ function App() {
     if (!startedAt) {
       return 0
     }
-
     return Math.floor((nowTimestamp - startedAt) / 1000)
   }, [startedAt, nowTimestamp])
 
@@ -679,15 +453,12 @@ function App() {
     if (!currentPhase || isFinished) {
       return 'Seance terminee'
     }
-
     if (currentPhase.kind === 'rest') {
       if (!nextPhase) {
         return 'A venir : fin de seance'
       }
-
       return `A venir : ${nextPhase.exerciseName} - ${nextPhase.setNumber}/${nextPhase.setTotal}`
     }
-
     return `${currentPhase.exerciseName} - ${currentPhase.setNumber}/${currentPhase.setTotal}`
   }, [currentPhase, nextPhase, isFinished])
 
@@ -695,11 +466,9 @@ function App() {
     if (isFinished) {
       return null
     }
-
     if (currentPhase?.kind === 'rest') {
       return nextPhase ?? null
     }
-
     return currentPhase ?? null
   }, [currentPhase, nextPhase, isFinished])
 
@@ -707,15 +476,12 @@ function App() {
     if (!currentPhase || isFinished) {
       return ''
     }
-
     if (currentPhase.kind === 'work') {
       return `${currentPhase.exerciseName}::${currentPhase.setNumber}`
     }
-
     if (nextPhase?.kind === 'work') {
       return `${nextPhase.exerciseName}::${nextPhase.setNumber}`
     }
-
     return ''
   }, [currentPhase, nextPhase, isFinished])
 
@@ -729,7 +495,6 @@ function App() {
         const key = `${exerciseName}::${index + 1}`
         const done = completedWorkKeys.has(key)
         const current = key === currentWorkKey && !done && !isFinished
-
         return {
           key,
           order: index + 1,
@@ -762,7 +527,6 @@ function App() {
         confirmLabel: 'Supprimer',
       }
     }
-
     if (pendingAction === 'leave-session') {
       return {
         title: 'Quitter la seance ?',
@@ -770,20 +534,14 @@ function App() {
         confirmLabel: 'Quitter',
       }
     }
-
     if (pendingAction === 'reset-session') {
       return {
-        title: 'Reinitialiser la seance ?',
+        title: 'Reinitialiser la seance ? ',
         message: 'Le chrono va repartir de zero.',
         confirmLabel: 'Reinitialiser',
       }
     }
-
-    return {
-      title: '',
-      message: '',
-      confirmLabel: 'Confirmer',
-    }
+    return { title: '', message: '', confirmLabel: 'Confirmer' }
   }, [pendingAction, sessionPendingDelete])
 
   const closeConfirmModal = () => {
@@ -808,7 +566,6 @@ function App() {
     if (!timeline.length) {
       return
     }
-
     setCurrentIndex(0)
     setRemaining(timeline[0].duration)
     setIsRunning(false)
@@ -824,17 +581,14 @@ function App() {
       await deleteSession()
       return
     }
-
     if (pendingAction === 'leave-session') {
       resetAllState()
       return
     }
-
     if (pendingAction === 'reset-session') {
       resetCurrentSessionState()
       return
     }
-
     closeConfirmModal()
   }
 
@@ -843,14 +597,11 @@ function App() {
       if (actionName === 'leave-session') {
         resetAllState()
       }
-
       if (actionName === 'reset-session') {
         resetCurrentSessionState()
       }
-
       return
     }
-
     setIsRunning(false)
     setPendingAction(actionName)
     setIsConfirmOpen(true)
@@ -862,7 +613,6 @@ function App() {
       if (!AudioContextClass) {
         return
       }
-
       if (!audioContextRef.current) {
         audioContextRef.current = new AudioContextClass()
       }
@@ -874,15 +624,12 @@ function App() {
 
       const oscillator = ctx.createOscillator()
       const gain = ctx.createGain()
-
       oscillator.type = 'sine'
       oscillator.frequency.setValueAtTime(1020, ctx.currentTime)
       oscillator.frequency.exponentialRampToValueAtTime(780, ctx.currentTime + 0.18)
-
       gain.gain.setValueAtTime(0.0001, ctx.currentTime)
       gain.gain.exponentialRampToValueAtTime(0.16, ctx.currentTime + 0.02)
       gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.22)
-
       oscillator.connect(gain)
       gain.connect(ctx.destination)
       oscillator.start()
@@ -896,7 +643,6 @@ function App() {
     if (hasStarted) {
       return
     }
-
     const start = Date.now()
     setHasStarted(true)
     setStartedAt(start)
@@ -907,7 +653,6 @@ function App() {
     if (!timeline.length || isFinished) {
       return
     }
-
     const nextIndex = currentIndex + 1
     const phaseToPlay = timeline[currentIndex]
     const targetNext = timeline[nextIndex]
@@ -918,11 +663,9 @@ function App() {
       setRemaining(0)
       return
     }
-
     if (phaseToPlay?.kind === 'rest' && targetNext.kind === 'work') {
       playDing()
     }
-
     setCurrentIndex(nextIndex)
     setRemaining(targetNext.duration)
   }
@@ -932,10 +675,7 @@ function App() {
       return undefined
     }
 
-    const intervalId = window.setInterval(() => {
-      setNowTimestamp(Date.now())
-    }, 1000)
-
+    const intervalId = window.setInterval(() => setNowTimestamp(Date.now()), 1000)
     return () => window.clearInterval(intervalId)
   }, [hasStarted, startedAt, isFinished])
 
@@ -951,11 +691,9 @@ function App() {
 
     const onPopState = () => {
       window.history.pushState({ timerGuard: true }, '', window.location.href)
-
       if (!shouldConfirmDestructive) {
         return
       }
-
       setIsRunning(false)
       setPendingAction('leave-session')
       setIsConfirmOpen(true)
@@ -972,18 +710,11 @@ function App() {
   }, [isGuardActive, shouldConfirmDestructive])
 
   useEffect(() => {
-    if (!isRunning || isFinished || !timeline.length) {
+    if (!isRunning || isFinished || !timeline.length || remaining <= 0) {
       return undefined
     }
 
-    if (remaining <= 0) {
-      return undefined
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      setRemaining((prev) => prev - 1)
-    }, 1000)
-
+    const timeoutId = window.setTimeout(() => setRemaining((prev) => prev - 1), 1000)
     return () => window.clearTimeout(timeoutId)
   }, [isRunning, isFinished, remaining, timeline.length])
 
@@ -991,7 +722,6 @@ function App() {
     if (!isRunning || isFinished || remaining > 0 || !timeline.length) {
       return
     }
-
     advancePhase()
   }, [isRunning, isFinished, remaining, timeline, currentIndex])
 
@@ -1014,7 +744,6 @@ function App() {
     if (!timeline.length) {
       return
     }
-
     if (isFinished) {
       setCurrentIndex(0)
       setRemaining(timeline[0].duration)
@@ -1023,15 +752,12 @@ function App() {
       setIsRunning(true)
       return
     }
-
     if (remaining <= 0) {
       setRemaining(timeline[currentIndex].duration)
     }
-
     if (!isRunning) {
       markStartedNow()
     }
-
     setIsRunning((prev) => !prev)
   }
 
@@ -1039,7 +765,6 @@ function App() {
     if (!timeline.length || isFinished) {
       return
     }
-
     markStartedNow()
     advancePhase()
   }
@@ -1047,83 +772,21 @@ function App() {
   if (!authToken) {
     return (
       <>
-        <main className="mx-auto flex min-h-svh w-full max-w-md items-center px-4 py-10">
-          <Card className="w-full border-white/10 bg-black/70 shadow-[0_0_0_1px_rgba(255,255,255,0.03)_inset] backdrop-blur">
-            <CardHeader className="space-y-3">
-              <Badge variant="outline" className="w-fit border-white/20 bg-white/5 uppercase tracking-[0.18em]">
-                Minuteur Sport
-              </Badge>
-              <CardTitle className="text-2xl text-white">
-                {authMode === 'login' ? 'Connexion' : 'Inscription'}
-              </CardTitle>
-              <CardDescription className="text-zinc-400">
-                Connecte-toi pour retrouver tes seances.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form className="space-y-4" onSubmit={handleAuthSubmit}>
-                <div className="space-y-2">
-                  <label className="text-sm text-zinc-300" htmlFor="email">
-                    Email
-                  </label>
-                  <input
-                    id="email"
-                    type="email"
-                    required
-                    value={authEmail}
-                    onChange={(event) => setAuthEmail(event.target.value)}
-                    className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-white outline-none ring-0 placeholder:text-zinc-500 focus:border-zinc-500"
-                    placeholder="toi@email.com"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm text-zinc-300" htmlFor="password">
-                    Mot de passe
-                  </label>
-                  <input
-                    id="password"
-                    type="password"
-                    required
-                    minLength={8}
-                    value={authPassword}
-                    onChange={(event) => setAuthPassword(event.target.value)}
-                    className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-white outline-none ring-0 placeholder:text-zinc-500 focus:border-zinc-500"
-                    placeholder="8 caracteres minimum"
-                  />
-                </div>
-
-                {authError ? <p className="text-sm text-red-400">{authError}</p> : null}
-                {sessionsError ? <p className="text-sm text-red-400">{sessionsError}</p> : null}
-
-                <Button
-                  type="submit"
-                  className="w-full bg-white text-black hover:bg-zinc-100"
-                  disabled={isAuthLoading}
-                >
-                  {isAuthLoading
-                    ? 'Chargement...'
-                    : authMode === 'login'
-                      ? 'Se connecter'
-                      : "S'inscrire"}
-                </Button>
-              </form>
-
-              <Button
-                variant="ghost"
-                className="mt-3 w-full text-zinc-300 hover:bg-zinc-900 hover:text-white"
-                onClick={() => {
-                  setAuthError('')
-                  setAuthMode((prev) => (prev === 'login' ? 'register' : 'login'))
-                }}
-              >
-                {authMode === 'login'
-                  ? "Pas de compte ? Creer un compte"
-                  : 'Deja un compte ? Se connecter'}
-              </Button>
-            </CardContent>
-          </Card>
-        </main>
+        <AuthPage
+          authMode={authMode}
+          authEmail={authEmail}
+          authPassword={authPassword}
+          authError={authError}
+          sessionsError={sessionsError}
+          isAuthLoading={isAuthLoading}
+          onSubmit={handleAuthSubmit}
+          onAuthModeToggle={() => {
+            setAuthError('')
+            setAuthMode((prev) => (prev === 'login' ? 'register' : 'login'))
+          }}
+          onEmailChange={setAuthEmail}
+          onPasswordChange={setAuthPassword}
+        />
         <ToastBanner toast={toast} />
       </>
     )
@@ -1132,182 +795,22 @@ function App() {
   if (isCreateMode) {
     return (
       <>
-        <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:py-12">
-          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-            <Button
-              variant="outline"
-              className="border-zinc-700 bg-black text-zinc-200 hover:bg-zinc-900"
-              onClick={closeCreateMode}
-            >
-              <ArrowLeft className="h-4 w-4" /> Retour
-            </Button>
-            <Button
-              className="bg-white text-black hover:bg-zinc-100"
-              onClick={saveDraftSession}
-              disabled={isSavingDraft}
-            >
-              <Save className="h-4 w-4" />
-              {isSavingDraft
-                ? 'Enregistrement...'
-                : editingSessionId
-                  ? 'Mettre a jour la seance'
-                  : 'Enregistrer la seance'}
-            </Button>
-          </div>
-
-          <Card className="mb-6 border-white/10 bg-black/60">
-            <CardHeader>
-              <CardTitle className="text-white">
-                {editingSessionId ? 'Modifier la seance' : 'Nouvelle seance'}
-              </CardTitle>
-              <CardDescription className="text-zinc-400">
-                Definis le nom, les exercices et les series.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <label className="mb-2 block text-sm text-zinc-300" htmlFor="session-name">
-                Nom de la seance
-              </label>
-              <input
-                id="session-name"
-                value={draftSessionName}
-                onChange={(event) => setDraftSessionName(event.target.value)}
-                className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-white outline-none focus:border-zinc-500"
-                placeholder="ex: Push volume"
-              />
-            </CardContent>
-          </Card>
-
-          <div className="space-y-4">
-            {draftExercises.map((exercise, exerciseIndex) => (
-              <Card key={`exercise-${exerciseIndex}`} className="border-white/10 bg-black/60">
-                <CardHeader className="pb-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <CardTitle className="text-white">Exercice {exerciseIndex + 1}</CardTitle>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-zinc-700 bg-black text-zinc-200 hover:bg-zinc-900"
-                      onClick={() => removeExercise(exerciseIndex)}
-                    >
-                      <Trash2 className="h-4 w-4" /> Supprimer
-                    </Button>
-                  </div>
-                  <input
-                    value={exercise.name}
-                    onChange={(event) => updateExerciseName(exerciseIndex, event.target.value)}
-                    className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-white outline-none focus:border-zinc-500"
-                    placeholder="Nom de l'exercice"
-                  />
-                </CardHeader>
-                <CardContent>
-                  <div className="rounded-md border border-zinc-800">
-                    <div className="hidden grid-cols-[1.2fr_1fr_1fr_auto] gap-3 border-b border-zinc-800 bg-zinc-900/70 px-3 py-2 text-xs uppercase tracking-wide text-zinc-400 md:grid">
-                      <span>Type</span>
-                      <span>Duree (s)</span>
-                      <span>Repos (s)</span>
-                      <span></span>
-                    </div>
-                    {exercise.sets.map((set, setIndex) => (
-                      <div
-                        key={`set-${setIndex}`}
-                        className="grid gap-3 border-b border-zinc-900 px-3 py-3 last:border-b-0 md:grid-cols-[1.2fr_1fr_1fr_auto] md:items-end md:py-2"
-                      >
-                        <label className="space-y-1 text-xs text-zinc-400 md:space-y-0 md:text-[0px]">
-                          <span className="md:hidden">Type</span>
-                          <div className="grid h-9 grid-cols-2 rounded-md border border-zinc-700 bg-zinc-950 p-1">
-                            <button
-                              type="button"
-                              onClick={() => updateSetField(exerciseIndex, setIndex, 'type', 'entrainement')}
-                              className={`rounded text-xs font-medium transition ${
-                                set.type === 'entrainement'
-                                  ? 'bg-zinc-200 text-zinc-900'
-                                  : 'text-zinc-300 hover:bg-zinc-900'
-                              }`}
-                            >
-                              entrainement
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => updateSetField(exerciseIndex, setIndex, 'type', 'echauffement')}
-                              className={`rounded text-xs font-medium transition ${
-                                set.type === 'echauffement'
-                                  ? 'bg-zinc-200 text-zinc-900'
-                                  : 'text-zinc-300 hover:bg-zinc-900'
-                              }`}
-                            >
-                              echauffement
-                            </button>
-                          </div>
-                        </label>
-
-                        <label className="space-y-1 text-xs text-zinc-400 md:space-y-0 md:text-[0px]">
-                          <span className="md:hidden">Duree (s)</span>
-                          <input
-                            type="number"
-                            min={1}
-                            value={set.time}
-                            onChange={(event) =>
-                              updateSetField(exerciseIndex, setIndex, 'time', event.target.value)
-                            }
-                            className="h-9 w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 text-sm text-white"
-                          />
-                        </label>
-
-                        <label className="space-y-1 text-xs text-zinc-400 md:space-y-0 md:text-[0px]">
-                          <span className="md:hidden">Repos (s)</span>
-                          <input
-                            type="number"
-                            min={0}
-                            value={set.wait}
-                            onChange={(event) =>
-                              updateSetField(exerciseIndex, setIndex, 'wait', event.target.value)
-                            }
-                            className="h-9 w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 text-sm text-white"
-                          />
-                        </label>
-
-                        <div className="flex justify-end md:block">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-zinc-400 hover:bg-zinc-900 hover:text-white"
-                            onClick={() => removeSet(exerciseIndex, setIndex)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="mt-3">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-zinc-700 bg-black text-zinc-200 hover:bg-zinc-900"
-                      onClick={() => addSet(exerciseIndex)}
-                    >
-                      <Plus className="h-4 w-4" /> Ajouter une serie
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          <div className="mt-4 flex flex-wrap gap-3">
-            <Button
-              variant="outline"
-              className="border-zinc-700 bg-black text-zinc-200 hover:bg-zinc-900"
-              onClick={addExercise}
-            >
-              <Plus className="h-4 w-4" /> Ajouter un exercice
-            </Button>
-          </div>
-
-          {draftError ? <p className="mt-4 text-sm text-red-400">{draftError}</p> : null}
-        </main>
+        <CreateSessionPage
+          editingSessionId={editingSessionId}
+          draftSessionName={draftSessionName}
+          draftExercises={draftExercises}
+          draftError={draftError}
+          isSavingDraft={isSavingDraft}
+          onBack={closeCreateMode}
+          onSave={saveDraftSession}
+          onSessionNameChange={setDraftSessionName}
+          onExerciseNameChange={updateExerciseName}
+          onRemoveExercise={removeExercise}
+          onSetFieldChange={updateSetField}
+          onRemoveSet={removeSet}
+          onAddSet={addSet}
+          onAddExercise={addExercise}
+        />
         <ToastBanner toast={toast} />
       </>
     )
@@ -1316,121 +819,25 @@ function App() {
   if (!selectedSessionName) {
     return (
       <>
-        <main className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:py-14">
-          <div className="mb-10 space-y-4">
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                className="border-zinc-700 bg-black text-zinc-200 hover:bg-zinc-900"
-                onClick={openCreateMode}
-              >
-                <Plus className="h-4 w-4" /> Nouvelle seance
-              </Button>
-              <Button
-                variant="outline"
-                className="border-zinc-700 bg-black text-zinc-200 hover:bg-zinc-900"
-                onClick={logout}
-              >
-                Deconnexion
-              </Button>
-            </div>
-            <Badge variant="outline" className="w-fit border-white/20 bg-white/5 uppercase tracking-[0.18em]">
-              Minuteur Sport
-            </Badge>
-            <h1 className="text-4xl font-semibold tracking-tight text-white sm:text-5xl">
-              Choisis ta seance
-            </h1>
-            {sessionsError ? (
-              <p className="text-sm text-red-400">
-                {sessionsError}.
-              </p>
-            ) : null}
-          </div>
+        <HomePage
+          sessions={sessions}
+          sessionsError={sessionsError}
+          isLoadingSessions={isLoadingSessions}
+          onOpenCreate={openCreateMode}
+          onLogout={logout}
+          onOpenSession={openSession}
+          onEditSession={openEditMode}
+          onDeleteSession={askDeleteSession}
+        />
 
-          {isLoadingSessions ? (
-            <div className="rounded-xl border border-white/10 bg-black/50 p-6 text-zinc-300">
-              Chargement des seances...
-            </div>
-          ) : null}
-
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {Object.keys(sessions).map((sessionName) => {
-              const exercisesCount = Object.keys(sessions[sessionName]).length
-              const sessionDuration = createTimeline(sessions[sessionName]).reduce(
-                (sum, step) => sum + step.duration,
-                0,
-              )
-
-              return (
-                <Card
-                  key={sessionName}
-                  className="group border-white/10 bg-black/60 shadow-[0_0_0_1px_rgba(255,255,255,0.02)_inset] backdrop-blur transition hover:-translate-y-0.5 hover:border-white/20"
-                >
-                  <CardHeader className="pb-4">
-                    <CardTitle className="flex items-center justify-between text-white capitalize">
-                      <span>{sessionName}</span>
-                      <Dumbbell className="h-4 w-4 text-zinc-300" />
-                    </CardTitle>
-                    <CardDescription className="text-zinc-500">
-                      {exercisesCount} exercices - {formatTimerValue(sessionDuration)}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <Button className="w-full bg-white text-black hover:bg-zinc-100" onClick={() => openSession(sessionName)}>
-                      Lancer la seance
-                    </Button>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button
-                        variant="outline"
-                        className="border-zinc-700 bg-black text-zinc-200 hover:bg-zinc-900"
-                        onClick={() => openEditMode(sessionName)}
-                      >
-                        <Pencil className="h-4 w-4" /> Modifier
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="border-red-800/80 bg-black text-red-300 hover:bg-red-950/30 hover:text-red-800"
-                        onClick={() => askDeleteSession(sessionName)}
-                      >
-                        <Trash2 className="h-4 w-4" /> Supprimer
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
-
-          {!isLoadingSessions && !Object.keys(sessions).length ? (
-            <div className="mt-4 rounded-xl border border-white/10 bg-black/50 p-6 text-zinc-300">
-              Aucune seance en base pour cet utilisateur.
-            </div>
-          ) : null}
-        </main>
-
-        <Dialog open={isConfirmOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle className="text-white">{modalContent.title}</DialogTitle>
-              <DialogDescription className="text-zinc-400">{modalContent.message}</DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                className="border-zinc-700 bg-black text-zinc-200 hover:bg-zinc-900"
-                onClick={closeConfirmModal}
-              >
-                Annuler
-              </Button>
-              <Button
-                className="bg-white text-black hover:bg-zinc-100"
-                onClick={executePendingAction}
-              >
-                {modalContent.confirmLabel}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <ConfirmDialog
+          open={isConfirmOpen}
+          title={modalContent.title}
+          message={modalContent.message}
+          confirmLabel={modalContent.confirmLabel}
+          onCancel={closeConfirmModal}
+          onConfirm={executePendingAction}
+        />
         <ToastBanner toast={toast} />
       </>
     )
@@ -1438,211 +845,36 @@ function App() {
 
   return (
     <>
-      <main className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-6 sm:px-6 lg:py-10">
-        <Button
-          variant="outline"
-          className="w-fit border-white/15 bg-black/40 text-zinc-200 hover:bg-white/10 hover:text-white"
-          onClick={() => requestAction('leave-session')}
-        >
-          <ArrowLeft className="h-4 w-4" /> Retour aux seances
-        </Button>
+      <TimerPage
+        selectedSessionName={selectedSessionName}
+        isFinished={isFinished}
+        currentPhase={currentPhase}
+        remainingLabel={formatMinutesSeconds(remaining)}
+        displayedExercise={displayedExercise}
+        displayedPhase={displayedPhase}
+        currentIndex={currentIndex}
+        timelineLength={timeline.length}
+        progressPct={progressPct}
+        isRunning={isRunning}
+        totalRemainingLabel={formatHoursMinutes(totalRemaining)}
+        elapsedLabel={formatHoursMinutes(elapsedSinceStart)}
+        completedExercisesCount={completedExercisesCount}
+        exerciseCount={exerciseNames.length}
+        sessionOutline={sessionOutline}
+        onBack={() => requestAction('leave-session')}
+        onToggleRun={toggleRun}
+        onSkip={skipCurrentPhase}
+        onReset={() => requestAction('reset-session')}
+      />
 
-        <div className="grid gap-4 lg:grid-cols-[1.8fr_1fr]">
-          <Card className="border-white/10 bg-black/60 shadow-[0_0_0_1px_rgba(255,255,255,0.03)_inset] backdrop-blur">
-            <CardHeader className="space-y-6 pb-4">
-              <div className="flex items-center justify-between">
-                <Badge
-                  variant="outline"
-                  className={
-                    currentPhase?.kind === 'rest'
-                      ? 'border-zinc-700 bg-zinc-900 text-zinc-200'
-                      : 'border-white/20 bg-white/10 text-white'
-                  }
-                >
-                  {isFinished ? 'Termine' : currentPhase?.label || 'Seance'}
-                </Badge>
-                <Badge variant="outline" className="border-zinc-700 text-zinc-300">
-                  Seance {selectedSessionName}
-                </Badge>
-              </div>
-              <CardTitle
-                className={`text-center font-mono text-6xl font-semibold tracking-tight sm:text-7xl ${
-                  !isFinished && currentPhase?.kind === 'work' ? 'text-red-500' : 'text-white'
-                }`}
-              >
-                {isFinished ? 'Seance terminee' : formatMinutesSeconds(remaining)}
-              </CardTitle>
-              <CardDescription className="text-center text-sm text-zinc-300 sm:text-base">
-                Exercice : {displayedExercise}
-              </CardDescription>
-              {displayedPhase?.setType === 'echauffement' ? (
-                <div className="flex justify-center">
-                  <Badge variant="outline" className="border-amber-700/60 bg-amber-950/40 text-amber-300">
-                    Echauffement
-                  </Badge>
-                </div>
-              ) : null}
-            </CardHeader>
-
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm text-zinc-400">
-                  <span>Progression de la seance</span>
-                  <span>{Math.round(progressPct)}%</span>
-                </div>
-                <Progress className="h-2 bg-zinc-900" value={progressPct} />
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <Button onClick={toggleRun} className="min-w-28 bg-white text-black hover:bg-zinc-100">
-                  {isFinished ? (
-                    <>
-                      <Play className="h-4 w-4" /> Relancer
-                    </>
-                  ) : isRunning ? (
-                    <>
-                      <Pause className="h-4 w-4" /> Pause
-                    </>
-                  ) : (
-                    <>
-                      <Play className="h-4 w-4" /> Lancer
-                    </>
-                  )}
-                </Button>
-                <Button
-                  variant="secondary"
-                  className="bg-zinc-900 text-zinc-100 hover:bg-zinc-800"
-                  onClick={skipCurrentPhase}
-                >
-                  <SkipForward className="h-4 w-4" /> Skip
-                </Button>
-                <Button
-                  variant="outline"
-                  className="border-zinc-700 bg-black text-zinc-200 hover:bg-zinc-900"
-                  onClick={() => requestAction('reset-session')}
-                >
-                  <RotateCcw className="h-4 w-4" /> Reinitialiser
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-white/10 bg-black/60 shadow-[0_0_0_1px_rgba(255,255,255,0.03)_inset] backdrop-blur">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg text-white">
-                <Gauge className="h-4 w-4 text-zinc-300" /> Statistiques
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 text-sm">
-              <div>
-                <p className="text-zinc-500">Temps restant global</p>
-                <p className="text-2xl font-semibold text-white">
-                  {formatTimerValue(totalRemaining)}
-                </p>
-              </div>
-              <Separator className="bg-zinc-800" />
-              <div>
-                <p className="text-zinc-500">Depuis le debut</p>
-                <p className="text-2xl font-semibold text-white">
-                  {formatElapsed(elapsedSinceStart)}
-                </p>
-              </div>
-              <Separator className="bg-zinc-800" />
-              <div>
-                <p className="text-zinc-500">Exercices</p>
-                <p className="text-2xl font-semibold text-white">
-                  {completedExercisesCount}/{exerciseNames.length}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card className="border-white/10 bg-black/60 shadow-[0_0_0_1px_rgba(255,255,255,0.03)_inset] backdrop-blur">
-          <CardHeader>
-            <CardTitle className="text-white">Details de la seance</CardTitle>
-            <CardDescription className="text-zinc-400">
-              Accordions imbriques des exercices et des series, avec etat fait / a faire.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {sessionOutline.map((exercise, exerciseIndex) => (
-              <details
-                key={exercise.exerciseName}
-                className="rounded-md border border-zinc-800 bg-zinc-950/40"
-                open={exercise.hasCurrent || (!exercise.done && exerciseIndex === 0)}
-              >
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-sm text-white marker:content-none">
-                  <span className="truncate">{exercise.exerciseName}</span>
-                  <span
-                    className={`rounded-full border px-2 py-0.5 text-[11px] uppercase tracking-wide ${
-                      exercise.done
-                        ? 'border-emerald-700/70 bg-emerald-950/50 text-emerald-300'
-                        : 'border-zinc-700 bg-zinc-900 text-zinc-300'
-                    }`}
-                  >
-                    {exercise.done ? 'Fait' : 'A faire'}
-                  </span>
-                </summary>
-
-                <div className="space-y-2 border-t border-zinc-900 px-3 py-3">
-                  {exercise.sets.map((set) => (
-                    <details
-                      key={set.key}
-                      className="rounded-md border border-zinc-800 bg-black/30"
-                      open={set.current}
-                    >
-                      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-xs text-zinc-200 marker:content-none">
-                        <span>
-                          Serie {set.order}/{set.total}
-                        </span>
-                        <span
-                          className={`rounded-full border px-2 py-0.5 uppercase tracking-wide ${
-                            set.done
-                              ? 'border-emerald-700/70 bg-emerald-950/40 text-emerald-300'
-                              : set.current
-                                ? 'border-blue-700/70 bg-blue-950/40 text-blue-300'
-                                : 'border-zinc-700 bg-zinc-900 text-zinc-300'
-                          }`}
-                        >
-                          {set.done ? 'Fait' : set.current ? 'En cours' : 'A faire'}
-                        </span>
-                      </summary>
-
-                      <div className="grid gap-1 border-t border-zinc-900 px-3 py-2 text-xs text-zinc-400 sm:grid-cols-3">
-                        <p>Type: {set.type}</p>
-                        <p>Travail: {formatMinutesSeconds(set.time)}</p>
-                        <p>Repos: {formatMinutesSeconds(set.wait)}</p>
-                      </div>
-                    </details>
-                  ))}
-                </div>
-              </details>
-            ))}
-          </CardContent>
-        </Card>
-      </main>
-
-      <Dialog open={isConfirmOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="text-white">{modalContent.title}</DialogTitle>
-            <DialogDescription className="text-zinc-400">{modalContent.message}</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              className="border-zinc-700 bg-black text-zinc-200 hover:bg-zinc-900"
-              onClick={closeConfirmModal}
-            >
-              Annuler
-            </Button>
-            <Button className="bg-white text-black hover:bg-zinc-100" onClick={executePendingAction}>
-              {modalContent.confirmLabel}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={isConfirmOpen}
+        title={modalContent.title}
+        message={modalContent.message}
+        confirmLabel={modalContent.confirmLabel}
+        onCancel={closeConfirmModal}
+        onConfirm={executePendingAction}
+      />
       <ToastBanner toast={toast} />
     </>
   )

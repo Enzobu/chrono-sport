@@ -1,0 +1,54 @@
+export function formatHoursMinutes(seconds) {
+  const safeSeconds = Math.max(0, seconds)
+  const totalMinutes = Math.floor(safeSeconds / 60)
+  const hours = Math.floor(totalMinutes / 60)
+  const mins = totalMinutes % 60
+  return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`
+}
+
+export function formatMinutesSeconds(seconds) {
+  const safeSeconds = Math.max(0, seconds)
+  const mins = Math.floor(safeSeconds / 60)
+  const secs = safeSeconds % 60
+  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+}
+
+export function createTimeline(session) {
+  const exerciseEntries = Object.entries(session)
+
+  return exerciseEntries.flatMap(([exerciseName, sets], exerciseIndex) => {
+    const isLastExercise = exerciseIndex === exerciseEntries.length - 1
+
+    return sets.flatMap((set, setIndex) => {
+      const isLastSet = setIndex === sets.length - 1
+      const isLastBlock = isLastExercise && isLastSet
+      const setType = set.type === 'echauffement' ? 'echauffement' : 'entrainement'
+      const work = {
+        kind: 'work',
+        label: 'Travail',
+        duration: Number(set.time) || 0,
+        exerciseName,
+        setNumber: setIndex + 1,
+        setTotal: sets.length,
+        setType,
+      }
+
+      if (isLastBlock || !(Number(set.wait) > 0)) {
+        return [work]
+      }
+
+      return [
+        work,
+        {
+          kind: 'rest',
+          label: 'Repos',
+          duration: Number(set.wait),
+          exerciseName,
+          setNumber: setIndex + 1,
+          setTotal: sets.length,
+          setType,
+        },
+      ]
+    })
+  })
+}
