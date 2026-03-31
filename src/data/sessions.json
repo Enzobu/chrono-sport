@@ -1,0 +1,112 @@
+{
+  "pull": {
+    "Seated Row (Machine)": [
+      {
+        "time": 60,
+        "wait": 120
+      },
+      {
+        "time": 60,
+        "wait": 180
+      },
+      {
+        "time": 60,
+        "wait": 180
+      },
+      {
+        "time": 60,
+        "wait": 180
+      },
+      {
+        "time": 60,
+        "wait": 180
+      }
+    ],
+    "Face Pull (Cable)": [
+      {
+        "time": 60,
+        "wait": 180
+      },
+      {
+        "time": 60,
+        "wait": 180
+      },
+      {
+        "time": 60,
+        "wait": 180
+      }
+    ],
+    "Reverse Fly (Machine)": [
+      {
+        "time": 60,
+        "wait": 180
+      },
+      {
+        "time": 60,
+        "wait": 180
+      },
+      {
+        "time": 60,
+        "wait": 180
+      }
+    ],
+    "Bicep Curl (Barbell)": [
+      {
+        "time": 60,
+        "wait": 180
+      },
+      {
+        "time": 60,
+        "wait": 180
+      },
+      {
+        "time": 60,
+        "wait": 180
+      }
+    ],
+    "Hammer Curl (Cable)": [
+      {
+        "time": 60,
+        "wait": 180
+      },
+      {
+        "time": 60,
+        "wait": 180
+      },
+      {
+        "time": 60,
+        "wait": 0
+      }
+    ]
+  },
+  "push": {
+    "ex1": [
+      {
+        "time": 6,
+        "wait": 10
+      },
+      {
+        "time": 6,
+        "wait": 10
+      },
+      {
+        "time": 6,
+        "wait": 10
+      }
+    ],
+    "ex2": [
+      {
+        "time": 6,
+        "wait": 10
+      },
+      {
+        "time": 6,
+        "wait": 10
+      },
+      {
+        "time": 6,
+        "wait": 10
+      }
+    ]
+  }
+}
