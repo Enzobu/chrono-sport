@@ -79,6 +79,8 @@ function App() {
   const [hasStarted, setHasStarted] = useState(false)
   const [startedAt, setStartedAt] = useState(null)
   const [nowTimestamp, setNowTimestamp] = useState(Date.now())
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false)
+  const [pendingAction, setPendingAction] = useState(null)
   const audioContextRef = useRef(null)
 
   const selectedSession = selectedSessionName ? sessions[selectedSessionName] : null
@@ -126,6 +128,95 @@ function App() {
   }, [currentPhase, nextPhase, isFinished])
 
   const isGuardActive = Boolean(selectedSessionName && hasStarted && !isFinished)
+  const shouldConfirmDestructive = hasStarted && !isFinished
+
+  const modalContent = useMemo(() => {
+    if (pendingAction === 'leave-session') {
+      return {
+        title: 'Quitter la seance ? ',
+        message: 'Ta progression en cours sera perdue.',
+        confirmLabel: 'Quitter',
+      }
+    }
+
+    if (pendingAction === 'reset-session') {
+      return {
+        title: 'Reinitialiser la seance ? ',
+        message: 'Le chrono va repartir de zero.',
+        confirmLabel: 'Reinitialiser',
+      }
+    }
+
+    return {
+      title: '',
+      message: '',
+      confirmLabel: 'Confirmer',
+    }
+  }, [pendingAction])
+
+  const closeConfirmModal = () => {
+    setIsConfirmOpen(false)
+    setPendingAction(null)
+  }
+
+  const resetAllState = () => {
+    setSelectedSessionName(null)
+    setCurrentIndex(0)
+    setRemaining(0)
+    setIsRunning(false)
+    setIsFinished(false)
+    setHasStarted(false)
+    setStartedAt(null)
+    setNowTimestamp(Date.now())
+    closeConfirmModal()
+  }
+
+  const resetCurrentSessionState = () => {
+    if (!timeline.length) {
+      return
+    }
+
+    setCurrentIndex(0)
+    setRemaining(timeline[0].duration)
+    setIsRunning(false)
+    setIsFinished(false)
+    setHasStarted(false)
+    setStartedAt(null)
+    setNowTimestamp(Date.now())
+    closeConfirmModal()
+  }
+
+  const executePendingAction = () => {
+    if (pendingAction === 'leave-session') {
+      resetAllState()
+      return
+    }
+
+    if (pendingAction === 'reset-session') {
+      resetCurrentSessionState()
+      return
+    }
+
+    closeConfirmModal()
+  }
+
+  const requestAction = (actionName) => {
+    if (!shouldConfirmDestructive) {
+      if (actionName === 'leave-session') {
+        resetAllState()
+      }
+
+      if (actionName === 'reset-session') {
+        resetCurrentSessionState()
+      }
+
+      return
+    }
+
+    setIsRunning(false)
+    setPendingAction(actionName)
+    setIsConfirmOpen(true)
+  }
 
   const playDing = () => {
     try {
@@ -198,41 +289,6 @@ function App() {
     setRemaining(targetNext.duration)
   }
 
-  const resetAllState = () => {
-    setSelectedSessionName(null)
-    setCurrentIndex(0)
-    setRemaining(0)
-    setIsRunning(false)
-    setIsFinished(false)
-    setHasStarted(false)
-    setStartedAt(null)
-    setNowTimestamp(Date.now())
-  }
-
-  const resetCurrentSessionState = () => {
-    if (!timeline.length) {
-      return
-    }
-
-    setCurrentIndex(0)
-    setRemaining(timeline[0].duration)
-    setIsRunning(false)
-    setIsFinished(false)
-    setHasStarted(false)
-    setStartedAt(null)
-    setNowTimestamp(Date.now())
-  }
-
-  const confirmAction = (message) => {
-    const shouldConfirm = hasStarted && !isFinished
-
-    if (!shouldConfirm) {
-      return true
-    }
-
-    return window.confirm(message)
-  }
-
   useEffect(() => {
     if (!hasStarted || !startedAt || isFinished) {
       return undefined
@@ -256,16 +312,15 @@ function App() {
     }
 
     const onPopState = () => {
-      const leave = window.confirm(
-        'Une seance est en cours. Veux-tu vraiment quitter cette seance ?'
-      )
+      window.history.pushState({ timerGuard: true }, '', window.location.href)
 
-      if (leave) {
-        resetAllState()
+      if (!shouldConfirmDestructive) {
         return
       }
 
-      window.history.pushState({ timerGuard: true }, '', window.location.href)
+      setIsRunning(false)
+      setPendingAction('leave-session')
+      setIsConfirmOpen(true)
     }
 
     window.history.pushState({ timerGuard: true }, '', window.location.href)
@@ -276,7 +331,7 @@ function App() {
       window.removeEventListener('beforeunload', beforeUnload)
       window.removeEventListener('popstate', onPopState)
     }
-  }, [isGuardActive])
+  }, [isGuardActive, shouldConfirmDestructive])
 
   useEffect(() => {
     if (!isRunning || isFinished || !timeline.length) {
@@ -313,18 +368,11 @@ function App() {
     setHasStarted(false)
     setStartedAt(null)
     setNowTimestamp(Date.now())
+    closeConfirmModal()
   }
 
   const goBack = () => {
-    const isConfirmed = confirmAction(
-      'La seance est en cours. Confirmer le retour a la liste des seances ?'
-    )
-
-    if (!isConfirmed) {
-      return
-    }
-
-    resetAllState()
+    requestAction('leave-session')
   }
 
   const toggleRun = () => {
@@ -353,15 +401,7 @@ function App() {
   }
 
   const resetSession = () => {
-    const isConfirmed = confirmAction(
-      'Veux-tu vraiment reinitialiser cette seance en cours ?'
-    )
-
-    if (!isConfirmed) {
-      return
-    }
-
-    resetCurrentSessionState()
+    requestAction('reset-session')
   }
 
   const skipCurrentPhase = () => {
@@ -402,44 +442,65 @@ function App() {
   }
 
   return (
-    <main className="app page-timer">
-      <button className="back-button" onClick={goBack}>
-        Retour aux seances
-      </button>
+    <>
+      <main className="app page-timer">
+        <button className="back-button" onClick={goBack}>
+          Retour aux seances
+        </button>
 
-      <section className="timer-panel">
-        <p className="kicker">Seance {selectedSessionName}</p>
-        <h1>{isFinished ? 'Seance terminee' : formatSeconds(remaining)}</h1>
-        {currentPhase && !isFinished ? (
-          <>
-            <p className="phase-label">{currentPhase.label}</p>
-            <p className="phase-meta">Exercice : {displayedExercise}</p>
-            <p className="phase-progress">
-              Etape {Math.min(currentIndex + 1, timeline.length)} / {timeline.length}
-            </p>
-          </>
-        ) : (
-          <p className="phase-label">Bravo, tout est termine.</p>
-        )}
+        <section className="timer-panel">
+          <p className="kicker">Seance {selectedSessionName}</p>
+          <h1>{isFinished ? 'Seance terminee' : formatSeconds(remaining)}</h1>
+          {currentPhase && !isFinished ? (
+            <>
+              <p className="phase-label">{currentPhase.label}</p>
+              <p className="phase-meta">Exercice : {displayedExercise}</p>
+              <p className="phase-progress">
+                Etape {Math.min(currentIndex + 1, timeline.length)} / {timeline.length}
+              </p>
+            </>
+          ) : (
+            <p className="phase-label">Bravo, tout est termine.</p>
+          )}
 
-        <div className="actions">
-          <button className="btn btn-primary" onClick={toggleRun}>
-            {isFinished ? 'Relancer' : isRunning ? 'Pause' : 'Lancer'}
-          </button>
-          <button className="btn btn-skip" onClick={skipCurrentPhase}>
-            Skip
-          </button>
-          <button className="btn btn-ghost" onClick={resetSession}>
-            Reinitialiser
-          </button>
+          <div className="actions">
+            <button className="btn btn-primary" onClick={toggleRun}>
+              {isFinished ? 'Relancer' : isRunning ? 'Pause' : 'Lancer'}
+            </button>
+            <button className="btn btn-skip" onClick={skipCurrentPhase}>
+              Skip
+            </button>
+            <button className="btn btn-ghost" onClick={resetSession}>
+              Reinitialiser
+            </button>
+          </div>
+        </section>
+
+        <div className="stats">
+          <p className="total-time">
+            Temps restant global : {formatTimerValue(totalRemaining)}
+          </p>
+          <p className="total-time">Depuis le debut : {formatElapsed(elapsedSinceStart)}</p>
         </div>
-      </section>
+      </main>
 
-      <div className="stats">
-        <p className="total-time">Temps restant global : {formatTimerValue(totalRemaining)}</p>
-        <p className="total-time">Depuis le debut : {formatElapsed(elapsedSinceStart)}</p>
-      </div>
-    </main>
+      {isConfirmOpen ? (
+        <div className="confirm-overlay" role="dialog" aria-modal="true">
+          <div className="confirm-modal">
+            <h2>{modalContent.title}</h2>
+            <p>{modalContent.message}</p>
+            <div className="confirm-actions">
+              <button className="btn btn-ghost" onClick={closeConfirmModal}>
+                Annuler
+              </button>
+              <button className="btn btn-primary" onClick={executePendingAction}>
+                {modalContent.confirmLabel}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
   )
 }
 
