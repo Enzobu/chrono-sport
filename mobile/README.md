@@ -25,6 +25,11 @@ Copie `.env.example` vers `.env` et adapte l'URL API:
 
 - `EXPO_PUBLIC_API_URL=http://localhost:38746`
 
+Si la variable est absente, l'app utilise:
+
+- Android emulator: `http://10.0.2.2:38746`
+- iOS simulator: `http://localhost:38746`
+
 Sur vrai telephone, `localhost` ne marche pas: utilise l'IP de ta machine (ex: `http://192.168.1.20:38746`).
 
 ## Build APK / AAB (EAS)

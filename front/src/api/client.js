@@ -1,4 +1,7 @@
-export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001'
+const normalizeApiUrl = (url) => url?.trim().replace(/\/+$/, '')
+
+export const API_URL =
+  normalizeApiUrl(import.meta.env.VITE_API_URL) ?? 'http://localhost:3001'
 
 export async function safeJson(response) {
   try {

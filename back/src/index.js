@@ -9,9 +9,36 @@ import { toSessionPayload } from './serializers.js'
 
 const app = express()
 
-const allowedOrigin = process.env.CORS_ORIGIN || '*'
+const normalizeOrigin = (origin) => origin?.trim().replace(/\/+$/, '')
 
-app.use(cors({ origin: allowedOrigin }))
+const allowedOrigins = (process.env.CORS_ORIGIN || '')
+  .split(',')
+  .map(normalizeOrigin)
+  .filter(Boolean)
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) {
+      callback(null, true)
+      return
+    }
+
+    if (!allowedOrigins.length) {
+      callback(null, true)
+      return
+    }
+
+    const normalizedOrigin = normalizeOrigin(origin)
+    if (allowedOrigins.includes(normalizedOrigin)) {
+      callback(null, true)
+      return
+    }
+
+    callback(new Error('Not allowed by CORS'))
+  },
+}
+
+app.use(cors(corsOptions))
 app.use(express.json())
 
 const authSchema = z.object({
