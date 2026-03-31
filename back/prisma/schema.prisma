@@ -1,0 +1,54 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int              @id @default(autoincrement())
+  email        String           @unique
+  passwordHash String
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  sessions     WorkoutSession[]
+}
+
+model WorkoutSession {
+  id         Int        @id @default(autoincrement())
+  name       String
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  userId     Int
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exercises  Exercise[]
+
+  @@index([userId])
+}
+
+model Exercise {
+  id         Int           @id @default(autoincrement())
+  name       String
+  orderIndex Int
+  sessionId  Int
+  session    WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sets       ExerciseSet[]
+
+  @@index([sessionId])
+  @@index([sessionId, orderIndex])
+}
+
+model ExerciseSet {
+  id         Int      @id @default(autoincrement())
+  type       String
+  time       Int
+  wait       Int
+  orderIndex Int
+  exerciseId Int
+  exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@index([exerciseId])
+  @@index([exerciseId, orderIndex])
+}

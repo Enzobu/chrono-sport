@@ -1,8 +1,61 @@
+name: minuteur-sport
+
 services:
-  minuteur-sport:
+  front:
     build:
-      context: .
+      context: ./front
       dockerfile: Dockerfile
     ports:
-      - "38747:80"
+      - "${FRONT_PORT}:80"
     restart: unless-stopped
+    depends_on:
+      back:
+        condition: service_started
+
+  back:
+    build:
+      context: ./back
+      dockerfile: Dockerfile
+    env_file:
+      - ./back/.env
+    ports:
+      - "${BACK_PORT}:3000"
+    restart: unless-stopped
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+  mariadb:
+    image: mariadb:11.8.5-ubi9
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+      MARIADB_DATABASE: ${MARIADB_DATABASE}
+      MARIADB_USER: ${MARIADB_USER}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD}
+    expose:
+      - "3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  phpmyadmin:
+    image: phpmyadmin:5.2.3
+    container_name: minuteur-sport-phpmyadmin
+    ports:
+      - "${PHPMYADMIN_PORT}:80"
+    environment:
+      - PMA_ARBITRARY=1
+      - PMA_HOST=mariadb
+      - PMA_USER=${MARIADB_USER}
+      - PMA_PASSWORD=${MARIADB_PASSWORD}
+    depends_on:
+      - mariadb
+    restart: unless-stopped
+
+volumes:
+  mariadb_data:
