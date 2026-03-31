@@ -6,6 +6,14 @@ export function formatHoursMinutes(seconds) {
   return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`
 }
 
+export function formatHoursMinutesSeconds(seconds) {
+  const safeSeconds = Math.max(0, seconds)
+  const hours = Math.floor(safeSeconds / 3600)
+  const mins = Math.floor((safeSeconds % 3600) / 60)
+  const secs = safeSeconds % 60
+  return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+}
+
 export function formatMinutesSeconds(seconds) {
   const safeSeconds = Math.max(0, seconds)
   const mins = Math.floor(safeSeconds / 60)

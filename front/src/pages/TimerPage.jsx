@@ -13,8 +13,6 @@ export function TimerPage({
   remainingLabel,
   displayedExercise,
   displayedPhase,
-  currentIndex,
-  timelineLength,
   progressPct,
   isRunning,
   totalRemainingLabel,
@@ -138,13 +136,6 @@ export function TimerPage({
               <p className="text-zinc-500">Exercices</p>
               <p className="text-2xl font-semibold text-white">
                 {completedExercisesCount}/{exerciseCount}
-              </p>
-            </div>
-            <Separator className="bg-zinc-800" />
-            <div>
-              <p className="text-zinc-500">Etapes</p>
-              <p className="text-2xl font-semibold text-white">
-                {Math.min(currentIndex + 1, timelineLength)}/{timelineLength}
               </p>
             </div>
           </CardContent>

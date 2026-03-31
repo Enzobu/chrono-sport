@@ -6,9 +6,6 @@ export function SessionDetailsAccordion({ sessionOutline }) {
     <Card className="border-white/10 bg-black/60 shadow-[0_0_0_1px_rgba(255,255,255,0.03)_inset] backdrop-blur">
       <CardHeader>
         <CardTitle className="text-white">Details de la seance</CardTitle>
-        <CardDescription className="text-zinc-400">
-          Accordions imbriques des exercices et des series, avec etat fait / a faire.
-        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">
         {sessionOutline.map((exercise, exerciseIndex) => (

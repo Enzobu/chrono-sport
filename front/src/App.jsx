@@ -9,7 +9,11 @@ import {
 import { ConfirmDialog } from './components/ConfirmDialog'
 import { ToastBanner } from './components/ToastBanner'
 import { createDefaultExercise, createDefaultSet, mapApiSessionsToClient } from './lib/sessions'
-import { createTimeline, formatHoursMinutes, formatMinutesSeconds } from './lib/timer'
+import {
+  createTimeline,
+  formatHoursMinutesSeconds,
+  formatMinutesSeconds,
+} from './lib/timer'
 import { AuthPage } from './pages/AuthPage'
 import { CreateSessionPage } from './pages/CreateSessionPage'
 import { HomePage } from './pages/HomePage'
@@ -392,23 +396,55 @@ function App() {
     return Math.max(0, remaining) + afterCurrent
   }, [timeline, isFinished, currentIndex, remaining])
 
-  const progressPct = useMemo(() => {
-    if (!timeline.length) {
-      return 0
-    }
-    if (isFinished) {
-      return 100
-    }
-    if (!hasStarted) {
-      return 0
-    }
-    return ((currentIndex + 1) / timeline.length) * 100
-  }, [timeline, isFinished, hasStarted, currentIndex])
-
   const effectiveProgressIndex = useMemo(
     () => currentIndex + (remaining <= 0 ? 1 : 0),
     [currentIndex, remaining],
   )
+
+  const totalWorkDuration = useMemo(
+    () => timeline.reduce((sum, step) => sum + (step.kind === 'work' ? step.duration : 0), 0),
+    [timeline],
+  )
+
+  const elapsedWorkDuration = useMemo(() => {
+    if (!timeline.length || !hasStarted) {
+      return 0
+    }
+
+    if (isFinished) {
+      return totalWorkDuration
+    }
+
+    const completedWorkDuration = timeline.reduce((sum, step, index) => {
+      if (step.kind === 'work' && index < effectiveProgressIndex) {
+        return sum + step.duration
+      }
+      return sum
+    }, 0)
+
+    if (currentPhase?.kind !== 'work' || remaining <= 0) {
+      return completedWorkDuration
+    }
+
+    const currentWorkProgress = Math.max(0, currentPhase.duration - remaining)
+    return completedWorkDuration + currentWorkProgress
+  }, [
+    timeline,
+    hasStarted,
+    isFinished,
+    totalWorkDuration,
+    effectiveProgressIndex,
+    currentPhase,
+    remaining,
+  ])
+
+  const progressPct = useMemo(() => {
+    if (!totalWorkDuration) {
+      return 0
+    }
+
+    return Math.min(100, (elapsedWorkDuration / totalWorkDuration) * 100)
+  }, [elapsedWorkDuration, totalWorkDuration])
 
   const completedWorkKeys = useMemo(() => {
     const done = new Set()
@@ -515,6 +551,14 @@ function App() {
       }
     })
   }, [selectedSession, completedWorkKeys, currentWorkKey, isFinished])
+
+  const isSessionOngoing = hasStarted && !isFinished
+  const totalRemainingLabel = isSessionOngoing
+    ? formatHoursMinutesSeconds(totalRemaining)
+    : formatHoursMinutes(totalRemaining)
+  const elapsedLabel = isSessionOngoing
+    ? formatHoursMinutesSeconds(elapsedSinceStart)
+    : formatHoursMinutes(elapsedSinceStart)
 
   const isGuardActive = Boolean(selectedSessionName && hasStarted && !isFinished)
   const shouldConfirmDestructive = hasStarted && !isFinished
@@ -852,12 +896,10 @@ function App() {
         remainingLabel={formatMinutesSeconds(remaining)}
         displayedExercise={displayedExercise}
         displayedPhase={displayedPhase}
-        currentIndex={currentIndex}
-        timelineLength={timeline.length}
         progressPct={progressPct}
         isRunning={isRunning}
-        totalRemainingLabel={formatHoursMinutes(totalRemaining)}
-        elapsedLabel={formatHoursMinutes(elapsedSinceStart)}
+        totalRemainingLabel={totalRemainingLabel}
+        elapsedLabel={elapsedLabel}
         completedExercisesCount={completedExercisesCount}
         exerciseCount={exerciseNames.length}
         sessionOutline={sessionOutline}
