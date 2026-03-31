@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import sessionsData from './data/sessions.json'
 import './App.css'
 
@@ -6,6 +6,31 @@ function formatSeconds(seconds) {
   const safeSeconds = Math.max(0, seconds)
   const mins = Math.floor(safeSeconds / 60)
   const secs = safeSeconds % 60
+  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+}
+
+function formatTimerValue(seconds) {
+  const safeSeconds = Math.max(0, seconds)
+
+  if (safeSeconds >= 3600) {
+    const hours = Math.floor(safeSeconds / 3600)
+    const mins = Math.floor((safeSeconds % 3600) / 60)
+    return `${String(hours).padStart(2, '0')}h${String(mins).padStart(2, '0')}min`
+  }
+
+  return formatSeconds(safeSeconds)
+}
+
+function formatElapsed(seconds) {
+  const safeSeconds = Math.max(0, seconds)
+  const hours = Math.floor(safeSeconds / 3600)
+  const mins = Math.floor((safeSeconds % 3600) / 60)
+  const secs = safeSeconds % 60
+
+  if (hours > 0) {
+    return `${String(hours).padStart(2, '0')}h${String(mins).padStart(2, '0')}min`
+  }
+
   return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
 }
 
@@ -51,6 +76,10 @@ function App() {
   const [remaining, setRemaining] = useState(0)
   const [isRunning, setIsRunning] = useState(false)
   const [isFinished, setIsFinished] = useState(false)
+  const [hasStarted, setHasStarted] = useState(false)
+  const [startedAt, setStartedAt] = useState(null)
+  const [nowTimestamp, setNowTimestamp] = useState(Date.now())
+  const audioContextRef = useRef(null)
 
   const selectedSession = selectedSessionName ? sessions[selectedSessionName] : null
   const timeline = useMemo(
@@ -58,11 +87,196 @@ function App() {
     [selectedSession],
   )
   const currentPhase = timeline[currentIndex]
+  const nextPhase = timeline[currentIndex + 1]
 
-  const totalDuration = useMemo(
-    () => timeline.reduce((sum, step) => sum + step.duration, 0),
-    [timeline],
-  )
+  const totalRemaining = useMemo(() => {
+    if (!timeline.length || isFinished) {
+      return 0
+    }
+
+    const afterCurrent = timeline
+      .slice(currentIndex + 1)
+      .reduce((sum, step) => sum + step.duration, 0)
+
+    return Math.max(0, remaining) + afterCurrent
+  }, [timeline, isFinished, currentIndex, remaining])
+
+  const elapsedSinceStart = useMemo(() => {
+    if (!startedAt) {
+      return 0
+    }
+
+    return Math.floor((nowTimestamp - startedAt) / 1000)
+  }, [startedAt, nowTimestamp])
+
+  const displayedExercise = useMemo(() => {
+    if (!currentPhase || isFinished) {
+      return 'Seance terminee'
+    }
+
+    if (currentPhase.kind === 'rest') {
+      if (!nextPhase) {
+        return 'A venir : fin de seance'
+      }
+
+      return `A venir : ${nextPhase.exerciseName} - serie ${nextPhase.setNumber}`
+    }
+
+    return `${currentPhase.exerciseName} - serie ${currentPhase.setNumber}`
+  }, [currentPhase, nextPhase, isFinished])
+
+  const isGuardActive = Boolean(selectedSessionName && hasStarted && !isFinished)
+
+  const playDing = () => {
+    try {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext
+      if (!AudioContextClass) {
+        return
+      }
+
+      if (!audioContextRef.current) {
+        audioContextRef.current = new AudioContextClass()
+      }
+
+      const ctx = audioContextRef.current
+      if (ctx.state === 'suspended') {
+        ctx.resume()
+      }
+
+      const oscillator = ctx.createOscillator()
+      const gain = ctx.createGain()
+
+      oscillator.type = 'sine'
+      oscillator.frequency.setValueAtTime(1020, ctx.currentTime)
+      oscillator.frequency.exponentialRampToValueAtTime(780, ctx.currentTime + 0.18)
+
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime)
+      gain.gain.exponentialRampToValueAtTime(0.16, ctx.currentTime + 0.02)
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.22)
+
+      oscillator.connect(gain)
+      gain.connect(ctx.destination)
+      oscillator.start()
+      oscillator.stop(ctx.currentTime + 0.24)
+    } catch {
+      // no-op
+    }
+  }
+
+  const markStartedNow = () => {
+    if (hasStarted) {
+      return
+    }
+
+    const start = Date.now()
+    setHasStarted(true)
+    setStartedAt(start)
+    setNowTimestamp(start)
+  }
+
+  const advancePhase = () => {
+    if (!timeline.length || isFinished) {
+      return
+    }
+
+    const nextIndex = currentIndex + 1
+    const phaseToPlay = timeline[currentIndex]
+    const targetNext = timeline[nextIndex]
+
+    if (!targetNext) {
+      setIsRunning(false)
+      setIsFinished(true)
+      setRemaining(0)
+      return
+    }
+
+    if (phaseToPlay?.kind === 'rest' && targetNext.kind === 'work') {
+      playDing()
+    }
+
+    setCurrentIndex(nextIndex)
+    setRemaining(targetNext.duration)
+  }
+
+  const resetAllState = () => {
+    setSelectedSessionName(null)
+    setCurrentIndex(0)
+    setRemaining(0)
+    setIsRunning(false)
+    setIsFinished(false)
+    setHasStarted(false)
+    setStartedAt(null)
+    setNowTimestamp(Date.now())
+  }
+
+  const resetCurrentSessionState = () => {
+    if (!timeline.length) {
+      return
+    }
+
+    setCurrentIndex(0)
+    setRemaining(timeline[0].duration)
+    setIsRunning(false)
+    setIsFinished(false)
+    setHasStarted(false)
+    setStartedAt(null)
+    setNowTimestamp(Date.now())
+  }
+
+  const confirmAction = (message) => {
+    const shouldConfirm = hasStarted && !isFinished
+
+    if (!shouldConfirm) {
+      return true
+    }
+
+    return window.confirm(message)
+  }
+
+  useEffect(() => {
+    if (!hasStarted || !startedAt || isFinished) {
+      return undefined
+    }
+
+    const intervalId = window.setInterval(() => {
+      setNowTimestamp(Date.now())
+    }, 1000)
+
+    return () => window.clearInterval(intervalId)
+  }, [hasStarted, startedAt, isFinished])
+
+  useEffect(() => {
+    if (!isGuardActive) {
+      return undefined
+    }
+
+    const beforeUnload = (event) => {
+      event.preventDefault()
+      event.returnValue = ''
+    }
+
+    const onPopState = () => {
+      const leave = window.confirm(
+        'Une seance est en cours. Veux-tu vraiment quitter cette seance ?'
+      )
+
+      if (leave) {
+        resetAllState()
+        return
+      }
+
+      window.history.pushState({ timerGuard: true }, '', window.location.href)
+    }
+
+    window.history.pushState({ timerGuard: true }, '', window.location.href)
+    window.addEventListener('beforeunload', beforeUnload)
+    window.addEventListener('popstate', onPopState)
+
+    return () => {
+      window.removeEventListener('beforeunload', beforeUnload)
+      window.removeEventListener('popstate', onPopState)
+    }
+  }, [isGuardActive])
 
   useEffect(() => {
     if (!isRunning || isFinished || !timeline.length) {
@@ -85,19 +299,8 @@ function App() {
       return
     }
 
-    setCurrentIndex((prevIndex) => {
-      const nextIndex = prevIndex + 1
-
-      if (nextIndex >= timeline.length) {
-        setIsRunning(false)
-        setIsFinished(true)
-        return prevIndex
-      }
-
-      setRemaining(timeline[nextIndex].duration)
-      return nextIndex
-    })
-  }, [isRunning, isFinished, remaining, timeline])
+    advancePhase()
+  }, [isRunning, isFinished, remaining, timeline, currentIndex])
 
   const openSession = (sessionName) => {
     const nextSession = sessions[sessionName]
@@ -107,14 +310,21 @@ function App() {
     setRemaining(nextTimeline[0]?.duration ?? 0)
     setIsRunning(false)
     setIsFinished(false)
+    setHasStarted(false)
+    setStartedAt(null)
+    setNowTimestamp(Date.now())
   }
 
   const goBack = () => {
-    setSelectedSessionName(null)
-    setCurrentIndex(0)
-    setRemaining(0)
-    setIsRunning(false)
-    setIsFinished(false)
+    const isConfirmed = confirmAction(
+      'La seance est en cours. Confirmer le retour a la liste des seances ?'
+    )
+
+    if (!isConfirmed) {
+      return
+    }
+
+    resetAllState()
   }
 
   const toggleRun = () => {
@@ -126,6 +336,7 @@ function App() {
       setCurrentIndex(0)
       setRemaining(timeline[0].duration)
       setIsFinished(false)
+      markStartedNow()
       setIsRunning(true)
       return
     }
@@ -134,18 +345,32 @@ function App() {
       setRemaining(timeline[currentIndex].duration)
     }
 
+    if (!isRunning) {
+      markStartedNow()
+    }
+
     setIsRunning((prev) => !prev)
   }
 
   const resetSession = () => {
-    if (!timeline.length) {
+    const isConfirmed = confirmAction(
+      'Veux-tu vraiment reinitialiser cette seance en cours ?'
+    )
+
+    if (!isConfirmed) {
       return
     }
 
-    setCurrentIndex(0)
-    setRemaining(timeline[0].duration)
-    setIsRunning(false)
-    setIsFinished(false)
+    resetCurrentSessionState()
+  }
+
+  const skipCurrentPhase = () => {
+    if (!timeline.length || isFinished) {
+      return
+    }
+
+    markStartedNow()
+    advancePhase()
   }
 
   if (!selectedSessionName) {
@@ -188,9 +413,7 @@ function App() {
         {currentPhase && !isFinished ? (
           <>
             <p className="phase-label">{currentPhase.label}</p>
-            <p className="phase-meta">
-              {currentPhase.exerciseName} - serie {currentPhase.setNumber}
-            </p>
+            <p className="phase-meta">Exercice : {displayedExercise}</p>
             <p className="phase-progress">
               Etape {Math.min(currentIndex + 1, timeline.length)} / {timeline.length}
             </p>
@@ -203,13 +426,19 @@ function App() {
           <button className="btn btn-primary" onClick={toggleRun}>
             {isFinished ? 'Relancer' : isRunning ? 'Pause' : 'Lancer'}
           </button>
+          <button className="btn btn-skip" onClick={skipCurrentPhase}>
+            Skip
+          </button>
           <button className="btn btn-ghost" onClick={resetSession}>
             Reinitialiser
           </button>
         </div>
       </section>
 
-      <p className="total-time">Duree totale: {formatSeconds(totalDuration)}</p>
+      <div className="stats">
+        <p className="total-time">Temps restant global : {formatTimerValue(totalRemaining)}</p>
+        <p className="total-time">Depuis le debut : {formatElapsed(elapsedSinceStart)}</p>
+      </div>
     </main>
   )
 }

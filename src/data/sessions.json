@@ -2,12 +2,12 @@
   "pull": {
     "Seated Row (Machine)": [
       {
-        "time": 60,
-        "wait": 120
+        "time": 6,
+        "wait": 12
       },
       {
-        "time": 60,
-        "wait": 180
+        "time": 6,
+        "wait": 18
       },
       {
         "time": 60,
