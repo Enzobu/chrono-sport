@@ -62,6 +62,7 @@ function createTimeline(session) {
     return sets.flatMap((set, setIndex) => {
       const isLastSet = setIndex === sets.length - 1
       const isLastBlock = isLastExercise && isLastSet
+      const setType = set.type === 'echauffement' ? 'echauffement' : 'entrainement'
       const work = {
         kind: 'work',
         label: 'Travail',
@@ -69,6 +70,7 @@ function createTimeline(session) {
         exerciseName,
         setNumber: setIndex + 1,
         setTotal: sets.length,
+        setType,
       }
 
       if (isLastBlock || !(Number(set.wait) > 0)) {
@@ -84,6 +86,7 @@ function createTimeline(session) {
           exerciseName,
           setNumber: setIndex + 1,
           setTotal: sets.length,
+          setType,
         },
       ]
     })
@@ -105,6 +108,10 @@ function App() {
   const audioContextRef = useRef(null)
 
   const selectedSession = selectedSessionName ? sessions[selectedSessionName] : null
+  const exerciseNames = useMemo(
+    () => (selectedSession ? Object.keys(selectedSession) : []),
+    [selectedSession],
+  )
   const timeline = useMemo(
     () => (selectedSession ? createTimeline(selectedSession) : []),
     [selectedSession],
@@ -140,6 +147,31 @@ function App() {
     return ((currentIndex + 1) / timeline.length) * 100
   }, [timeline, isFinished, hasStarted, currentIndex])
 
+  const completedExercisesCount = useMemo(() => {
+    if (!exerciseNames.length) {
+      return 0
+    }
+
+    if (isFinished) {
+      return exerciseNames.length
+    }
+
+    const lastWorkIndexByExercise = timeline.reduce((acc, step, index) => {
+      if (step.kind === 'work') {
+        acc[step.exerciseName] = index
+      }
+      return acc
+    }, {})
+
+    const effectiveProgressIndex = currentIndex + (remaining <= 0 ? 1 : 0)
+
+    return exerciseNames.filter(
+      (exerciseName) =>
+        Number.isInteger(lastWorkIndexByExercise[exerciseName]) &&
+        lastWorkIndexByExercise[exerciseName] < effectiveProgressIndex,
+    ).length
+  }, [exerciseNames, timeline, isFinished, currentIndex, remaining])
+
   const elapsedSinceStart = useMemo(() => {
     if (!startedAt) {
       return 0
@@ -162,6 +194,18 @@ function App() {
     }
 
     return `${currentPhase.exerciseName} - ${currentPhase.setNumber}/${currentPhase.setTotal}`
+  }, [currentPhase, nextPhase, isFinished])
+
+  const displayedPhase = useMemo(() => {
+    if (isFinished) {
+      return null
+    }
+
+    if (currentPhase?.kind === 'rest') {
+      return nextPhase ?? null
+    }
+
+    return currentPhase ?? null
   }, [currentPhase, nextPhase, isFinished])
 
   const isGuardActive = Boolean(selectedSessionName && hasStarted && !isFinished)
@@ -517,12 +561,23 @@ function App() {
                   Seance {selectedSessionName}
                 </Badge>
               </div>
-              <CardTitle className="text-center font-mono text-6xl font-semibold tracking-tight text-white sm:text-7xl">
+              <CardTitle
+                className={`text-center font-mono text-6xl font-semibold tracking-tight sm:text-7xl ${
+                  !isFinished && currentPhase?.kind === 'work' ? 'text-red-500' : 'text-white'
+                }`}
+              >
                 {isFinished ? 'Seance terminee' : formatSeconds(remaining)}
               </CardTitle>
               <CardDescription className="text-center text-sm text-zinc-300 sm:text-base">
                 Exercice : {displayedExercise}
               </CardDescription>
+              {displayedPhase?.setType === 'echauffement' ? (
+                <div className="flex justify-center">
+                  <Badge variant="outline" className="border-amber-700/60 bg-amber-950/40 text-amber-300">
+                    Echauffement
+                  </Badge>
+                </div>
+              ) : null}
             </CardHeader>
 
             <CardContent className="space-y-6">
@@ -586,6 +641,13 @@ function App() {
                 <p className="text-zinc-500">Depuis le debut</p>
                 <p className="text-2xl font-semibold text-white">
                   {formatElapsed(elapsedSinceStart)}
+                </p>
+              </div>
+              <Separator className="bg-zinc-800" />
+              <div>
+                <p className="text-zinc-500">Exercices</p>
+                <p className="text-2xl font-semibold text-white">
+                  {completedExercisesCount}/{exerciseNames.length}
                 </p>
               </div>
             </CardContent>

@@ -2,80 +2,97 @@
   "pull": {
     "Seated Row (Machine)": [
       {
-        "time": 6,
-        "wait": 12
-      },
-      {
-        "time": 6,
-        "wait": 18
+        "time": 60,
+        "wait": 120,
+        "type": "echauffement"
       },
       {
         "time": 60,
-        "wait": 180
+        "wait": 180,
+        "type": "echauffement"
       },
       {
         "time": 60,
-        "wait": 180
+        "wait": 180,
+        "type": "entrainement"
       },
       {
         "time": 60,
-        "wait": 180
+        "wait": 180,
+        "type": "entrainement"
+      },
+      {
+        "time": 60,
+        "wait": 180,
+        "type": "entrainement"
       }
     ],
     "Face Pull (Cable)": [
       {
         "time": 60,
-        "wait": 180
+        "wait": 180,
+        "type": "entrainement"
       },
       {
         "time": 60,
-        "wait": 180
+        "wait": 180,
+        "type": "entrainement"
       },
       {
         "time": 60,
-        "wait": 180
+        "wait": 180,
+        "type": "entrainement"
       }
     ],
     "Reverse Fly (Machine)": [
       {
         "time": 60,
-        "wait": 180
+        "wait": 180,
+        "type": "entrainement"
       },
       {
         "time": 60,
-        "wait": 180
+        "wait": 180,
+        "type": "entrainement"
       },
       {
         "time": 60,
-        "wait": 180
+        "wait": 180,
+        "type": "entrainement"
       }
     ],
     "Bicep Curl (Barbell)": [
       {
         "time": 60,
-        "wait": 180
+        "wait": 180,
+        "type": "entrainement"
       },
       {
         "time": 60,
-        "wait": 180
+        "wait": 180,
+        "type": "entrainement"
       },
       {
         "time": 60,
-        "wait": 180
+        "wait": 180,
+        "type": "entrainement"
       }
     ],
     "Hammer Curl (Cable)": [
       {
         "time": 60,
-        "wait": 180
+        "wait": 180,
+        "type": "entrainement"
       },
       {
         "time": 60,
-        "wait": 180
+        "wait": 180,
+        "type": "entrainement"
       },
       {
         "time": 60,
-        "wait": 0
+        "wait": 0,
+        "type": "entrainement"
       }
     ]
   },
@@ -83,29 +100,35 @@
     "ex1": [
       {
         "time": 6,
-        "wait": 10
+        "wait": 10,
+        "type": "entrainement"
       },
       {
         "time": 6,
-        "wait": 10
+        "wait": 10,
+        "type": "entrainement"
       },
       {
         "time": 6,
-        "wait": 10
+        "wait": 10,
+        "type": "entrainement"
       }
     ],
     "ex2": [
       {
         "time": 6,
-        "wait": 10
+        "wait": 10,
+        "type": "entrainement"
       },
       {
         "time": 6,
-        "wait": 10
+        "wait": 10,
+        "type": "entrainement"
       },
       {
         "time": 6,
-        "wait": 10
+        "wait": 10,
+        "type": "entrainement"
       }
     ]
   }
