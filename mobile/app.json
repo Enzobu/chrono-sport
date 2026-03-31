@@ -11,6 +11,11 @@
     ],
     "android": {
       "package": "com.chronosport.mobile",
+      "permissions": [
+        "FOREGROUND_SERVICE",
+        "POST_NOTIFICATIONS",
+        "WAKE_LOCK"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#0b0b0c"

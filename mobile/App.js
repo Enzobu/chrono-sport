@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Audio } from 'expo-av'
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { SafeAreaView, StyleSheet } from 'react-native'
+import { AppState, PermissionsAndroid, Platform, SafeAreaView, StyleSheet } from 'react-native'
 import { authRequest } from './src/api/auth'
 import {
   createSession,
@@ -12,6 +12,12 @@ import {
 } from './src/api/sessions'
 import { ConfirmModal } from './src/components/ConfirmModal'
 import { ToastBanner } from './src/components/ToastBanner'
+import {
+  ensureBackgroundChronoRunning,
+  refreshBackgroundChronoNotification,
+  setTimerSnapshotProvider,
+  stopBackgroundChrono,
+} from './src/lib/backgroundTimerService'
 import { createDefaultExercise, createDefaultSet, mapApiSessionsToClient } from './src/lib/sessions'
 import {
   createTimeline,
@@ -68,6 +74,16 @@ export default function App() {
         setAuthToken(token)
         setScreen('home')
       }
+    })
+  }, [])
+
+  useEffect(() => {
+    if (Platform.OS !== 'android' || Platform.Version < 33) {
+      return
+    }
+
+    PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS).catch(() => {
+      // no-op
     })
   }, [])
 
@@ -298,6 +314,62 @@ export default function App() {
       }
     })
   }, [selectedSession, completedWorkKeys, currentWorkKey, isFinished])
+
+  useEffect(() => {
+    setTimerSnapshotProvider(() => ({
+      sessionName: selectedSessionName ?? 'Seance',
+      phase: isFinished ? 'Termine' : currentPhase?.label || 'Seance',
+      remaining: isFinished ? '00:00' : formatMinutesSeconds(remaining),
+    }))
+  }, [selectedSessionName, isFinished, currentPhase, remaining])
+
+  useEffect(() => {
+    const syncService = async () => {
+      try {
+        if (isRunning && !isFinished && timeline.length) {
+          await ensureBackgroundChronoRunning()
+          await refreshBackgroundChronoNotification()
+          return
+        }
+        await stopBackgroundChrono()
+      } catch {
+        // no-op
+      }
+    }
+
+    syncService()
+  }, [isRunning, isFinished, timeline.length])
+
+  useEffect(() => {
+    refreshBackgroundChronoNotification().catch(() => {
+      // no-op
+    })
+  }, [selectedSessionName, currentPhase, remaining, isFinished])
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState !== 'active' && isRunning && !isFinished && timeline.length) {
+        ensureBackgroundChronoRunning().catch(() => {
+          // no-op
+        })
+        return
+      }
+
+      refreshBackgroundChronoNotification().catch(() => {
+        // no-op
+      })
+    })
+
+    return () => subscription.remove()
+  }, [isRunning, isFinished, timeline.length])
+
+  useEffect(() => {
+    return () => {
+      stopBackgroundChrono().catch(() => {
+        // no-op
+      })
+    }
+  }, [])
 
   const confirmContent = useMemo(() => {
     if (pendingAction === 'delete-session') {

@@ -6,6 +6,7 @@ App React Native calquee sur le front web:
 - Home: listing des seances
 - CRUD seances: creation, edition, suppression (confirmation)
 - Timer: travail/repos, skip, reset, progression, stats, details en accordions
+- Android: timer maintenu en arriere-plan avec notification persistante pendant une seance en cours
 
 ## Prerequis
 
