@@ -3,11 +3,14 @@ import { formatMinutesSeconds } from '../lib/timer'
 import { colors } from '../styles/theme'
 
 function Accordion({ title, status, children, open }) {
+  const statusStyle =
+    status === 'fait' ? styles.doneBadge : status === 'en cours' ? styles.currentBadge : styles.todoBadge
+
   return (
     <View style={styles.accordion}>
       <View style={styles.accordionHeader}>
         <Text style={styles.accordionTitle}>{title}</Text>
-        <View style={[styles.statusBadge, status === 'fait' ? styles.doneBadge : styles.todoBadge]}>
+        <View style={[styles.statusBadge, statusStyle]}>
           <Text style={styles.statusTxt}>{status}</Text>
         </View>
       </View>
@@ -83,25 +86,26 @@ export function TimerScreen({
 
       <View style={styles.detailCard}>
         <Text style={styles.detailTitle}>Details de la seance</Text>
-        {sessionOutline.map((exercise) => (
+        {sessionOutline.map((exercise, exerciseIndex) => (
           <Accordion
             key={exercise.exerciseName}
             title={exercise.exerciseName}
-            status={exercise.done ? 'fait' : 'a faire'}
-            open={exercise.hasCurrent || !exercise.done}
+            status={exercise.done ? 'fait' : exercise.hasCurrent ? 'en cours' : 'a faire'}
+            open={exercise.hasCurrent || (!exercise.done && exerciseIndex === 0)}
           >
             {exercise.sets.map((set) => (
-              <View key={set.key} style={styles.setLine}>
-                <Text style={styles.setTitle}>
-                  Serie {set.order}/{set.total}
-                </Text>
-                <Text style={styles.setMeta}>
-                  {set.done ? 'fait' : set.current ? 'en cours' : 'a faire'} - {set.type}
-                </Text>
-                <Text style={styles.setMeta}>
-                  Travail {formatMinutesSeconds(set.time)} - Repos {formatMinutesSeconds(set.wait)}
-                </Text>
-              </View>
+              <Accordion
+                key={set.key}
+                title={`Serie ${set.order}/${set.total}`}
+                status={set.done ? 'fait' : set.current ? 'en cours' : 'a faire'}
+                open={set.current}
+              >
+                <View style={styles.setLine}>
+                  <Text style={styles.setMeta}>Type: {set.type}</Text>
+                  <Text style={styles.setMeta}>Travail: {formatMinutesSeconds(set.time)}</Text>
+                  <Text style={styles.setMeta}>Repos: {formatMinutesSeconds(set.wait)}</Text>
+                </View>
+              </Accordion>
             ))}
           </Accordion>
         ))}
@@ -273,6 +277,10 @@ const styles = StyleSheet.create({
     borderColor: '#14532d',
     backgroundColor: '#052e16',
   },
+  currentBadge: {
+    borderColor: '#1e3a8a',
+    backgroundColor: '#172554',
+  },
   todoBadge: {
     borderColor: colors.border,
     backgroundColor: colors.panelAlt,
@@ -289,15 +297,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   setLine: {
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 8,
+    paddingTop: 2,
     gap: 2,
-  },
-  setTitle: {
-    color: colors.text,
-    fontWeight: '600',
   },
   setMeta: {
     color: colors.muted,
