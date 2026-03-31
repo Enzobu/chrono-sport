@@ -97,37 +97,208 @@
     ]
   },
   "push": {
-    "ex1": [
+    "Bench Press (Dumbbell)": [
       {
-        "time": 6,
-        "wait": 10,
+        "time": 60,
+        "wait": 120,
+        "type": "echauffement"
+      },
+      {
+        "time": 60,
+        "wait": 120,
+        "type": "echauffement"
+      },
+      {
+        "time": 60,
+        "wait": 180,
+        "type": "echauffement"
+      },
+      {
+        "time": 60,
+        "wait": 180,
         "type": "entrainement"
       },
       {
-        "time": 6,
-        "wait": 10,
+        "time": 60,
+        "wait": 180,
         "type": "entrainement"
       },
       {
-        "time": 6,
-        "wait": 10,
+        "time": 60,
+        "wait": 180,
         "type": "entrainement"
       }
     ],
-    "ex2": [
+    "Incline Bench Press (Dumbbell)": [
       {
-        "time": 6,
-        "wait": 10,
+        "time": 60,
+        "wait": 180,
         "type": "entrainement"
       },
       {
-        "time": 6,
-        "wait": 10,
+        "time": 60,
+        "wait": 180,
         "type": "entrainement"
       },
       {
-        "time": 6,
-        "wait": 10,
+        "time": 60,
+        "wait": 180,
+        "type": "entrainement"
+      }
+    ],
+    "Shoulder Press (Machine)": [
+      {
+        "time": 60,
+        "wait": 180,
+        "type": "entrainement"
+      },
+      {
+        "time": 60,
+        "wait": 180,
+        "type": "entrainement"
+      },
+      {
+        "time": 60,
+        "wait": 180,
+        "type": "entrainement"
+      }
+    ],
+    "Lateral Raise (Dumbbell)": [
+      {
+        "time": 60,
+        "wait": 180,
+        "type": "entrainement"
+      },
+      {
+        "time": 60,
+        "wait": 180,
+        "type": "entrainement"
+      },
+      {
+        "time": 60,
+        "wait": 180,
+        "type": "entrainement"
+      }
+    ],
+    "Triceps Extension": [
+      {
+        "time": 60,
+        "wait": 180,
+        "type": "entrainement"
+      },
+      {
+        "time": 60,
+        "wait": 180,
+        "type": "entrainement"
+      },
+      {
+        "time": 60,
+        "wait": 0,
+        "type": "entrainement"
+      }
+    ]
+  },
+  "legs": {
+    "Leg Extension (Machine)": [
+      {
+        "time": 60,
+        "wait": 120,
+        "type": "echauffement"
+      },
+      {
+        "time": 60,
+        "wait": 180,
+        "type": "echauffement"
+      },
+      {
+        "time": 60,
+        "wait": 180,
+        "type": "entrainement"
+      },
+      {
+        "time": 60,
+        "wait": 180,
+        "type": "entrainement"
+      },
+      {
+        "time": 60,
+        "wait": 180,
+        "type": "entrainement"
+      }
+    ],
+    "Seated Leg Curl (Machine)": [
+      {
+        "time": 60,
+        "wait": 120,
+        "type": "echauffement"
+      },
+      {
+        "time": 60,
+        "wait": 180,
+        "type": "echauffement"
+      },
+      {
+        "time": 60,
+        "wait": 180,
+        "type": "entrainement"
+      },
+      {
+        "time": 60,
+        "wait": 180,
+        "type": "entrainement"
+      },
+      {
+        "time": 60,
+        "wait": 180,
+        "type": "entrainement"
+      }
+    ],
+    "Hip Adductor (Machine)": [
+      {
+        "time": 60,
+        "wait": 0,
+        "type": "echauffement"
+      },
+      {
+        "time": 60,
+        "wait": 120,
+        "type": "echauffement"
+      },
+      {
+        "time": 60,
+        "wait": 180,
+        "type": "echauffement"
+      },
+      {
+        "time": 60,
+        "wait": 180,
+        "type": "entrainement"
+      },
+      {
+        "time": 60,
+        "wait": 180,
+        "type": "entrainement"
+      },
+      {
+        "time": 60,
+        "wait": 180,
+        "type": "entrainement"
+      }
+    ],
+    "Calf Press on Leg Press": [
+      {
+        "time": 60,
+        "wait": 120,
+        "type": "entrainement"
+      },
+      {
+        "time": 60,
+        "wait": 120,
+        "type": "entrainement"
+      },
+      {
+        "time": 60,
+        "wait": 0,
         "type": "entrainement"
       }
     ]
