@@ -11,6 +11,8 @@ export function TimerPage({
   isFinished,
   currentPhase,
   remainingLabel,
+  weightOverlayLabel,
+  showWeightOverlay,
   displayedExercise,
   displayedPhase,
   progressPct,
@@ -24,6 +26,7 @@ export function TimerPage({
   onToggleRun,
   onSkip,
   onReset,
+  onTimerClick,
 }) {
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-6 sm:px-6 lg:py-10">
@@ -53,13 +56,34 @@ export function TimerPage({
                 Seance {selectedSessionName}
               </Badge>
             </div>
-            <CardTitle
-              className={`text-center font-mono text-6xl font-semibold tracking-tight sm:text-7xl ${
+            <button
+              type="button"
+              onClick={onTimerClick}
+              className={`w-full bg-transparent text-center font-mono text-6xl font-semibold tracking-tight outline-none transition duration-150 active:scale-[0.98] sm:text-7xl ${
                 !isFinished && currentPhase?.kind === 'work' ? 'text-red-500' : 'text-white'
               }`}
             >
-              {isFinished ? 'Seance terminee' : remainingLabel}
-            </CardTitle>
+              {isFinished ? (
+                'Seance terminee'
+              ) : (
+                <span className="relative block">
+                  <span
+                    className={`block transition-opacity duration-300 ${
+                      showWeightOverlay ? 'opacity-0' : 'opacity-100'
+                    }`}
+                  >
+                    {remainingLabel}
+                  </span>
+                  <span
+                    className={`pointer-events-none absolute inset-0 block transition-opacity duration-300 ${
+                      showWeightOverlay ? 'opacity-100' : 'opacity-0'
+                    }`}
+                  >
+                    {weightOverlayLabel ?? ''}
+                  </span>
+                </span>
+              )}
+            </button>
             <CardDescription className="text-center text-sm text-zinc-300 sm:text-base">
               Exercice : {displayedExercise}
             </CardDescription>

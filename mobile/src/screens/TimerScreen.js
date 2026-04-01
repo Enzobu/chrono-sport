@@ -1,4 +1,5 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { useEffect, useRef } from 'react'
+import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { formatMinutesSeconds } from '../lib/timer'
 import { colors } from '../styles/theme'
 
@@ -27,7 +28,9 @@ function Accordion({ title, status, children, open }) {
 export function TimerScreen({
   sessionName,
   phaseLabel,
-  timerLabel,
+  chronoLabel,
+  weightOverlayLabel,
+  showWeightOverlay,
   exerciseLabel,
   progressPct,
   totalRemainingLabel,
@@ -41,7 +44,23 @@ export function TimerScreen({
   onToggleRun,
   onSkip,
   onReset,
+  onTimerPress,
 }) {
+  const overlayOpacity = useRef(new Animated.Value(showWeightOverlay ? 1 : 0)).current
+
+  useEffect(() => {
+    Animated.timing(overlayOpacity, {
+      toValue: showWeightOverlay ? 1 : 0,
+      duration: 250,
+      useNativeDriver: true,
+    }).start()
+  }, [showWeightOverlay, overlayOpacity])
+
+  const chronoOpacity = overlayOpacity.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 0],
+  })
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Pressable style={styles.secondaryBtn} onPress={onBack}>
@@ -54,9 +73,32 @@ export function TimerScreen({
           <Text style={styles.sessionPill}>Seance {sessionName}</Text>
         </View>
 
-        <Text style={[styles.timerText, phaseLabel === 'Travail' && !isFinished ? styles.timerWork : null]}>
-          {timerLabel}
-        </Text>
+        <Pressable
+          onPress={onTimerPress}
+          style={({ pressed }) => [styles.timerPressable, pressed && styles.timerPressablePressed]}
+        >
+          <View style={styles.timerWrap}>
+            <Animated.Text
+              style={[
+                styles.timerText,
+                phaseLabel === 'Travail' && !isFinished ? styles.timerWork : null,
+                { opacity: chronoOpacity },
+              ]}
+            >
+              {chronoLabel}
+            </Animated.Text>
+            <Animated.Text
+              style={[
+                styles.timerText,
+                phaseLabel === 'Travail' && !isFinished ? styles.timerWork : null,
+                styles.timerOverlay,
+                { opacity: overlayOpacity },
+              ]}
+            >
+              {weightOverlayLabel ?? ''}
+            </Animated.Text>
+          </View>
+        </Pressable>
         <Text style={styles.exerciseText}>Exercice : {exerciseLabel}</Text>
         {isWarmup ? <Text style={styles.warmup}>Echauffement</Text> : null}
 
@@ -160,6 +202,22 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 54,
     fontWeight: '700',
+  },
+  timerWrap: {
+    position: 'relative',
+  },
+  timerPressable: {
+    alignSelf: 'stretch',
+  },
+  timerPressablePressed: {
+    transform: [{ scale: 0.985 }],
+    opacity: 0.96,
+  },
+  timerOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
   },
   timerWork: {
     color: '#ef4444',

@@ -66,10 +66,12 @@ export default function App() {
   const [pendingAction, setPendingAction] = useState(null)
   const [sessionPendingDelete, setSessionPendingDelete] = useState(null)
   const [toast, setToast] = useState(null)
+  const [showWeightOverlay, setShowWeightOverlay] = useState(false)
 
   const soundRef = useRef(null)
   const lastTickAtRef = useRef(null)
   const batteryPromptedRef = useRef(false)
+  const weightOverlayTimeoutRef = useRef(null)
 
   const ensureNotificationPermission = async () => {
     if (Platform.OS !== 'android' || Platform.Version < 33) {
@@ -401,6 +403,39 @@ export default function App() {
     return currentPhase ?? null
   }, [currentPhase, nextPhase, isFinished])
 
+  const displayedWeightLabel = useMemo(() => {
+    const weight = Number(displayedPhase?.weight)
+    if (!Number.isFinite(weight)) {
+      return null
+    }
+    return `${weight % 1 === 0 ? weight : weight.toFixed(1)}kg`
+  }, [displayedPhase])
+
+  const showCurrentOrNextWeight = () => {
+    if (isFinished || !displayedWeightLabel || !displayedPhase?.kind) {
+      return
+    }
+
+    if (showWeightOverlay) {
+      setShowWeightOverlay(false)
+      if (weightOverlayTimeoutRef.current) {
+        clearTimeout(weightOverlayTimeoutRef.current)
+        weightOverlayTimeoutRef.current = null
+      }
+      return
+    }
+
+    setShowWeightOverlay(true)
+    if (weightOverlayTimeoutRef.current) {
+      clearTimeout(weightOverlayTimeoutRef.current)
+    }
+
+    weightOverlayTimeoutRef.current = setTimeout(() => {
+      setShowWeightOverlay(false)
+      weightOverlayTimeoutRef.current = null
+    }, 5000)
+  }
+
   const currentWorkKey = useMemo(() => {
     if (!currentPhase || isFinished) {
       return ''
@@ -485,6 +520,12 @@ export default function App() {
   }, [selectedSessionName, currentPhase, remaining, isFinished])
 
   useEffect(() => {
+    if (isFinished || !displayedWeightLabel) {
+      setShowWeightOverlay(false)
+    }
+  }, [isFinished, displayedWeightLabel])
+
+  useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextState) => {
       if (nextState !== 'active' && isRunning && !isFinished && timeline.length) {
         ensureNotificationPermission()
@@ -513,6 +554,10 @@ export default function App() {
       stopBackgroundChrono().catch(() => {
         console.error('Background timer service stop failed')
       })
+
+      if (weightOverlayTimeoutRef.current) {
+        clearTimeout(weightOverlayTimeoutRef.current)
+      }
     }
   }, [])
 
@@ -1031,7 +1076,9 @@ export default function App() {
         <TimerScreen
           sessionName={selectedSessionName}
           phaseLabel={isFinished ? 'Termine' : currentPhase?.label || 'Seance'}
-          timerLabel={isFinished ? 'Seance terminee' : formatMinutesSeconds(Math.max(0, remaining))}
+          chronoLabel={isFinished ? 'Seance terminee' : formatMinutesSeconds(Math.max(0, remaining))}
+          weightOverlayLabel={displayedWeightLabel}
+          showWeightOverlay={showWeightOverlay && Boolean(displayedWeightLabel) && !isFinished}
           exerciseLabel={displayedExercise}
           progressPct={progressPct}
           totalRemainingLabel={formatHoursMinutesSeconds(totalRemaining)}
@@ -1045,6 +1092,7 @@ export default function App() {
           onToggleRun={toggleRun}
           onSkip={skipCurrent}
           onReset={() => openConfirm('reset-session')}
+          onTimerPress={showCurrentOrNextWeight}
         />
       ) : null}
 

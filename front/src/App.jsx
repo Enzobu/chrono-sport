@@ -54,7 +54,9 @@ function App() {
   const [sessionPendingDelete, setSessionPendingDelete] = useState(null)
 
   const [toast, setToast] = useState(null)
+  const [showWeightOverlay, setShowWeightOverlay] = useState(false)
   const audioContextRef = useRef(null)
+  const weightOverlayTimeoutRef = useRef(null)
 
   const showToast = (type, message) => setToast({ type, message, id: Date.now() })
 
@@ -519,6 +521,44 @@ function App() {
     return currentPhase ?? null
   }, [currentPhase, nextPhase, isFinished])
 
+  const displayedWeightLabel = useMemo(() => {
+    const weight = Number(displayedPhase?.weight)
+    if (!Number.isFinite(weight)) {
+      return null
+    }
+    return `${weight % 1 === 0 ? weight : weight.toFixed(1)}kg`
+  }, [displayedPhase])
+
+  const handleTimerLabelClick = () => {
+    if (isFinished || !displayedWeightLabel || !displayedPhase?.kind) {
+      return
+    }
+
+    setShowWeightOverlay(true)
+    if (weightOverlayTimeoutRef.current) {
+      window.clearTimeout(weightOverlayTimeoutRef.current)
+    }
+    weightOverlayTimeoutRef.current = window.setTimeout(() => {
+      setShowWeightOverlay(false)
+      weightOverlayTimeoutRef.current = null
+    }, 5000)
+  }
+
+  useEffect(() => {
+    if (isFinished || !displayedWeightLabel) {
+      setShowWeightOverlay(false)
+    }
+  }, [isFinished, displayedWeightLabel])
+
+  useEffect(() => {
+    return () => {
+      if (!weightOverlayTimeoutRef.current) {
+        return
+      }
+      window.clearTimeout(weightOverlayTimeoutRef.current)
+    }
+  }, [])
+
   const currentWorkKey = useMemo(() => {
     if (!currentPhase || isFinished) {
       return ''
@@ -906,6 +946,8 @@ function App() {
         isFinished={isFinished}
         currentPhase={currentPhase}
         remainingLabel={formatMinutesSeconds(remaining)}
+        weightOverlayLabel={displayedWeightLabel}
+        showWeightOverlay={showWeightOverlay && Boolean(displayedWeightLabel)}
         displayedExercise={displayedExercise}
         displayedPhase={displayedPhase}
         progressPct={progressPct}
@@ -919,6 +961,7 @@ function App() {
         onToggleRun={toggleRun}
         onSkip={skipCurrentPhase}
         onReset={() => requestAction('reset-session')}
+        onTimerClick={handleTimerLabelClick}
       />
 
       <ConfirmDialog
