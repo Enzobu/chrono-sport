@@ -5,7 +5,7 @@ import * as Battery from 'expo-battery'
 import * as IntentLauncher from 'expo-intent-launcher'
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AppState, PermissionsAndroid, Platform, SafeAreaView, StyleSheet } from 'react-native'
+import { AppState, PermissionsAndroid, Platform, SafeAreaView, StyleSheet, Vibration } from 'react-native'
 import { authRequest } from './src/api/auth'
 import {
   createSession,
@@ -92,6 +92,20 @@ export default function App() {
 
   const showToast = (type, message) => setToast({ type, message, id: Date.now() })
 
+  const loadDingSound = async () => {
+    if (soundRef.current) {
+      return soundRef.current
+    }
+
+    const { sound } = await Audio.Sound.createAsync(
+      require('./assets/sounds/ding.wav'),
+      { shouldPlay: false, volume: 1.0 },
+    )
+    await sound.setVolumeAsync(1)
+    soundRef.current = sound
+    return sound
+  }
+
   const openBatterySettings = async (packageName) => {
     if (packageName) {
       try {
@@ -176,23 +190,21 @@ export default function App() {
           allowsRecordingIOS: false,
           playsInSilentModeIOS: true,
           staysActiveInBackground: true,
-          interruptionModeIOS: Audio.INTERRUPTION_MODE_IOS_MIX_WITH_OTHERS,
+          interruptionModeIOS: Audio.InterruptionModeIOS.MixWithOthers,
           shouldDuckAndroid: true,
           playThroughEarpieceAndroid: false,
-          interruptionModeAndroid: Audio.INTERRUPTION_MODE_ANDROID_DUCK_OTHERS,
+          interruptionModeAndroid: Audio.InterruptionModeAndroid.DuckOthers,
         })
 
-        const { sound } = await Audio.Sound.createAsync(
-          require('./assets/sounds/ding.wav'),
-          { shouldPlay: false },
-        )
+        const sound = await loadDingSound()
 
         if (cancelled) {
           await sound.unloadAsync()
+          if (soundRef.current === sound) {
+            soundRef.current = null
+          }
           return
         }
-
-        soundRef.current = sound
       } catch (error) {
         console.error('Ding audio init failed', error)
       }
@@ -632,11 +644,28 @@ export default function App() {
       }
 
       lastTickAtRef.current += elapsedSeconds * 1000
-      setRemaining((prev) => prev - elapsedSeconds)
+
+      setRemaining((prev) => {
+        const nextRemaining = prev - elapsedSeconds
+
+        if (currentPhase?.kind === 'rest') {
+          ;[3, 2, 1].forEach((marker) => {
+            if (prev > marker && nextRemaining <= marker) {
+              Vibration.vibrate(500)
+            }
+          })
+
+          if (prev > 0 && nextRemaining <= 0) {
+            Vibration.vibrate(1000)
+          }
+        }
+
+        return nextRemaining
+      })
     }, 250)
 
     return () => clearInterval(id)
-  }, [isRunning, isFinished, timeline.length])
+  }, [isRunning, isFinished, timeline.length, currentPhase?.kind])
 
   useEffect(() => {
     if (!isRunning || isFinished || remaining > 0 || !timeline.length) {
@@ -686,12 +715,12 @@ export default function App() {
 
   const playDing = async () => {
     try {
-      if (!soundRef.current) {
-        return
-      }
-      await soundRef.current.replayAsync()
+      const sound = await loadDingSound()
+      await sound.setPositionAsync(0)
+      await sound.playAsync()
     } catch (error) {
       console.error('Ding playback failed', error)
+      Vibration.vibrate(180)
     }
   }
 
