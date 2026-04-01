@@ -522,15 +522,26 @@ function App() {
   }, [currentPhase, nextPhase, isFinished])
 
   const displayedWeightLabel = useMemo(() => {
-    const weight = Number(displayedPhase?.weight)
-    if (!Number.isFinite(weight)) {
+    if (!displayedPhase?.kind) {
       return null
     }
+
+    const rawWeight = displayedPhase?.weight
+    const weight = Number.isFinite(Number(rawWeight)) ? Number(rawWeight) : 0
     return `${weight % 1 === 0 ? weight : weight.toFixed(1)}kg`
   }, [displayedPhase])
 
   const handleTimerLabelClick = () => {
-    if (isFinished || !displayedWeightLabel || !displayedPhase?.kind) {
+    if (isFinished || !displayedPhase?.kind) {
+      return
+    }
+
+    if (showWeightOverlay) {
+      setShowWeightOverlay(false)
+      if (weightOverlayTimeoutRef.current) {
+        window.clearTimeout(weightOverlayTimeoutRef.current)
+        weightOverlayTimeoutRef.current = null
+      }
       return
     }
 
@@ -947,7 +958,7 @@ function App() {
         currentPhase={currentPhase}
         remainingLabel={formatMinutesSeconds(remaining)}
         weightOverlayLabel={displayedWeightLabel}
-        showWeightOverlay={showWeightOverlay && Boolean(displayedWeightLabel)}
+        showWeightOverlay={showWeightOverlay}
         displayedExercise={displayedExercise}
         displayedPhase={displayedPhase}
         progressPct={progressPct}

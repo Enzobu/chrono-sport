@@ -59,7 +59,7 @@ export function TimerPage({
             <button
               type="button"
               onClick={onTimerClick}
-              className={`w-full bg-transparent text-center font-mono text-6xl font-semibold tracking-tight outline-none transition duration-150 active:scale-[0.98] sm:text-7xl ${
+              className={`w-full select-none bg-transparent text-center font-mono text-6xl font-semibold tracking-tight outline-none transition duration-150 active:scale-[0.98] sm:text-7xl ${
                 !isFinished && currentPhase?.kind === 'work' ? 'text-red-500' : 'text-white'
               }`}
             >
