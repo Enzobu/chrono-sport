@@ -402,50 +402,50 @@ function App() {
     [currentIndex, remaining],
   )
 
-  const totalWorkDuration = useMemo(
-    () => timeline.reduce((sum, step) => sum + (step.kind === 'work' ? step.duration : 0), 0),
+  const totalTimelineDuration = useMemo(
+    () => timeline.reduce((sum, step) => sum + step.duration, 0),
     [timeline],
   )
 
-  const elapsedWorkDuration = useMemo(() => {
+  const elapsedTimelineDuration = useMemo(() => {
     if (!timeline.length || !hasStarted) {
       return 0
     }
 
     if (isFinished) {
-      return totalWorkDuration
+      return totalTimelineDuration
     }
 
-    const completedWorkDuration = timeline.reduce((sum, step, index) => {
-      if (step.kind === 'work' && index < effectiveProgressIndex) {
+    const completedDuration = timeline.reduce((sum, step, index) => {
+      if (index < effectiveProgressIndex) {
         return sum + step.duration
       }
       return sum
     }, 0)
 
-    if (currentPhase?.kind !== 'work' || remaining <= 0) {
-      return completedWorkDuration
+    if (!currentPhase || remaining <= 0) {
+      return completedDuration
     }
 
-    const currentWorkProgress = Math.max(0, currentPhase.duration - remaining)
-    return completedWorkDuration + currentWorkProgress
+    const currentPhaseProgress = Math.max(0, currentPhase.duration - remaining)
+    return completedDuration + currentPhaseProgress
   }, [
     timeline,
     hasStarted,
     isFinished,
-    totalWorkDuration,
+    totalTimelineDuration,
     effectiveProgressIndex,
     currentPhase,
     remaining,
   ])
 
   const progressPct = useMemo(() => {
-    if (!totalWorkDuration) {
+    if (!totalTimelineDuration) {
       return 0
     }
 
-    return Math.min(100, (elapsedWorkDuration / totalWorkDuration) * 100)
-  }, [elapsedWorkDuration, totalWorkDuration])
+    return Math.min(100, (elapsedTimelineDuration / totalTimelineDuration) * 100)
+  }, [elapsedTimelineDuration, totalTimelineDuration])
 
   const completedWorkKeys = useMemo(() => {
     const done = new Set()

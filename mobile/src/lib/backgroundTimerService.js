@@ -36,6 +36,7 @@ const options = {
     type: 'mipmap',
   },
   color: '#ffffff',
+  linkingURI: 'com.chronosport.mobile://timer',
   parameters: {
     delay: 1000,
   },

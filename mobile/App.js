@@ -90,6 +90,34 @@ export default function App() {
 
   const showToast = (type, message) => setToast({ type, message, id: Date.now() })
 
+  const openBatterySettings = async (packageName) => {
+    if (packageName) {
+      try {
+        await IntentLauncher.startActivityAsync(
+          IntentLauncher.ActivityAction.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+          { data: `package:${packageName}` },
+        )
+        return
+      } catch {
+        // fallback below
+      }
+
+      try {
+        await IntentLauncher.startActivityAsync(
+          IntentLauncher.ActivityAction.APPLICATION_DETAILS_SETTINGS,
+          { data: `package:${packageName}` },
+        )
+        return
+      } catch {
+        // fallback below
+      }
+    }
+
+    await IntentLauncher.startActivityAsync(
+      IntentLauncher.ActivityAction.IGNORE_BATTERY_OPTIMIZATION_SETTINGS,
+    )
+  }
+
   const ensureBatteryOptimizationDisabled = async () => {
     if (Platform.OS !== 'android') {
       return true
@@ -109,14 +137,7 @@ export default function App() {
       showToast('error', 'Desactive l optimisation batterie pour un chrono fiable.')
 
       const packageName = Application.applicationId
-      if (packageName) {
-        await IntentLauncher.startActivityAsync(
-          'android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS',
-          { data: `package:${packageName}` },
-        )
-      } else {
-        await IntentLauncher.startActivityAsync('android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS')
-      }
+      await openBatterySettings(packageName)
 
       return false
     } catch (error) {
@@ -142,6 +163,50 @@ export default function App() {
     ensureNotificationPermission().catch(() => {
       console.error('Notification permission request failed')
     })
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const prepareDing = async () => {
+      try {
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: false,
+          playsInSilentModeIOS: true,
+          staysActiveInBackground: true,
+          interruptionModeIOS: Audio.INTERRUPTION_MODE_IOS_MIX_WITH_OTHERS,
+          shouldDuckAndroid: true,
+          playThroughEarpieceAndroid: false,
+          interruptionModeAndroid: Audio.INTERRUPTION_MODE_ANDROID_DUCK_OTHERS,
+        })
+
+        const { sound } = await Audio.Sound.createAsync(
+          require('./assets/sounds/ding.wav'),
+          { shouldPlay: false },
+        )
+
+        if (cancelled) {
+          await sound.unloadAsync()
+          return
+        }
+
+        soundRef.current = sound
+      } catch (error) {
+        console.error('Ding audio init failed', error)
+      }
+    }
+
+    prepareDing()
+
+    return () => {
+      cancelled = true
+      if (soundRef.current) {
+        soundRef.current.unloadAsync().catch(() => {
+          // no-op
+        })
+        soundRef.current = null
+      }
+    }
   }, [])
 
   useEffect(() => {
@@ -232,39 +297,47 @@ export default function App() {
     [currentIndex, remaining],
   )
 
-  const totalWorkDuration = useMemo(
-    () => timeline.reduce((sum, step) => sum + (step.kind === 'work' ? step.duration : 0), 0),
+  const totalTimelineDuration = useMemo(
+    () => timeline.reduce((sum, step) => sum + step.duration, 0),
     [timeline],
   )
 
-  const elapsedWorkDuration = useMemo(() => {
+  const elapsedTimelineDuration = useMemo(() => {
     if (!timeline.length || !hasStarted) {
       return 0
     }
     if (isFinished) {
-      return totalWorkDuration
+      return totalTimelineDuration
     }
 
-    const completedWork = timeline.reduce((sum, step, index) => {
-      if (step.kind === 'work' && index < effectiveProgressIndex) {
+    const completedDuration = timeline.reduce((sum, step, index) => {
+      if (index < effectiveProgressIndex) {
         return sum + step.duration
       }
       return sum
     }, 0)
 
-    if (currentPhase?.kind !== 'work' || remaining <= 0) {
-      return completedWork
+    if (!currentPhase || remaining <= 0) {
+      return completedDuration
     }
 
-    return completedWork + Math.max(0, currentPhase.duration - remaining)
-  }, [timeline, hasStarted, isFinished, totalWorkDuration, effectiveProgressIndex, currentPhase, remaining])
+    return completedDuration + Math.max(0, currentPhase.duration - remaining)
+  }, [
+    timeline,
+    hasStarted,
+    isFinished,
+    totalTimelineDuration,
+    effectiveProgressIndex,
+    currentPhase,
+    remaining,
+  ])
 
   const progressPct = useMemo(() => {
-    if (!totalWorkDuration) {
+    if (!totalTimelineDuration) {
       return 0
     }
-    return Math.min(100, (elapsedWorkDuration / totalWorkDuration) * 100)
-  }, [elapsedWorkDuration, totalWorkDuration])
+    return Math.min(100, (elapsedTimelineDuration / totalTimelineDuration) * 100)
+  }, [elapsedTimelineDuration, totalTimelineDuration])
 
   const completedWorkKeys = useMemo(() => {
     const done = new Set()
@@ -567,13 +640,12 @@ export default function App() {
 
   const playDing = async () => {
     try {
-      const { sound } = await Audio.Sound.createAsync({
-        uri: 'https://actions.google.com/sounds/v1/alarms/beep_short.ogg',
-      })
-      soundRef.current = sound
-      await sound.playAsync()
-    } catch {
-      // no-op
+      if (!soundRef.current) {
+        return
+      }
+      await soundRef.current.replayAsync()
+    } catch (error) {
+      console.error('Ding playback failed', error)
     }
   }
 
