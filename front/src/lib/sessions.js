@@ -5,6 +5,7 @@ export function mapApiSessionsToClient(apiSessions) {
         type: set.type,
         time: Number(set.time) || 0,
         wait: Number(set.wait) || 0,
+        weight: Number(set.weight) || 0,
       }))
       return exerciseAcc
     }, {})
@@ -19,6 +20,7 @@ export function createDefaultSet() {
     type: 'entrainement',
     time: 60,
     wait: 180,
+    weight: 0,
   }
 }
 

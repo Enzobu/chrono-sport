@@ -45,6 +45,7 @@ model ExerciseSet {
   type       String
   time       Int
   wait       Int
+  weight     Float    @default(0)
   orderIndex Int
   exerciseId Int
   exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)

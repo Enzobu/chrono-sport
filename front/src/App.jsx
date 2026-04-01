@@ -190,6 +190,7 @@ function App() {
           type: set.type,
           time: Number(set.time) || 60,
           wait: Number(set.wait) || 0,
+          weight: Number(set.weight) || 0,
         })),
       })),
     )
@@ -265,6 +266,14 @@ function App() {
             }
 
             const numericValue = Number(value)
+
+            if (field === 'weight') {
+              return {
+                ...set,
+                weight: Number.isFinite(numericValue) ? Math.max(0, numericValue) : 0,
+              }
+            }
+
             return {
               ...set,
               [field]: Number.isFinite(numericValue)
@@ -292,8 +301,8 @@ function App() {
         return 'Chaque exercice doit avoir un nom.'
       }
       for (const set of exercise.sets) {
-        if (set.time < 1 || set.wait < 0) {
-          return 'Chaque serie doit avoir une duree >= 1 et un repos >= 0.'
+        if (set.time < 1 || set.wait < 0 || set.weight < 0) {
+          return 'Chaque serie doit avoir une duree >= 1, un repos >= 0 et un poids >= 0.'
         }
       }
     }
@@ -324,6 +333,7 @@ function App() {
             type: set.type,
             time: Number(set.time),
             wait: Number(set.wait),
+            weight: Number(set.weight) || 0,
           })),
         })),
       }
@@ -539,6 +549,7 @@ function App() {
           type: set.type,
           time: set.time,
           wait: set.wait,
+          weight: set.weight,
           done,
           current,
         }

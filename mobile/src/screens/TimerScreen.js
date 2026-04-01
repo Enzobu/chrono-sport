@@ -2,6 +2,11 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { formatMinutesSeconds } from '../lib/timer'
 import { colors } from '../styles/theme'
 
+const formatWeight = (weight) => {
+  const parsed = Number(weight) || 0
+  return `${parsed % 1 === 0 ? parsed : parsed.toFixed(1)}kg`
+}
+
 function Accordion({ title, status, children, open }) {
   const statusStyle =
     status === 'fait' ? styles.doneBadge : status === 'en cours' ? styles.currentBadge : styles.todoBadge
@@ -96,7 +101,7 @@ export function TimerScreen({
             {exercise.sets.map((set) => (
               <Accordion
                 key={set.key}
-                title={`Serie ${set.order}/${set.total}`}
+                title={`Serie ${set.order}/${set.total} ・ ${formatWeight(set.weight)}`}
                 status={set.done ? 'fait' : set.current ? 'en cours' : 'a faire'}
                 open={set.current}
               >

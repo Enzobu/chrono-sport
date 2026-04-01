@@ -50,6 +50,7 @@ const setSchema = z.object({
   type: z.enum(['echauffement', 'entrainement']),
   time: z.number().int().min(1),
   wait: z.number().int().min(0),
+  weight: z.number().min(0).default(0),
 })
 
 const exerciseSchema = z.object({
@@ -184,6 +185,7 @@ app.post('/sessions', authRequired, async (req, res) => {
               type: set.type,
               time: set.time,
               wait: set.wait,
+              weight: set.weight,
               orderIndex: setIndex,
             })),
           },
@@ -245,6 +247,7 @@ app.put('/sessions/:id', authRequired, async (req, res) => {
                 type: set.type,
                 time: set.time,
                 wait: set.wait,
+                weight: set.weight,
                 orderIndex: setIndex,
               })),
             },

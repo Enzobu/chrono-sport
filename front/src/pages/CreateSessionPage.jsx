@@ -89,16 +89,17 @@ export function CreateSessionPage({
             </CardHeader>
             <CardContent>
               <div className="rounded-md border border-zinc-800">
-                <div className="hidden grid-cols-[1.2fr_1fr_1fr_auto] gap-3 border-b border-zinc-800 bg-zinc-900/70 px-3 py-2 text-xs uppercase tracking-wide text-zinc-400 md:grid">
+                <div className="hidden grid-cols-[1.2fr_1fr_1fr_1fr_auto] gap-3 border-b border-zinc-800 bg-zinc-900/70 px-3 py-2 text-xs uppercase tracking-wide text-zinc-400 md:grid">
                   <span>Type</span>
                   <span>Duree (s)</span>
                   <span>Repos (s)</span>
+                  <span>Poids (kg)</span>
                   <span></span>
                 </div>
                 {exercise.sets.map((set, setIndex) => (
                   <div
                     key={`set-${setIndex}`}
-                    className="grid gap-3 border-b border-zinc-900 px-3 py-3 last:border-b-0 md:grid-cols-[1.2fr_1fr_1fr_auto] md:items-end md:py-2"
+                    className="grid gap-3 border-b border-zinc-900 px-3 py-3 last:border-b-0 md:grid-cols-[1.2fr_1fr_1fr_1fr_auto] md:items-end md:py-2"
                   >
                     <label className="space-y-1 text-xs text-zinc-400 md:space-y-0 md:text-[0px]">
                       <span className="md:hidden">Type</span>
@@ -149,6 +150,20 @@ export function CreateSessionPage({
                         value={set.wait}
                         onChange={(event) =>
                           onSetFieldChange(exerciseIndex, setIndex, 'wait', event.target.value)
+                        }
+                        className="h-9 w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 text-sm text-white"
+                      />
+                    </label>
+
+                    <label className="space-y-1 text-xs text-zinc-400 md:space-y-0 md:text-[0px]">
+                      <span className="md:hidden">Poids (kg)</span>
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.5"
+                        value={set.weight}
+                        onChange={(event) =>
+                          onSetFieldChange(exerciseIndex, setIndex, 'weight', event.target.value)
                         }
                         className="h-9 w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 text-sm text-white"
                       />

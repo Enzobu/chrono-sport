@@ -1,6 +1,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { formatMinutesSeconds } from '../lib/timer'
 
+const formatWeight = (weight) => `${Number(weight) % 1 === 0 ? Number(weight) : Number(weight).toFixed(1)}kg`
+
 export function SessionDetailsAccordion({ sessionOutline }) {
   return (
     <Card className="border-white/10 bg-black/60 shadow-[0_0_0_1px_rgba(255,255,255,0.03)_inset] backdrop-blur">
@@ -34,10 +36,10 @@ export function SessionDetailsAccordion({ sessionOutline }) {
                   className="rounded-md border border-zinc-800 bg-black/30"
                   open={set.current}
                 >
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-xs text-zinc-200 marker:content-none">
-                    <span>
-                      Serie {set.order}/{set.total}
-                    </span>
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-xs text-zinc-200 marker:content-none">
+                      <span>
+                        Serie {set.order}/{set.total} ・ {formatWeight(set.weight)}
+                      </span>
                     <span
                       className={`rounded-full border px-2 py-0.5 uppercase tracking-wide ${
                         set.done

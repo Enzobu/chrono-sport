@@ -16,6 +16,7 @@ export function toSessionPayload(session) {
             type: set.type,
             time: set.time,
             wait: set.wait,
+            weight: set.weight,
           })),
       })),
   }

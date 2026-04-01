@@ -99,6 +99,14 @@ export function SessionFormScreen({
                 style={styles.input}
               />
 
+              <Text style={styles.smallLabel}>Poids (kg)</Text>
+              <TextInput
+                value={String(set.weight)}
+                keyboardType="decimal-pad"
+                onChangeText={(value) => onSetFieldChange(exerciseIndex, setIndex, 'weight', value)}
+                style={styles.input}
+              />
+
               <Pressable style={styles.deleteBtn} onPress={() => onRemoveSet(exerciseIndex, setIndex)}>
                 <Text style={styles.deleteTxt}>Supprimer la serie</Text>
               </Pressable>
