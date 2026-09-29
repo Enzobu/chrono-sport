@@ -3,6 +3,7 @@ import * as Application from 'expo-application'
 import { Audio } from 'expo-av'
 import * as Battery from 'expo-battery'
 import * as IntentLauncher from 'expo-intent-launcher'
+import * as Notifications from 'expo-notifications'
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AppState, PermissionsAndroid, Platform, SafeAreaView, StyleSheet, Vibration } from 'react-native'
@@ -73,6 +74,8 @@ export default function App() {
   const lastTickAtRef = useRef(null)
   const batteryPromptedRef = useRef(false)
   const weightOverlayTimeoutRef = useRef(null)
+  const appStateRef = useRef(AppState.currentState)
+  const scheduledRestCueIdsRef = useRef([])
 
   const ensureNotificationPermission = async () => {
     if (Platform.OS !== 'android' || Platform.Version < 33) {
@@ -92,6 +95,30 @@ export default function App() {
   }
 
   const showToast = (type, message) => setToast({ type, message, id: Date.now() })
+
+  const setIdleAudioMode = async () => {
+    await Audio.setAudioModeAsync({
+      allowsRecordingIOS: false,
+      playsInSilentModeIOS: true,
+      staysActiveInBackground: true,
+      interruptionModeIOS: Audio.InterruptionModeIOS.MixWithOthers,
+      shouldDuckAndroid: false,
+      playThroughEarpieceAndroid: false,
+      interruptionModeAndroid: Audio.InterruptionModeAndroid.DuckOthers,
+    })
+  }
+
+  const setCueAudioMode = async () => {
+    await Audio.setAudioModeAsync({
+      allowsRecordingIOS: false,
+      playsInSilentModeIOS: true,
+      staysActiveInBackground: true,
+      interruptionModeIOS: Audio.InterruptionModeIOS.MixWithOthers,
+      shouldDuckAndroid: true,
+      playThroughEarpieceAndroid: false,
+      interruptionModeAndroid: Audio.InterruptionModeAndroid.DuckOthers,
+    })
+  }
 
   const loadDingSound = async () => {
     if (soundRef.current) {
@@ -183,27 +210,35 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: appStateRef.current !== 'active',
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+      }),
+    })
+
+    if (Platform.OS === 'android') {
+      Notifications.setNotificationChannelAsync('rest-finished', {
+        name: 'Fin de repos',
+        importance: Notifications.AndroidImportance.MAX,
+        sound: 'default',
+        vibrationPattern: [0, 250, 150, 250],
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+      }).catch((error) => {
+        console.error('Notification channel setup failed', error)
+      })
+    }
+  }, [])
+
+  useEffect(() => {
     let cancelled = false
 
     const prepareDing = async () => {
       try {
-        await Audio.setAudioModeAsync({
-          allowsRecordingIOS: false,
-          playsInSilentModeIOS: true,
-          staysActiveInBackground: true,
-          interruptionModeIOS: Audio.InterruptionModeIOS.MixWithOthers,
-          shouldDuckAndroid: true,
-          playThroughEarpieceAndroid: false,
-          interruptionModeAndroid: Audio.InterruptionModeAndroid.DuckOthers,
-        })
-
-        const sound = await loadDingSound()
+        await setIdleAudioMode()
 
         if (cancelled) {
-          await sound.unloadAsync()
-          if (soundRef.current === sound) {
-            soundRef.current = null
-          }
           return
         }
       } catch (error) {
@@ -540,6 +575,8 @@ export default function App() {
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextState) => {
+      appStateRef.current = nextState
+
       if (nextState !== 'active' && isRunning && !isFinished && timeline.length) {
         ensureNotificationPermission()
           .then((permissionGranted) => {
@@ -563,9 +600,25 @@ export default function App() {
   }, [isRunning, isFinished, timeline.length])
 
   useEffect(() => {
+    scheduleAllRestCueNotifications().catch((error) => {
+      console.error('Scheduling rest cues failed', error)
+    })
+
+    return () => {
+      clearScheduledRestCueNotifications().catch(() => {
+        // no-op
+      })
+    }
+  }, [isRunning, isFinished, currentIndex, timeline.length, currentPhase?.kind])
+
+  useEffect(() => {
     return () => {
       stopBackgroundChrono().catch(() => {
         console.error('Background timer service stop failed')
+      })
+
+      clearScheduledRestCueNotifications().catch(() => {
+        // no-op
       })
 
       if (weightOverlayTimeoutRef.current) {
@@ -617,6 +670,67 @@ export default function App() {
   const openConfirm = (action) => {
     setPendingAction(action)
     setConfirmVisible(true)
+  }
+
+  const clearScheduledRestCueNotifications = async () => {
+    const ids = scheduledRestCueIdsRef.current
+    if (!ids.length) {
+      return
+    }
+
+    await Promise.all(
+      ids.map((id) =>
+        Notifications.cancelScheduledNotificationAsync(id).catch(() => {
+          // no-op
+        }),
+      ),
+    )
+
+    scheduledRestCueIdsRef.current = []
+  }
+
+  const scheduleAllRestCueNotifications = async () => {
+    await clearScheduledRestCueNotifications()
+
+    if (Platform.OS !== 'android' || !isRunning || isFinished || !timeline.length) {
+      return
+    }
+
+    const permissionGranted = await ensureNotificationPermission()
+    if (!permissionGranted) {
+      return
+    }
+
+    const scheduledIds = []
+    let secondsFromNow = 0
+
+    for (let index = currentIndex; index < timeline.length - 1; index += 1) {
+      const phase = timeline[index]
+      const next = timeline[index + 1]
+      const phaseKind = index === currentIndex ? (currentPhase?.kind ?? phase.kind) : phase.kind
+      const phaseRemaining = index === currentIndex ? Math.max(0, remaining) : phase.duration
+
+      secondsFromNow += phaseRemaining
+
+      if (phaseKind === 'rest' && next.kind === 'work' && secondsFromNow > 0) {
+        const id = await Notifications.scheduleNotificationAsync({
+          content: {
+            title: 'Chrono-Sport',
+            body: 'Repos termine, on repart.',
+            sound: 'default',
+            channelId: 'rest-finished',
+            priority: Notifications.AndroidNotificationPriority.MAX,
+          },
+          trigger: {
+            seconds: Math.max(1, Math.ceil(secondsFromNow)),
+          },
+        })
+
+        scheduledIds.push(id)
+      }
+    }
+
+    scheduledRestCueIdsRef.current = scheduledIds
   }
 
   useEffect(() => {
@@ -688,7 +802,11 @@ export default function App() {
       }
 
       if (fromStep?.kind === 'rest' && toStep.kind === 'work') {
-        playDing()
+        if (appStateRef.current === 'active') {
+          playDing().catch((error) => {
+            console.error('Foreground rest-to-work cue failed', error)
+          })
+        }
       }
 
       nextIndex += 1
@@ -715,13 +833,39 @@ export default function App() {
   }, [isRunning, isFinished, remaining, timeline, currentIndex])
 
   const playDing = async () => {
+    let sound = null
+
     try {
-      const sound = await loadDingSound()
+      await setCueAudioMode()
+      sound = await loadDingSound()
       await sound.setPositionAsync(0)
       await sound.playAsync()
     } catch (error) {
       console.error('Ding playback failed', error)
       Vibration.vibrate(180)
+    } finally {
+      setTimeout(() => {
+        setIdleAudioMode().catch(() => {
+          // no-op
+        })
+      }, 350)
+
+      if (!sound) {
+        return
+      }
+
+      setTimeout(() => {
+        sound
+          .unloadAsync()
+          .catch(() => {
+            // no-op
+          })
+          .finally(() => {
+            if (soundRef.current === sound) {
+              soundRef.current = null
+            }
+          })
+      }, 900)
     }
   }
 

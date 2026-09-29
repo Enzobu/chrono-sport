@@ -4,8 +4,8 @@ import { colors } from '../styles/theme'
 export function ConfirmModal({ visible, title, message, confirmLabel, onCancel, onConfirm }) {
   return (
     <Modal transparent animationType="fade" visible={visible} onRequestClose={onCancel}>
-      <View style={styles.overlay}>
-        <View style={styles.panel}>
+      <Pressable style={styles.overlay} onPress={onCancel}>
+        <Pressable style={styles.panel} onPress={(event) => event.stopPropagation()}>
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.message}>{message}</Text>
           <View style={styles.actions}>
@@ -16,8 +16,8 @@ export function ConfirmModal({ visible, title, message, confirmLabel, onCancel, 
               <Text style={styles.confirmText}>{confirmLabel}</Text>
             </Pressable>
           </View>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   )
 }

@@ -20,10 +20,10 @@ function SessionCard({ name, data, onOpen, onEdit, onDelete }) {
       </Pressable>
 
       <View style={styles.rowButtons}>
-        <Pressable style={styles.secondaryBtn} onPress={() => onEdit(name)}>
+        <Pressable style={[styles.secondaryBtn, styles.cardActionBtn]} onPress={() => onEdit(name)}>
           <Text style={styles.secondaryText}>Modifier</Text>
         </Pressable>
-        <Pressable style={styles.deleteBtn} onPress={() => onDelete(name)}>
+        <Pressable style={[styles.deleteBtn, styles.cardActionBtn]} onPress={() => onDelete(name)}>
           <Text style={styles.deleteText}>Supprimer</Text>
         </Pressable>
       </View>
@@ -123,6 +123,7 @@ const styles = StyleSheet.create({
   rowButtons: {
     flexDirection: 'row',
     gap: 8,
+    justifyContent: 'center',
   },
   primaryBtn: {
     backgroundColor: colors.accent,
@@ -156,6 +157,9 @@ const styles = StyleSheet.create({
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  cardActionBtn: {
+    flex: 1,
   },
   deleteText: {
     color: '#fca5a5',

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { colors } from '../styles/theme'
 
@@ -33,6 +34,39 @@ export function SessionFormScreen({
   onAddSet,
   onAddExercise,
 }) {
+  const [weightInputs, setWeightInputs] = useState({})
+
+  const fieldKey = (exerciseIndex, setIndex) => `${exerciseIndex}-${setIndex}`
+
+  const onWeightChange = (exerciseIndex, setIndex, value) => {
+    const key = fieldKey(exerciseIndex, setIndex)
+    setWeightInputs((prev) => ({ ...prev, [key]: value }))
+
+    const normalized = value.replace(',', '.')
+    if (/^\d+(\.\d+)?$/.test(normalized)) {
+      onSetFieldChange(exerciseIndex, setIndex, 'weight', normalized)
+    }
+  }
+
+  const onWeightBlur = (exerciseIndex, setIndex, fallback) => {
+    const key = fieldKey(exerciseIndex, setIndex)
+    const raw = weightInputs[key]
+    if (typeof raw !== 'string') {
+      return
+    }
+
+    const normalized = raw.replace(',', '.')
+    const parsed = Number(normalized)
+    const sanitized = Number.isFinite(parsed) ? Math.max(0, Math.round(parsed * 2) / 2) : fallback
+    onSetFieldChange(exerciseIndex, setIndex, 'weight', String(sanitized))
+
+    setWeightInputs((prev) => {
+      const next = { ...prev }
+      delete next[key]
+      return next
+    })
+  }
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.topActions}>
@@ -100,12 +134,29 @@ export function SessionFormScreen({
               />
 
               <Text style={styles.smallLabel}>Poids (kg)</Text>
-              <TextInput
-                value={String(set.weight)}
-                keyboardType="decimal-pad"
-                onChangeText={(value) => onSetFieldChange(exerciseIndex, setIndex, 'weight', value)}
-                style={styles.input}
-              />
+              <View style={styles.weightRow}>
+                <Pressable
+                  style={styles.weightStepBtn}
+                  onPress={() => onSetFieldChange(exerciseIndex, setIndex, 'weight', String(set.weight - 0.5))}
+                >
+                  <Text style={styles.weightStepTxt}>-0.5</Text>
+                </Pressable>
+
+                <TextInput
+                  value={weightInputs[fieldKey(exerciseIndex, setIndex)] ?? String(set.weight)}
+                  keyboardType="decimal-pad"
+                  onChangeText={(value) => onWeightChange(exerciseIndex, setIndex, value)}
+                  onBlur={() => onWeightBlur(exerciseIndex, setIndex, set.weight)}
+                  style={[styles.input, styles.weightInput]}
+                />
+
+                <Pressable
+                  style={styles.weightStepBtn}
+                  onPress={() => onSetFieldChange(exerciseIndex, setIndex, 'weight', String(set.weight + 0.5))}
+                >
+                  <Text style={styles.weightStepTxt}>+0.5</Text>
+                </Pressable>
+              </View>
 
               <Pressable style={styles.deleteBtn} onPress={() => onRemoveSet(exerciseIndex, setIndex)}>
                 <Text style={styles.deleteTxt}>Supprimer la serie</Text>
@@ -173,6 +224,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     color: colors.text,
     backgroundColor: colors.bg,
+  },
+  weightRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  weightInput: {
+    flex: 1,
+  },
+  weightStepBtn: {
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 10,
+    height: 42,
+    minWidth: 62,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  weightStepTxt: {
+    color: colors.text,
+    fontWeight: '600',
+    fontSize: 12,
   },
   exerciseHeader: {
     flexDirection: 'row',

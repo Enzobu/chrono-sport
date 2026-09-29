@@ -10,7 +10,7 @@ import {
 
 export function ConfirmDialog({ open, title, message, confirmLabel, onCancel, onConfirm }) {
   return (
-    <Dialog open={open}>
+    <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onCancel()}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle className="text-white">{title}</DialogTitle>
