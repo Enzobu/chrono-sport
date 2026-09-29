@@ -495,7 +495,23 @@ export default function App() {
         boundaryAt += Math.max(0, Number(next.duration) || 0) * 1000
       }
 
-      TimerNotification.sync(restEndTimestamps)
+      const activePhase = timeline[currentIndex]
+      const nextWorkPhase =
+        activePhase?.kind === 'rest'
+          ? timeline.slice(currentIndex + 1).find((phase) => phase.kind === 'work')
+          : activePhase
+      const phaseLabel = activePhase?.kind === 'rest' ? 'Repos' : 'Série'
+      const seriesLabel =
+        nextWorkPhase?.setNumber && nextWorkPhase?.setTotal
+          ? `${nextWorkPhase.setNumber}/${nextWorkPhase.setTotal}`
+          : ''
+
+      TimerNotification.sync(
+        restEndTimestamps,
+        Number(phaseEndAt),
+        phaseLabel,
+        seriesLabel,
+      )
     }
 
     syncNativeTimer().catch((error) => {
