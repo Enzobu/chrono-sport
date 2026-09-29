@@ -11,6 +11,7 @@ import { ToastBanner } from './components/ToastBanner'
 import { createDefaultExercise, createDefaultSet, mapApiSessionsToClient } from './lib/sessions'
 import {
   createTimeline,
+  formatEndTime,
   formatHoursMinutes,
   formatHoursMinutesSeconds,
   formatMinutesSeconds,
@@ -616,9 +617,10 @@ function App() {
   }, [selectedSession, completedWorkKeys, currentWorkKey, isFinished])
 
   const isSessionOngoing = hasStarted && !isFinished
-  const totalRemainingLabel = isSessionOngoing
+  const totalRemainingDurationLabel = isSessionOngoing
     ? formatHoursMinutesSeconds(totalRemaining)
     : formatHoursMinutes(totalRemaining)
+  const totalRemainingLabel = `${totalRemainingDurationLabel}・${formatEndTime(totalRemaining)}`
   const elapsedLabel = isSessionOngoing
     ? formatHoursMinutesSeconds(elapsedSinceStart)
     : formatHoursMinutes(elapsedSinceStart)
