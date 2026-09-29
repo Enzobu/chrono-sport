@@ -29,6 +29,8 @@ export function SessionFormScreen({
   onSessionNameChange,
   onExerciseNameChange,
   onRemoveExercise,
+  onMoveExercise,
+  onInsertExercise,
   onSetFieldChange,
   onRemoveSet,
   onAddSet,
@@ -93,13 +95,36 @@ export function SessionFormScreen({
       </View>
 
       {exercises.map((exercise, exerciseIndex) => (
-        <View key={`exercise-${exerciseIndex}`} style={styles.card}>
-          <View style={styles.exerciseHeader}>
-            <Text style={styles.subtitle}>Exercice {exerciseIndex + 1}</Text>
-            <Pressable style={styles.secondaryBtn} onPress={() => onRemoveExercise(exerciseIndex)}>
-              <Text style={styles.secondaryText}>Supprimer</Text>
-            </Pressable>
-          </View>
+        <View key={`exercise-${exerciseIndex}`} style={styles.exerciseBlock}>
+          <View style={styles.card}>
+            <View style={styles.exerciseHeader}>
+              <Text style={styles.subtitle}>Exercice {exerciseIndex + 1}</Text>
+              <View style={styles.exerciseActions}>
+                <Pressable
+                  style={[styles.orderBtn, exerciseIndex === 0 && styles.orderBtnDisabled]}
+                  onPress={() => onMoveExercise(exerciseIndex, -1)}
+                  disabled={exerciseIndex === 0}
+                >
+                  <Text style={styles.orderBtnText}>↑</Text>
+                </Pressable>
+                <Pressable
+                  style={[
+                    styles.orderBtn,
+                    exerciseIndex === exercises.length - 1 && styles.orderBtnDisabled,
+                  ]}
+                  onPress={() => onMoveExercise(exerciseIndex, 1)}
+                  disabled={exerciseIndex === exercises.length - 1}
+                >
+                  <Text style={styles.orderBtnText}>↓</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.secondaryBtn}
+                  onPress={() => onRemoveExercise(exerciseIndex)}
+                >
+                  <Text style={styles.secondaryText}>Supprimer</Text>
+                </Pressable>
+              </View>
+            </View>
 
           <TextInput
             value={exercise.name}
@@ -164,9 +189,19 @@ export function SessionFormScreen({
             </View>
           ))}
 
-          <Pressable style={styles.secondaryBtn} onPress={() => onAddSet(exerciseIndex)}>
-            <Text style={styles.secondaryText}>Ajouter une serie</Text>
-          </Pressable>
+            <Pressable style={styles.secondaryBtn} onPress={() => onAddSet(exerciseIndex)}>
+              <Text style={styles.secondaryText}>Ajouter une serie</Text>
+            </Pressable>
+          </View>
+
+          {exerciseIndex < exercises.length - 1 ? (
+            <Pressable
+              style={styles.insertExerciseBtn}
+              onPress={() => onInsertExercise(exerciseIndex + 1)}
+            >
+              <Text style={styles.insertExerciseText}>+ Ajouter ici</Text>
+            </Pressable>
+          ) : null}
         </View>
       ))}
 
@@ -189,6 +224,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 8,
+  },
+  exerciseBlock: {
+    gap: 10,
   },
   card: {
     borderColor: colors.border,
@@ -252,6 +290,43 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 8,
+  },
+  exerciseActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  orderBtn: {
+    width: 40,
+    height: 40,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  orderBtnDisabled: {
+    opacity: 0.3,
+  },
+  orderBtnText: {
+    color: colors.text,
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  insertExerciseBtn: {
+    height: 36,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 20,
+  },
+  insertExerciseText: {
+    color: colors.muted,
+    fontWeight: '600',
   },
   setCard: {
     borderColor: colors.border,
