@@ -1,8 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import * as Application from 'expo-application'
 import { Audio } from 'expo-av'
-import * as Battery from 'expo-battery'
-import * as IntentLauncher from 'expo-intent-launcher'
 import * as Notifications from 'expo-notifications'
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -16,18 +13,13 @@ import {
 } from './src/api/sessions'
 import { ConfirmModal } from './src/components/ConfirmModal'
 import { ToastBanner } from './src/components/ToastBanner'
-import {
-  ensureBackgroundChronoRunning,
-  refreshBackgroundChronoNotification,
-  setTimerSnapshotProvider,
-  stopBackgroundChrono,
-} from './src/lib/backgroundTimerService'
 import { createDefaultExercise, createDefaultSet, mapApiSessionsToClient } from './src/lib/sessions'
 import {
   createTimeline,
   formatEndTime,
   formatHoursMinutesSeconds,
   formatMinutesSeconds,
+  resolveTimerPosition,
 } from './src/lib/timer'
 import { AuthScreen } from './src/screens/AuthScreen'
 import { HomeScreen } from './src/screens/HomeScreen'
@@ -62,6 +54,7 @@ export default function App() {
   const [isFinished, setIsFinished] = useState(false)
   const [hasStarted, setHasStarted] = useState(false)
   const [startedAt, setStartedAt] = useState(null)
+  const [phaseEndAt, setPhaseEndAt] = useState(null)
   const [nowTimestamp, setNowTimestamp] = useState(Date.now())
 
   const [confirmVisible, setConfirmVisible] = useState(false)
@@ -71,8 +64,6 @@ export default function App() {
   const [showWeightOverlay, setShowWeightOverlay] = useState(false)
 
   const soundRef = useRef(null)
-  const lastTickAtRef = useRef(null)
-  const batteryPromptedRef = useRef(false)
   const weightOverlayTimeoutRef = useRef(null)
   const appStateRef = useRef(AppState.currentState)
   const scheduledRestCueIdsRef = useRef([])
@@ -132,62 +123,6 @@ export default function App() {
     await sound.setVolumeAsync(1)
     soundRef.current = sound
     return sound
-  }
-
-  const openBatterySettings = async (packageName) => {
-    if (packageName) {
-      try {
-        await IntentLauncher.startActivityAsync(
-          IntentLauncher.ActivityAction.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-          { data: `package:${packageName}` },
-        )
-        return
-      } catch {
-        // fallback below
-      }
-
-      try {
-        await IntentLauncher.startActivityAsync(
-          IntentLauncher.ActivityAction.APPLICATION_DETAILS_SETTINGS,
-          { data: `package:${packageName}` },
-        )
-        return
-      } catch {
-        // fallback below
-      }
-    }
-
-    await IntentLauncher.startActivityAsync(
-      IntentLauncher.ActivityAction.IGNORE_BATTERY_OPTIMIZATION_SETTINGS,
-    )
-  }
-
-  const ensureBatteryOptimizationDisabled = async () => {
-    if (Platform.OS !== 'android') {
-      return true
-    }
-
-    try {
-      const isBatteryOptimizationEnabled = await Battery.isBatteryOptimizationEnabledAsync()
-      if (!isBatteryOptimizationEnabled) {
-        return true
-      }
-
-      if (batteryPromptedRef.current) {
-        return false
-      }
-
-      batteryPromptedRef.current = true
-      showToast('error', 'Desactive l optimisation batterie pour un chrono fiable.')
-
-      const packageName = Application.applicationId
-      await openBatterySettings(packageName)
-
-      return false
-    } catch (error) {
-      console.error('Battery optimization check failed', error)
-      return false
-    }
   }
 
   useEffect(() => {
