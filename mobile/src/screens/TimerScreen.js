@@ -8,6 +8,8 @@ const formatWeight = (weight) => {
   return `${parsed % 1 === 0 ? parsed : parsed.toFixed(1)}kg`
 }
 
+const formatRest = (seconds) => formatMinutesSeconds(seconds).replace(/^0(?=\d:)/, '')
+
 function Accordion({ title, status, children, open }) {
   const statusStyle =
     status === 'fait' ? styles.doneBadge : status === 'en cours' ? styles.currentBadge : styles.todoBadge
@@ -143,7 +145,7 @@ export function TimerScreen({
             {exercise.sets.map((set) => (
               <Accordion
                 key={set.key}
-                title={`Serie ${set.order}/${set.total} ・ ${formatWeight(set.weight)}`}
+                title={`Serie ${set.order}/${set.total}・${formatWeight(set.weight)}・${formatRest(set.wait)}`}
                 status={set.done ? 'fait' : set.current ? 'en cours' : 'a faire'}
                 open={set.current}
               >
