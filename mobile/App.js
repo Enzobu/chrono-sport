@@ -24,6 +24,7 @@ import {
 import { createDefaultExercise, createDefaultSet, mapApiSessionsToClient } from './src/lib/sessions'
 import {
   createTimeline,
+  formatEndTime,
   formatHoursMinutesSeconds,
   formatMinutesSeconds,
 } from './src/lib/timer'
@@ -1110,7 +1111,7 @@ export default function App() {
           showWeightOverlay={showWeightOverlay && Boolean(displayedWeightLabel) && !isFinished}
           exerciseLabel={displayedExercise}
           progressPct={progressPct}
-          totalRemainingLabel={formatHoursMinutesSeconds(totalRemaining)}
+          totalRemainingLabel={`${formatHoursMinutesSeconds(totalRemaining)}・${formatEndTime(totalRemaining)}`}
           elapsedLabel={formatHoursMinutesSeconds(elapsedSinceStart)}
           exercisesStat={`${completedExercisesCount}/${exerciseNames.length}`}
           isWarmup={displayedPhase?.setType === 'echauffement'}
