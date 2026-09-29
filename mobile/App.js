@@ -465,44 +465,7 @@ export default function App() {
   }, [selectedSession, completedWorkKeys, currentWorkKey, isFinished])
 
   useEffect(() => {
-    setTimerSnapshotProvider(() => ({
-      sessionName: selectedSessionName ?? 'Seance',
-      phase: isFinished ? 'Termine' : currentPhase?.label || 'Seance',
-      remaining: isFinished ? '00:00' : formatMinutesSeconds(Math.max(0, remaining)),
-    }))
-  }, [selectedSessionName, isFinished, currentPhase, remaining])
-
-  useEffect(() => {
-    const syncService = async () => {
-      try {
-        if (isRunning && !isFinished && timeline.length) {
-          const permissionGranted = await ensureNotificationPermission()
-          if (!permissionGranted) {
-            return
-          }
-
-          await ensureBatteryOptimizationDisabled()
-
-          await ensureBackgroundChronoRunning()
-          await refreshBackgroundChronoNotification()
-          return
-        }
-        await stopBackgroundChrono()
-      } catch (error) {
-        console.error('Background timer service sync failed', error)
-      }
-    }
-
-    syncService()
-  }, [isRunning, isFinished, timeline.length])
-
-  useEffect(() => {
-    refreshBackgroundChronoNotification().catch(() => {
-      console.error('Background notification refresh failed')
-    })
-  }, [selectedSessionName, currentPhase, remaining, isFinished])
-
-  useEffect(() => {
+    if (isFinished || !displayedWeightLabel) {  useEffect(() => {
     if (isFinished || !displayedWeightLabel) {
       setShowWeightOverlay(false)
     }
@@ -511,28 +474,10 @@ export default function App() {
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextState) => {
       appStateRef.current = nextState
-
-      if (nextState !== 'active' && isRunning && !isFinished && timeline.length) {
-        ensureNotificationPermission()
-          .then((permissionGranted) => {
-            if (!permissionGranted) {
-              return
-            }
-            return ensureBatteryOptimizationDisabled().then(() => ensureBackgroundChronoRunning())
-          })
-          .catch(() => {
-            console.error('Background timer service start failed')
-          })
-        return
-      }
-
-      refreshBackgroundChronoNotification().catch(() => {
-        console.error('Background notification refresh failed')
-      })
     })
 
     return () => subscription.remove()
-  }, [isRunning, isFinished, timeline.length])
+  }, [])
 
   useEffect(() => {
     scheduleAllRestCueNotifications().catch((error) => {
@@ -544,14 +489,10 @@ export default function App() {
         // no-op
       })
     }
-  }, [isRunning, isFinished, currentIndex, timeline.length, currentPhase?.kind])
+  }, [isRunning, isFinished, currentIndex, phaseEndAt, timeline.length])
 
   useEffect(() => {
     return () => {
-      stopBackgroundChrono().catch(() => {
-        console.error('Background timer service stop failed')
-      })
-
       clearScheduledRestCueNotifications().catch(() => {
         // no-op
       })
@@ -561,15 +502,6 @@ export default function App() {
       }
     }
   }, [])
-
-  useEffect(() => {
-    if (isRunning && !isFinished && timeline.length) {
-      lastTickAtRef.current = Date.now()
-      return
-    }
-
-    lastTickAtRef.current = null
-  }, [isRunning, isFinished, timeline.length, currentIndex])
 
   const confirmContent = useMemo(() => {
     if (pendingAction === 'delete-session') {
@@ -627,7 +559,13 @@ export default function App() {
   const scheduleAllRestCueNotifications = async () => {
     await clearScheduledRestCueNotifications()
 
-    if (Platform.OS !== 'android' || !isRunning || isFinished || !timeline.length) {
+    if (
+      Platform.OS !== 'android' ||
+      !isRunning ||
+      isFinished ||
+      !timeline.length ||
+      !Number.isFinite(Number(phaseEndAt))
+    ) {
       return
     }
 
@@ -637,17 +575,14 @@ export default function App() {
     }
 
     const scheduledIds = []
-    let secondsFromNow = 0
+    const now = Date.now()
+    let boundaryAt = Number(phaseEndAt)
 
     for (let index = currentIndex; index < timeline.length - 1; index += 1) {
       const phase = timeline[index]
       const next = timeline[index + 1]
-      const phaseKind = index === currentIndex ? (currentPhase?.kind ?? phase.kind) : phase.kind
-      const phaseRemaining = index === currentIndex ? Math.max(0, remaining) : phase.duration
 
-      secondsFromNow += phaseRemaining
-
-      if (phaseKind === 'rest' && next.kind === 'work' && secondsFromNow > 0) {
+      if (phase.kind === 'rest' && next.kind === 'work' && boundaryAt > now) {
         const id = await Notifications.scheduleNotificationAsync({
           content: {
             title: 'Chrono-Sport',
@@ -657,12 +592,14 @@ export default function App() {
             priority: Notifications.AndroidNotificationPriority.MAX,
           },
           trigger: {
-            seconds: Math.max(1, Math.ceil(secondsFromNow)),
+            seconds: Math.max(1, Math.ceil((boundaryAt - now) / 1000)),
           },
         })
 
         scheduledIds.push(id)
       }
+
+      boundaryAt += Math.max(0, Number(next.duration) || 0) * 1000
     }
 
     scheduledRestCueIdsRef.current = scheduledIds
@@ -677,95 +614,60 @@ export default function App() {
   }, [hasStarted, startedAt, isFinished])
 
   useEffect(() => {
-    if (!isRunning || isFinished || !timeline.length) {
+    if (
+      !isRunning ||
+      isFinished ||
+      !timeline.length ||
+      !Number.isFinite(Number(phaseEndAt))
+    ) {
       return undefined
     }
 
-    const id = setInterval(() => {
-      const now = Date.now()
-      if (!lastTickAtRef.current) {
-        lastTickAtRef.current = now
-        return
-      }
+    const tick = () => {
+      const resolved = resolveTimerPosition(timeline, currentIndex, phaseEndAt, Date.now())
 
-      const elapsedSeconds = Math.floor((now - lastTickAtRef.current) / 1000)
-      if (elapsedSeconds <= 0) {
-        return
-      }
-
-      lastTickAtRef.current += elapsedSeconds * 1000
-
-      setRemaining((prev) => {
-        const nextRemaining = prev - elapsedSeconds
-
-        if (currentPhase?.kind === 'rest') {
+      setRemaining((previousRemaining) => {
+        if (
+          currentPhase?.kind === 'rest' &&
+          resolved.currentIndex === currentIndex
+        ) {
           ;[3, 2, 1].forEach((marker) => {
-            if (prev > marker && nextRemaining <= marker) {
+            if (previousRemaining > marker && resolved.remaining <= marker) {
               Vibration.vibrate(500)
             }
           })
-
-          if (prev > 0 && nextRemaining <= 0) {
-            Vibration.vibrate(1000)
-          }
         }
 
-        return nextRemaining
+        return resolved.remaining
       })
-    }, 250)
 
+      if (resolved.crossedRestToWork && appStateRef.current === 'active') {
+        playDing().catch((error) => {
+          console.error('Foreground rest-to-work cue failed', error)
+        })
+      }
+
+      if (resolved.finished) {
+        setIsRunning(false)
+        setIsFinished(true)
+        setRemaining(0)
+        setPhaseEndAt(null)
+        return
+      }
+
+      if (resolved.currentIndex !== currentIndex) {
+        setCurrentIndex(resolved.currentIndex)
+      }
+
+      if (resolved.phaseEndAt !== phaseEndAt) {
+        setPhaseEndAt(resolved.phaseEndAt)
+      }
+    }
+
+    tick()
+    const id = setInterval(tick, 250)
     return () => clearInterval(id)
-  }, [isRunning, isFinished, timeline.length, currentPhase?.kind])
-
-  useEffect(() => {
-    if (!isRunning || isFinished || remaining > 0 || !timeline.length) {
-      return
-    }
-
-    let overflow = Math.abs(remaining)
-    let nextIndex = currentIndex
-    let nextRemaining = 0
-    let reachedEnd = false
-
-    while (!reachedEnd) {
-      const fromStep = timeline[nextIndex]
-      const toStep = timeline[nextIndex + 1]
-
-      if (!toStep) {
-        reachedEnd = true
-        break
-      }
-
-      if (fromStep?.kind === 'rest' && toStep.kind === 'work') {
-        if (appStateRef.current === 'active') {
-          playDing().catch((error) => {
-            console.error('Foreground rest-to-work cue failed', error)
-          })
-        }
-      }
-
-      nextIndex += 1
-
-      if (overflow < toStep.duration) {
-        nextRemaining = toStep.duration - overflow
-        overflow = 0
-        break
-      }
-
-      overflow -= toStep.duration
-      nextRemaining = 0
-    }
-
-    if (reachedEnd) {
-      setIsRunning(false)
-      setIsFinished(true)
-      setRemaining(0)
-      return
-    }
-
-    setCurrentIndex(nextIndex)
-    setRemaining(nextRemaining)
-  }, [isRunning, isFinished, remaining, timeline, currentIndex])
+  }, [isRunning, isFinished, timeline, currentIndex, currentPhase?.kind, phaseEndAt])
 
   const playDing = async () => {
     let sound = null
