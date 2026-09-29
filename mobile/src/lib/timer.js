@@ -41,6 +41,76 @@ export function createTimeline(session) {
   })
 }
 
+export function resolveTimerPosition(timeline, currentIndex, phaseEndAt, now = Date.now()) {
+  if (!timeline.length) {
+    return {
+      currentIndex: 0,
+      remaining: 0,
+      phaseEndAt: null,
+      finished: true,
+      crossedRestToWork: false,
+    }
+  }
+
+  const safeIndex = Math.min(Math.max(0, currentIndex), timeline.length - 1)
+  const safeEndAt = Number(phaseEndAt)
+
+  if (!Number.isFinite(safeEndAt)) {
+    return {
+      currentIndex: safeIndex,
+      remaining: timeline[safeIndex]?.duration ?? 0,
+      phaseEndAt: null,
+      finished: false,
+      crossedRestToWork: false,
+    }
+  }
+
+  if (now < safeEndAt) {
+    return {
+      currentIndex: safeIndex,
+      remaining: Math.max(0, Math.ceil((safeEndAt - now) / 1000)),
+      phaseEndAt: safeEndAt,
+      finished: false,
+      crossedRestToWork: false,
+    }
+  }
+
+  let index = safeIndex
+  let endAt = safeEndAt
+  let crossedRestToWork = false
+
+  while (index < timeline.length - 1) {
+    const fromStep = timeline[index]
+    const nextIndex = index + 1
+    const nextStep = timeline[nextIndex]
+
+    if (fromStep?.kind === 'rest' && nextStep?.kind === 'work') {
+      crossedRestToWork = true
+    }
+
+    index = nextIndex
+    endAt += Math.max(0, Number(nextStep?.duration) || 0) * 1000
+
+    if (now < endAt) {
+      return {
+        currentIndex: index,
+        remaining: Math.max(0, Math.ceil((endAt - now) / 1000)),
+        phaseEndAt: endAt,
+        finished: false,
+        crossedRestToWork,
+      }
+    }
+  }
+
+  return {
+    currentIndex: timeline.length - 1,
+    remaining: 0,
+    phaseEndAt: null,
+    finished: true,
+    crossedRestToWork,
+  }
+}
+
 export function formatHoursMinutesSeconds(seconds) {
   const safeSeconds = Math.max(0, seconds)
   const hours = Math.floor(safeSeconds / 3600)
