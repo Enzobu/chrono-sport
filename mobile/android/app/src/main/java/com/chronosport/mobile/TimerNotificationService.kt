@@ -64,19 +64,6 @@ class TimerNotificationService : Service() {
     phaseLabel: String,
     seriesLabel: String,
   ): Notification {
-    val launchIntent = packageManager.getLaunchIntentForPackage(packageName)?.apply {
-      flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-    }
-
-    val pendingIntent = launchIntent?.let {
-      PendingIntent.getActivity(
-        this,
-        0,
-        it,
-        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-      )
-    }
-
     val content = listOf(phaseLabel, seriesLabel)
       .filter { it.isNotBlank() }
       .joinToString(" • ")
@@ -92,7 +79,7 @@ class TimerNotificationService : Service() {
       .setWhen(phaseEndAt)
       .setUsesChronometer(true)
       .setChronometerCountDown(true)
-      .setContentIntent(pendingIntent)
+      .setContentIntent(createLaunchPendingIntent())
       .build()
   }
 
@@ -115,6 +102,7 @@ class TimerNotificationService : Service() {
               .setPriority(NotificationCompat.PRIORITY_MAX)
               .setCategory(NotificationCompat.CATEGORY_ALARM)
               .setDefaults(Notification.DEFAULT_ALL)
+              .setContentIntent(createLaunchPendingIntent())
               .build(),
           )
         }
@@ -159,6 +147,19 @@ class TimerNotificationService : Service() {
       }
     }
     wakeLock = null
+  }
+
+  private fun createLaunchPendingIntent(): PendingIntent? {
+    val launchIntent = packageManager.getLaunchIntentForPackage(packageName)?.apply {
+      flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+    } ?: return null
+
+    return PendingIntent.getActivity(
+      this,
+      0,
+      launchIntent,
+      PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+    )
   }
 
   private fun notificationManager(): NotificationManager =
