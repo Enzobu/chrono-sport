@@ -14,6 +14,12 @@ export function formatHoursMinutesSeconds(seconds) {
   return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
 }
 
+export function formatEndTime(seconds, now = new Date()) {
+  const safeSeconds = Math.max(0, seconds)
+  const endTime = new Date(now.getTime() + safeSeconds * 1000)
+  return `${String(endTime.getHours()).padStart(2, '0')}h${String(endTime.getMinutes()).padStart(2, '0')}`
+}
+
 export function formatMinutesSeconds(seconds) {
   const safeSeconds = Math.max(0, seconds)
   const mins = Math.floor(safeSeconds / 60)
