@@ -1,5 +1,6 @@
 package com.chronosport.mobile
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
@@ -79,7 +80,7 @@ class TimerNotificationService : Service() {
               .setAutoCancel(true)
               .setPriority(NotificationCompat.PRIORITY_MAX)
               .setCategory(NotificationCompat.CATEGORY_ALARM)
-              .setDefaults(NotificationCompat.DEFAULT_ALL)
+              .setDefaults(Notification.DEFAULT_ALL)
               .build(),
           )
         }
