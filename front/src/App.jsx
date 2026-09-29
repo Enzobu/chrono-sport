@@ -223,6 +223,28 @@ function App() {
 
   const addExercise = () => setDraftExercises((prev) => [...prev, createDefaultExercise()])
 
+  const insertExercise = (exerciseIndex) => {
+    setDraftExercises((prev) => {
+      const next = [...prev]
+      next.splice(exerciseIndex, 0, createDefaultExercise())
+      return next
+    })
+  }
+
+  const moveExercise = (exerciseIndex, direction) => {
+    setDraftExercises((prev) => {
+      const targetIndex = exerciseIndex + direction
+      if (targetIndex < 0 || targetIndex >= prev.length) {
+        return prev
+      }
+
+      const next = [...prev]
+      const [exercise] = next.splice(exerciseIndex, 1)
+      next.splice(targetIndex, 0, exercise)
+      return next
+    })
+  }
+
   const removeExercise = (exerciseIndex) => {
     setDraftExercises((prev) => prev.filter((_, index) => index !== exerciseIndex))
   }
@@ -915,6 +937,8 @@ function App() {
           onSessionNameChange={setDraftSessionName}
           onExerciseNameChange={updateExerciseName}
           onRemoveExercise={removeExercise}
+          onMoveExercise={moveExercise}
+          onInsertExercise={insertExercise}
           onSetFieldChange={updateSetField}
           onRemoveSet={removeSet}
           onAddSet={addSet}
