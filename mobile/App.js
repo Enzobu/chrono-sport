@@ -65,6 +65,7 @@ export default function App() {
   const [showWeightOverlay, setShowWeightOverlay] = useState(false)
 
   const soundRef = useRef(null)
+  const timerClockRef = useRef({ currentIndex: 0, phaseEndAt: null })
   const weightOverlayTimeoutRef = useRef(null)
   const appStateRef = useRef(AppState.currentState)
 
@@ -565,13 +566,30 @@ export default function App() {
       return undefined
     }
 
+    timerClockRef.current = {
+      currentIndex,
+      phaseEndAt,
+    }
+
     const tick = () => {
-      const resolved = resolveTimerPosition(timeline, currentIndex, phaseEndAt, Date.now())
+      const clock = timerClockRef.current
+      const phaseBeforeTick = timeline[clock.currentIndex]
+      const resolved = resolveTimerPosition(
+        timeline,
+        clock.currentIndex,
+        clock.phaseEndAt,
+        Date.now(),
+      )
+
+      timerClockRef.current = {
+        currentIndex: resolved.currentIndex,
+        phaseEndAt: resolved.phaseEndAt,
+      }
 
       setRemaining((previousRemaining) => {
         if (
-          currentPhase?.kind === 'rest' &&
-          resolved.currentIndex === currentIndex
+          phaseBeforeTick?.kind === 'rest' &&
+          resolved.currentIndex === clock.currentIndex
         ) {
           ;[3, 2, 1].forEach((marker) => {
             if (previousRemaining > marker && resolved.remaining <= marker) {
@@ -597,11 +615,11 @@ export default function App() {
         return
       }
 
-      if (resolved.currentIndex !== currentIndex) {
+      if (resolved.currentIndex !== clock.currentIndex) {
         setCurrentIndex(resolved.currentIndex)
       }
 
-      if (resolved.phaseEndAt !== phaseEndAt) {
+      if (resolved.phaseEndAt !== clock.phaseEndAt) {
         setPhaseEndAt(resolved.phaseEndAt)
       }
     }
@@ -609,7 +627,7 @@ export default function App() {
     tick()
     const id = setInterval(tick, 250)
     return () => clearInterval(id)
-  }, [isRunning, isFinished, timeline, currentIndex, currentPhase?.kind, phaseEndAt])
+  }, [isRunning, isFinished, timeline])
 
   const playDing = async () => {
     let sound = null
@@ -662,6 +680,7 @@ export default function App() {
     const nextSession = sessions[sessionName]
     const nextTimeline = createTimeline(nextSession)
     setSelectedSessionName(sessionName)
+    timerClockRef.current = { currentIndex: 0, phaseEndAt: null }
     setCurrentIndex(0)
     setRemaining(nextTimeline[0]?.duration ?? 0)
     setPhaseEndAt(null)
@@ -682,9 +701,11 @@ export default function App() {
 
     if (isFinished) {
       const firstDuration = timeline[0]?.duration ?? 0
+      const firstPhaseEndAt = now + firstDuration * 1000
+      timerClockRef.current = { currentIndex: 0, phaseEndAt: firstPhaseEndAt }
       setCurrentIndex(0)
       setRemaining(firstDuration)
-      setPhaseEndAt(now + firstDuration * 1000)
+      setPhaseEndAt(firstPhaseEndAt)
       setIsFinished(false)
       setHasStarted(true)
       setStartedAt(now)
@@ -694,7 +715,8 @@ export default function App() {
     }
 
     if (isRunning) {
-      const resolved = resolveTimerPosition(timeline, currentIndex, phaseEndAt, now)
+      const clock = timerClockRef.current
+      const resolved = resolveTimerPosition(timeline, clock.currentIndex, clock.phaseEndAt, now)
 
       if (resolved.finished) {
         setIsRunning(false)
@@ -704,6 +726,7 @@ export default function App() {
         return
       }
 
+      timerClockRef.current = { currentIndex: resolved.currentIndex, phaseEndAt: null }
       setCurrentIndex(resolved.currentIndex)
       setRemaining(resolved.remaining)
       setPhaseEndAt(null)
@@ -713,8 +736,10 @@ export default function App() {
 
     markStarted()
     const nextRemaining = remaining > 0 ? remaining : timeline[currentIndex]?.duration ?? 0
+    const nextPhaseEndAt = now + nextRemaining * 1000
+    timerClockRef.current = { currentIndex, phaseEndAt: nextPhaseEndAt }
     setRemaining(nextRemaining)
-    setPhaseEndAt(now + nextRemaining * 1000)
+    setPhaseEndAt(nextPhaseEndAt)
     setIsRunning(true)
   }
 
