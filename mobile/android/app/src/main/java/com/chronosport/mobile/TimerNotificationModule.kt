@@ -40,6 +40,13 @@ class TimerNotificationModule(
   }
 
   @ReactMethod
+  fun dismissRestFinishedNotification() {
+    val manager = reactContext.getSystemService(android.content.Context.NOTIFICATION_SERVICE)
+      as android.app.NotificationManager
+    manager.cancel(42002)
+  }
+
+  @ReactMethod
   fun stop() {
     reactContext.stopService(Intent(reactContext, TimerNotificationService::class.java))
   }
