@@ -1,4 +1,4 @@
-import { ArrowLeft, Plus, Save, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowUp, Plus, Save, Trash2 } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 
@@ -13,6 +13,8 @@ export function CreateSessionPage({
   onSessionNameChange,
   onExerciseNameChange,
   onRemoveExercise,
+  onMoveExercise,
+  onInsertExercise,
   onSetFieldChange,
   onRemoveSet,
   onAddSet,
@@ -67,19 +69,42 @@ export function CreateSessionPage({
 
       <div className="space-y-4">
         {draftExercises.map((exercise, exerciseIndex) => (
-          <Card key={`exercise-${exerciseIndex}`} className="border-white/10 bg-black/60">
-            <CardHeader className="pb-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <CardTitle className="text-white">Exercice {exerciseIndex + 1}</CardTitle>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="border-zinc-700 bg-black text-zinc-200 hover:bg-zinc-900"
-                  onClick={() => onRemoveExercise(exerciseIndex)}
-                >
-                  <Trash2 className="h-4 w-4" /> Supprimer
-                </Button>
-              </div>
+          <div key={`exercise-${exerciseIndex}`} className="space-y-3">
+            <Card className="border-white/10 bg-black/60">
+              <CardHeader className="pb-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <CardTitle className="text-white">Exercice {exerciseIndex + 1}</CardTitle>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="border-zinc-700 bg-black text-zinc-200 hover:bg-zinc-900 disabled:opacity-30"
+                      onClick={() => onMoveExercise(exerciseIndex, -1)}
+                      disabled={exerciseIndex === 0}
+                      aria-label="Monter l'exercice"
+                    >
+                      <ArrowUp className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="border-zinc-700 bg-black text-zinc-200 hover:bg-zinc-900 disabled:opacity-30"
+                      onClick={() => onMoveExercise(exerciseIndex, 1)}
+                      disabled={exerciseIndex === draftExercises.length - 1}
+                      aria-label="Descendre l'exercice"
+                    >
+                      <ArrowDown className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-zinc-700 bg-black text-zinc-200 hover:bg-zinc-900"
+                      onClick={() => onRemoveExercise(exerciseIndex)}
+                    >
+                      <Trash2 className="h-4 w-4" /> Supprimer
+                    </Button>
+                  </div>
+                </div>
               <input
                 value={exercise.name}
                 onChange={(event) => onExerciseNameChange(exerciseIndex, event.target.value)}
@@ -183,18 +208,32 @@ export function CreateSessionPage({
                 ))}
               </div>
 
-              <div className="mt-3">
+                <div className="mt-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-zinc-700 bg-black text-zinc-200 hover:bg-zinc-900"
+                    onClick={() => onAddSet(exerciseIndex)}
+                  >
+                    <Plus className="h-4 w-4" /> Ajouter une serie
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {exerciseIndex < draftExercises.length - 1 ? (
+              <div className="flex justify-center">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="border-zinc-700 bg-black text-zinc-200 hover:bg-zinc-900"
-                  onClick={() => onAddSet(exerciseIndex)}
+                  className="border-dashed border-zinc-700 bg-black text-zinc-400 hover:bg-zinc-900 hover:text-white"
+                  onClick={() => onInsertExercise(exerciseIndex + 1)}
                 >
-                  <Plus className="h-4 w-4" /> Ajouter une serie
+                  <Plus className="h-4 w-4" /> Ajouter ici
                 </Button>
               </div>
-            </CardContent>
-          </Card>
+            ) : null}
+          </div>
         ))}
       </div>
 
