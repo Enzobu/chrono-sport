@@ -1013,11 +1013,16 @@ export default function App() {
 
   const addSet = (exerciseIndex) => {
     setDraftExercises((prev) =>
-      prev.map((exercise, index) =>
-        index === exerciseIndex
-          ? { ...exercise, sets: [...exercise.sets, createDefaultSet()] }
-          : exercise,
-      ),
+      prev.map((exercise, index) => {
+        if (index !== exerciseIndex) {
+          return exercise
+        }
+
+        const previousSet = exercise.sets[exercise.sets.length - 1]
+        const nextSet = previousSet ? { ...previousSet } : createDefaultSet()
+
+        return { ...exercise, sets: [...exercise.sets, nextSet] }
+      }),
     )
   }
 
