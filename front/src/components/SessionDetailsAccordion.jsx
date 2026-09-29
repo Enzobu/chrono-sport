@@ -2,6 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { formatMinutesSeconds } from '../lib/timer'
 
 const formatWeight = (weight) => `${Number(weight) % 1 === 0 ? Number(weight) : Number(weight).toFixed(1)}kg`
+const formatRest = (seconds) => formatMinutesSeconds(seconds).replace(/^0(?=\d:)/, '')
 
 export function SessionDetailsAccordion({ sessionOutline }) {
   return (
@@ -38,7 +39,7 @@ export function SessionDetailsAccordion({ sessionOutline }) {
                 >
                     <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-xs text-zinc-200 marker:content-none">
                       <span>
-                        Serie {set.order}/{set.total} ・ {formatWeight(set.weight)}
+                        Serie {set.order}/{set.total}・{formatWeight(set.weight)}・{formatRest(set.wait)}
                       </span>
                     <span
                       className={`rounded-full border px-2 py-0.5 uppercase tracking-wide ${
