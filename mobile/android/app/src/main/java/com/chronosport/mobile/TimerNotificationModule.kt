@@ -14,7 +14,12 @@ class TimerNotificationModule(
   override fun getName(): String = "TimerNotification"
 
   @ReactMethod
-  fun sync(restEndTimestamps: ReadableArray) {
+  fun sync(
+    restEndTimestamps: ReadableArray,
+    phaseEndAt: Double,
+    phaseLabel: String,
+    seriesLabel: String,
+  ) {
     val timestamps = LongArray(restEndTimestamps.size()) { index ->
       restEndTimestamps.getDouble(index).toLong()
     }
@@ -22,6 +27,9 @@ class TimerNotificationModule(
     val intent = Intent(reactContext, TimerNotificationService::class.java).apply {
       action = TimerNotificationService.ACTION_SYNC
       putExtra(TimerNotificationService.EXTRA_REST_END_TIMESTAMPS, timestamps)
+      putExtra(TimerNotificationService.EXTRA_PHASE_END_AT, phaseEndAt.toLong())
+      putExtra(TimerNotificationService.EXTRA_PHASE_LABEL, phaseLabel)
+      putExtra(TimerNotificationService.EXTRA_SERIES_LABEL, seriesLabel)
     }
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
