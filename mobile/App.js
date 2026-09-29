@@ -465,7 +465,6 @@ export default function App() {
   }, [selectedSession, completedWorkKeys, currentWorkKey, isFinished])
 
   useEffect(() => {
-    if (isFinished || !displayedWeightLabel) {  useEffect(() => {
     if (isFinished || !displayedWeightLabel) {
       setShowWeightOverlay(false)
     }
