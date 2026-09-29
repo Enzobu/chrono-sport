@@ -564,7 +564,7 @@ export default function App() {
       !isRunning ||
       isFinished ||
       !timeline.length ||
-      !Number.isFinite(Number(phaseEndAt))
+      phaseEndAt == null || !Number.isFinite(Number(phaseEndAt))
     ) {
       return
     }
@@ -784,7 +784,7 @@ export default function App() {
     const now = Date.now()
     let baseIndex = currentIndex
 
-    if (isRunning && Number.isFinite(Number(phaseEndAt))) {
+    if (isRunning && phaseEndAt != null && Number.isFinite(Number(phaseEndAt))) {
       const resolved = resolveTimerPosition(timeline, currentIndex, phaseEndAt, now)
 
       if (resolved.finished) {
