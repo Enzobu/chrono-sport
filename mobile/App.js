@@ -618,6 +618,7 @@ export default function App() {
       !isRunning ||
       isFinished ||
       !timeline.length ||
+      phaseEndAt == null ||
       !Number.isFinite(Number(phaseEndAt))
     ) {
       return undefined
