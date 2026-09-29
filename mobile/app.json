@@ -12,7 +12,10 @@
     "android": {
       "package": "com.chronosport.mobile",
       "permissions": [
-        "POST_NOTIFICATIONS"
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_SPECIAL_USE",
+        "POST_NOTIFICATIONS",
+        "WAKE_LOCK"
       ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
