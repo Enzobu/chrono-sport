@@ -722,6 +722,7 @@ export default function App() {
     setSelectedSessionName(sessionName)
     setCurrentIndex(0)
     setRemaining(nextTimeline[0]?.duration ?? 0)
+    setPhaseEndAt(null)
     setIsRunning(false)
     setIsFinished(false)
     setHasStarted(false)
@@ -735,24 +736,44 @@ export default function App() {
       return
     }
 
+    const now = Date.now()
+
     if (isFinished) {
+      const firstDuration = timeline[0]?.duration ?? 0
       setCurrentIndex(0)
-      setRemaining(timeline[0].duration)
+      setRemaining(firstDuration)
+      setPhaseEndAt(now + firstDuration * 1000)
       setIsFinished(false)
-      markStarted()
+      setHasStarted(true)
+      setStartedAt(now)
+      setNowTimestamp(now)
       setIsRunning(true)
       return
     }
 
-    if (remaining <= 0) {
-      setRemaining(timeline[currentIndex].duration)
+    if (isRunning) {
+      const resolved = resolveTimerPosition(timeline, currentIndex, phaseEndAt, now)
+
+      if (resolved.finished) {
+        setIsRunning(false)
+        setIsFinished(true)
+        setRemaining(0)
+        setPhaseEndAt(null)
+        return
+      }
+
+      setCurrentIndex(resolved.currentIndex)
+      setRemaining(resolved.remaining)
+      setPhaseEndAt(null)
+      setIsRunning(false)
+      return
     }
 
-    if (!isRunning) {
-      markStarted()
-    }
-
-    setIsRunning((prev) => !prev)
+    markStarted()
+    const nextRemaining = remaining > 0 ? remaining : timeline[currentIndex]?.duration ?? 0
+    setRemaining(nextRemaining)
+    setPhaseEndAt(now + nextRemaining * 1000)
+    setIsRunning(true)
   }
 
   const skipCurrent = () => {
@@ -760,19 +781,38 @@ export default function App() {
       return
     }
 
+    const now = Date.now()
+    let baseIndex = currentIndex
+
+    if (isRunning && Number.isFinite(Number(phaseEndAt))) {
+      const resolved = resolveTimerPosition(timeline, currentIndex, phaseEndAt, now)
+
+      if (resolved.finished) {
+        setIsFinished(true)
+        setIsRunning(false)
+        setRemaining(0)
+        setPhaseEndAt(null)
+        return
+      }
+
+      baseIndex = resolved.currentIndex
+    }
+
     markStarted()
-    const nextIndex = currentIndex + 1
+    const nextIndex = baseIndex + 1
     const nextStep = timeline[nextIndex]
 
     if (!nextStep) {
       setIsFinished(true)
       setIsRunning(false)
       setRemaining(0)
+      setPhaseEndAt(null)
       return
     }
 
     setCurrentIndex(nextIndex)
     setRemaining(nextStep.duration)
+    setPhaseEndAt(isRunning ? now + nextStep.duration * 1000 : null)
   }
 
   const resetTimerSession = () => {
@@ -781,6 +821,7 @@ export default function App() {
     }
     setCurrentIndex(0)
     setRemaining(timeline[0].duration)
+    setPhaseEndAt(null)
     setIsRunning(false)
     setIsFinished(false)
     setHasStarted(false)
@@ -875,6 +916,7 @@ export default function App() {
       setScreen('home')
       setSelectedSessionName(null)
       setIsRunning(false)
+      setPhaseEndAt(null)
       closeConfirm()
       return
     }
