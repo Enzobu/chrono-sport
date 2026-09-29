@@ -452,6 +452,10 @@ export default function App() {
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextState) => {
       appStateRef.current = nextState
+
+      if (nextState === 'active' && Platform.OS === 'android' && TimerNotification) {
+        TimerNotification.dismissRestFinishedNotification()
+      }
     })
 
     return () => subscription.remove()
