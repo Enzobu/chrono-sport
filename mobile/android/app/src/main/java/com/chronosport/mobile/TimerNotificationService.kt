@@ -162,6 +162,10 @@ class TimerNotificationService : Service() {
     )
   }
 
+  fun dismissRestFinishedNotification() {
+    notificationManager().cancel(ALERT_NOTIFICATION_ID)
+  }
+
   private fun notificationManager(): NotificationManager =
     getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
