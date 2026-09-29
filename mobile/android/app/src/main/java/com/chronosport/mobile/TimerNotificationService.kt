@@ -3,6 +3,7 @@ package com.chronosport.mobile
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -30,18 +31,14 @@ class TimerNotificationService : Service() {
     }
 
     val timestamps = intent?.getLongArrayExtra(EXTRA_REST_END_TIMESTAMPS) ?: longArrayOf()
+    val phaseEndAt = intent?.getLongExtra(EXTRA_PHASE_END_AT, 0L) ?: 0L
+    val phaseLabel = intent?.getStringExtra(EXTRA_PHASE_LABEL) ?: "Serie"
+    val seriesLabel = intent?.getStringExtra(EXTRA_SERIES_LABEL) ?: ""
 
     ensureWakeLock()
     startForeground(
       SERVICE_NOTIFICATION_ID,
-      NotificationCompat.Builder(this, SERVICE_CHANNEL_ID)
-        .setSmallIcon(R.mipmap.ic_launcher)
-        .setContentTitle("Chrono-Sport actif")
-        .setContentText("Le chrono continue en arriere-plan")
-        .setOngoing(true)
-        .setSilent(true)
-        .setPriority(NotificationCompat.PRIORITY_LOW)
-        .build(),
+      buildServiceNotification(phaseEndAt, phaseLabel, seriesLabel),
     )
 
     scheduleRestNotifications(timestamps)
@@ -61,6 +58,43 @@ class TimerNotificationService : Service() {
   }
 
   override fun onBind(intent: Intent?): IBinder? = null
+
+  private fun buildServiceNotification(
+    phaseEndAt: Long,
+    phaseLabel: String,
+    seriesLabel: String,
+  ): Notification {
+    val launchIntent = packageManager.getLaunchIntentForPackage(packageName)?.apply {
+      flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+    }
+
+    val pendingIntent = launchIntent?.let {
+      PendingIntent.getActivity(
+        this,
+        0,
+        it,
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+      )
+    }
+
+    val content = listOf(phaseLabel, seriesLabel)
+      .filter { it.isNotBlank() }
+      .joinToString(" • ")
+
+    return NotificationCompat.Builder(this, SERVICE_CHANNEL_ID)
+      .setSmallIcon(R.mipmap.ic_launcher)
+      .setContentTitle("Chrono-Sport actif")
+      .setContentText(content)
+      .setOngoing(true)
+      .setSilent(true)
+      .setOnlyAlertOnce(true)
+      .setPriority(NotificationCompat.PRIORITY_LOW)
+      .setWhen(phaseEndAt)
+      .setUsesChronometer(true)
+      .setChronometerCountDown(true)
+      .setContentIntent(pendingIntent)
+      .build()
+  }
 
   private fun scheduleRestNotifications(timestamps: LongArray) {
     clearScheduledCallbacks()
@@ -159,6 +193,9 @@ class TimerNotificationService : Service() {
     const val ACTION_SYNC = "com.chronosport.mobile.timer.SYNC"
     const val ACTION_STOP = "com.chronosport.mobile.timer.STOP"
     const val EXTRA_REST_END_TIMESTAMPS = "restEndTimestamps"
+    const val EXTRA_PHASE_END_AT = "phaseEndAt"
+    const val EXTRA_PHASE_LABEL = "phaseLabel"
+    const val EXTRA_SERIES_LABEL = "seriesLabel"
 
     private const val SERVICE_CHANNEL_ID = "chrono-timer-service"
     private const val ALERT_CHANNEL_ID = "rest-finished-native"
