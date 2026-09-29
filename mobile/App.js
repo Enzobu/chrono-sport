@@ -1,12 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import * as Application from 'expo-application'
 import { Audio } from 'expo-av'
-import * as Battery from 'expo-battery'
-import * as IntentLauncher from 'expo-intent-launcher'
-import * as Notifications from 'expo-notifications'
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AppState, PermissionsAndroid, Platform, SafeAreaView, StyleSheet, Vibration } from 'react-native'
+import { AppState, NativeModules, PermissionsAndroid, Platform, SafeAreaView, StyleSheet, Vibration } from 'react-native'
 import { authRequest } from './src/api/auth'
 import {
   createSession,
@@ -16,24 +12,21 @@ import {
 } from './src/api/sessions'
 import { ConfirmModal } from './src/components/ConfirmModal'
 import { ToastBanner } from './src/components/ToastBanner'
-import {
-  ensureBackgroundChronoRunning,
-  refreshBackgroundChronoNotification,
-  setTimerSnapshotProvider,
-  stopBackgroundChrono,
-} from './src/lib/backgroundTimerService'
 import { createDefaultExercise, createDefaultSet, mapApiSessionsToClient } from './src/lib/sessions'
 import {
   createTimeline,
   formatEndTime,
   formatHoursMinutesSeconds,
   formatMinutesSeconds,
+  resolveTimerPosition,
 } from './src/lib/timer'
 import { AuthScreen } from './src/screens/AuthScreen'
 import { HomeScreen } from './src/screens/HomeScreen'
 import { SessionFormScreen } from './src/screens/SessionFormScreen'
 import { TimerScreen } from './src/screens/TimerScreen'
 import { colors } from './src/styles/theme'
+
+const { TimerNotification } = NativeModules
 
 export default function App() {
   const [authToken, setAuthToken] = useState('')
@@ -62,6 +55,7 @@ export default function App() {
   const [isFinished, setIsFinished] = useState(false)
   const [hasStarted, setHasStarted] = useState(false)
   const [startedAt, setStartedAt] = useState(null)
+  const [phaseEndAt, setPhaseEndAt] = useState(null)
   const [nowTimestamp, setNowTimestamp] = useState(Date.now())
 
   const [confirmVisible, setConfirmVisible] = useState(false)
@@ -71,11 +65,9 @@ export default function App() {
   const [showWeightOverlay, setShowWeightOverlay] = useState(false)
 
   const soundRef = useRef(null)
-  const lastTickAtRef = useRef(null)
-  const batteryPromptedRef = useRef(false)
+  const timerClockRef = useRef({ currentIndex: 0, phaseEndAt: null })
   const weightOverlayTimeoutRef = useRef(null)
   const appStateRef = useRef(AppState.currentState)
-  const scheduledRestCueIdsRef = useRef([])
 
   const ensureNotificationPermission = async () => {
     if (Platform.OS !== 'android' || Platform.Version < 33) {
@@ -134,62 +126,6 @@ export default function App() {
     return sound
   }
 
-  const openBatterySettings = async (packageName) => {
-    if (packageName) {
-      try {
-        await IntentLauncher.startActivityAsync(
-          IntentLauncher.ActivityAction.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-          { data: `package:${packageName}` },
-        )
-        return
-      } catch {
-        // fallback below
-      }
-
-      try {
-        await IntentLauncher.startActivityAsync(
-          IntentLauncher.ActivityAction.APPLICATION_DETAILS_SETTINGS,
-          { data: `package:${packageName}` },
-        )
-        return
-      } catch {
-        // fallback below
-      }
-    }
-
-    await IntentLauncher.startActivityAsync(
-      IntentLauncher.ActivityAction.IGNORE_BATTERY_OPTIMIZATION_SETTINGS,
-    )
-  }
-
-  const ensureBatteryOptimizationDisabled = async () => {
-    if (Platform.OS !== 'android') {
-      return true
-    }
-
-    try {
-      const isBatteryOptimizationEnabled = await Battery.isBatteryOptimizationEnabledAsync()
-      if (!isBatteryOptimizationEnabled) {
-        return true
-      }
-
-      if (batteryPromptedRef.current) {
-        return false
-      }
-
-      batteryPromptedRef.current = true
-      showToast('error', 'Desactive l optimisation batterie pour un chrono fiable.')
-
-      const packageName = Application.applicationId
-      await openBatterySettings(packageName)
-
-      return false
-    } catch (error) {
-      console.error('Battery optimization check failed', error)
-      return false
-    }
-  }
-
   useEffect(() => {
     AsyncStorage.getItem('auth_token').then((token) => {
       if (token) {
@@ -207,28 +143,6 @@ export default function App() {
     ensureNotificationPermission().catch(() => {
       console.error('Notification permission request failed')
     })
-  }, [])
-
-  useEffect(() => {
-    Notifications.setNotificationHandler({
-      handleNotification: async () => ({
-        shouldShowAlert: appStateRef.current !== 'active',
-        shouldPlaySound: true,
-        shouldSetBadge: false,
-      }),
-    })
-
-    if (Platform.OS === 'android') {
-      Notifications.setNotificationChannelAsync('rest-finished', {
-        name: 'Fin de repos',
-        importance: Notifications.AndroidImportance.MAX,
-        sound: 'default',
-        vibrationPattern: [0, 250, 150, 250],
-        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
-      }).catch((error) => {
-        console.error('Notification channel setup failed', error)
-      })
-    }
   }, [])
 
   useEffect(() => {
@@ -530,44 +444,6 @@ export default function App() {
   }, [selectedSession, completedWorkKeys, currentWorkKey, isFinished])
 
   useEffect(() => {
-    setTimerSnapshotProvider(() => ({
-      sessionName: selectedSessionName ?? 'Seance',
-      phase: isFinished ? 'Termine' : currentPhase?.label || 'Seance',
-      remaining: isFinished ? '00:00' : formatMinutesSeconds(Math.max(0, remaining)),
-    }))
-  }, [selectedSessionName, isFinished, currentPhase, remaining])
-
-  useEffect(() => {
-    const syncService = async () => {
-      try {
-        if (isRunning && !isFinished && timeline.length) {
-          const permissionGranted = await ensureNotificationPermission()
-          if (!permissionGranted) {
-            return
-          }
-
-          await ensureBatteryOptimizationDisabled()
-
-          await ensureBackgroundChronoRunning()
-          await refreshBackgroundChronoNotification()
-          return
-        }
-        await stopBackgroundChrono()
-      } catch (error) {
-        console.error('Background timer service sync failed', error)
-      }
-    }
-
-    syncService()
-  }, [isRunning, isFinished, timeline.length])
-
-  useEffect(() => {
-    refreshBackgroundChronoNotification().catch(() => {
-      console.error('Background notification refresh failed')
-    })
-  }, [selectedSessionName, currentPhase, remaining, isFinished])
-
-  useEffect(() => {
     if (isFinished || !displayedWeightLabel) {
       setShowWeightOverlay(false)
     }
@@ -577,64 +453,83 @@ export default function App() {
     const subscription = AppState.addEventListener('change', (nextState) => {
       appStateRef.current = nextState
 
-      if (nextState !== 'active' && isRunning && !isFinished && timeline.length) {
-        ensureNotificationPermission()
-          .then((permissionGranted) => {
-            if (!permissionGranted) {
-              return
-            }
-            return ensureBatteryOptimizationDisabled().then(() => ensureBackgroundChronoRunning())
-          })
-          .catch(() => {
-            console.error('Background timer service start failed')
-          })
-        return
+      if (nextState === 'active' && Platform.OS === 'android' && TimerNotification) {
+        TimerNotification.dismissRestFinishedNotification()
       }
-
-      refreshBackgroundChronoNotification().catch(() => {
-        console.error('Background notification refresh failed')
-      })
     })
 
     return () => subscription.remove()
-  }, [isRunning, isFinished, timeline.length])
+  }, [])
 
   useEffect(() => {
-    scheduleAllRestCueNotifications().catch((error) => {
-      console.error('Scheduling rest cues failed', error)
-    })
+    const syncNativeTimer = async () => {
+      if (Platform.OS !== 'android' || !TimerNotification) {
+        return
+      }
 
-    return () => {
-      clearScheduledRestCueNotifications().catch(() => {
-        // no-op
-      })
+      if (
+        !isRunning ||
+        isFinished ||
+        !timeline.length ||
+        phaseEndAt == null ||
+        !Number.isFinite(Number(phaseEndAt))
+      ) {
+        TimerNotification.stop()
+        return
+      }
+
+      const permissionGranted = await ensureNotificationPermission()
+      if (!permissionGranted) {
+        TimerNotification.stop()
+        return
+      }
+
+      const restEndTimestamps = []
+      const now = Date.now()
+      let boundaryAt = Number(phaseEndAt)
+
+      for (let index = currentIndex; index < timeline.length - 1; index += 1) {
+        const phase = timeline[index]
+        const next = timeline[index + 1]
+
+        if (phase.kind === 'rest' && next.kind === 'work' && boundaryAt > now) {
+          restEndTimestamps.push(boundaryAt)
+        }
+
+        boundaryAt += Math.max(0, Number(next.duration) || 0) * 1000
+      }
+
+      const activePhase = timeline[currentIndex]
+      const nextWorkPhase =
+        activePhase?.kind === 'rest'
+          ? timeline.slice(currentIndex + 1).find((phase) => phase.kind === 'work')
+          : activePhase
+      const phaseLabel = activePhase?.kind === 'rest' ? 'Repos' : 'Série'
+      const seriesLabel =
+        nextWorkPhase?.setNumber && nextWorkPhase?.setTotal
+          ? `${nextWorkPhase.setNumber}/${nextWorkPhase.setTotal}`
+          : ''
+
+      TimerNotification.sync(
+        restEndTimestamps,
+        Number(phaseEndAt),
+        phaseLabel,
+        seriesLabel,
+      )
     }
-  }, [isRunning, isFinished, currentIndex, timeline.length, currentPhase?.kind])
+
+    syncNativeTimer().catch((error) => {
+      console.error('Native timer notification sync failed', error)
+    })
+  }, [isRunning, isFinished, currentIndex, phaseEndAt, timeline])
 
   useEffect(() => {
     return () => {
-      stopBackgroundChrono().catch(() => {
-        console.error('Background timer service stop failed')
-      })
-
-      clearScheduledRestCueNotifications().catch(() => {
-        // no-op
-      })
-
       if (weightOverlayTimeoutRef.current) {
         clearTimeout(weightOverlayTimeoutRef.current)
       }
     }
   }, [])
-
-  useEffect(() => {
-    if (isRunning && !isFinished && timeline.length) {
-      lastTickAtRef.current = Date.now()
-      return
-    }
-
-    lastTickAtRef.current = null
-  }, [isRunning, isFinished, timeline.length, currentIndex])
 
   const confirmContent = useMemo(() => {
     if (pendingAction === 'delete-session') {
@@ -672,67 +567,6 @@ export default function App() {
     setConfirmVisible(true)
   }
 
-  const clearScheduledRestCueNotifications = async () => {
-    const ids = scheduledRestCueIdsRef.current
-    if (!ids.length) {
-      return
-    }
-
-    await Promise.all(
-      ids.map((id) =>
-        Notifications.cancelScheduledNotificationAsync(id).catch(() => {
-          // no-op
-        }),
-      ),
-    )
-
-    scheduledRestCueIdsRef.current = []
-  }
-
-  const scheduleAllRestCueNotifications = async () => {
-    await clearScheduledRestCueNotifications()
-
-    if (Platform.OS !== 'android' || !isRunning || isFinished || !timeline.length) {
-      return
-    }
-
-    const permissionGranted = await ensureNotificationPermission()
-    if (!permissionGranted) {
-      return
-    }
-
-    const scheduledIds = []
-    let secondsFromNow = 0
-
-    for (let index = currentIndex; index < timeline.length - 1; index += 1) {
-      const phase = timeline[index]
-      const next = timeline[index + 1]
-      const phaseKind = index === currentIndex ? (currentPhase?.kind ?? phase.kind) : phase.kind
-      const phaseRemaining = index === currentIndex ? Math.max(0, remaining) : phase.duration
-
-      secondsFromNow += phaseRemaining
-
-      if (phaseKind === 'rest' && next.kind === 'work' && secondsFromNow > 0) {
-        const id = await Notifications.scheduleNotificationAsync({
-          content: {
-            title: 'Chrono-Sport',
-            body: 'Repos termine, on repart.',
-            sound: 'default',
-            channelId: 'rest-finished',
-            priority: Notifications.AndroidNotificationPriority.MAX,
-          },
-          trigger: {
-            seconds: Math.max(1, Math.ceil(secondsFromNow)),
-          },
-        })
-
-        scheduledIds.push(id)
-      }
-    }
-
-    scheduledRestCueIdsRef.current = scheduledIds
-  }
-
   useEffect(() => {
     if (!hasStarted || !startedAt || isFinished) {
       return undefined
@@ -742,95 +576,79 @@ export default function App() {
   }, [hasStarted, startedAt, isFinished])
 
   useEffect(() => {
-    if (!isRunning || isFinished || !timeline.length) {
+    if (
+      !isRunning ||
+      isFinished ||
+      !timeline.length ||
+      phaseEndAt == null ||
+      !Number.isFinite(Number(phaseEndAt))
+    ) {
       return undefined
     }
 
-    const id = setInterval(() => {
-      const now = Date.now()
-      if (!lastTickAtRef.current) {
-        lastTickAtRef.current = now
-        return
+    timerClockRef.current = {
+      currentIndex,
+      phaseEndAt,
+    }
+
+    const tick = () => {
+      const clock = timerClockRef.current
+      const phaseBeforeTick = timeline[clock.currentIndex]
+      const resolved = resolveTimerPosition(
+        timeline,
+        clock.currentIndex,
+        clock.phaseEndAt,
+        Date.now(),
+      )
+
+      timerClockRef.current = {
+        currentIndex: resolved.currentIndex,
+        phaseEndAt: resolved.phaseEndAt,
       }
 
-      const elapsedSeconds = Math.floor((now - lastTickAtRef.current) / 1000)
-      if (elapsedSeconds <= 0) {
-        return
-      }
-
-      lastTickAtRef.current += elapsedSeconds * 1000
-
-      setRemaining((prev) => {
-        const nextRemaining = prev - elapsedSeconds
-
-        if (currentPhase?.kind === 'rest') {
+      setRemaining((previousRemaining) => {
+        if (
+          phaseBeforeTick?.kind === 'rest' &&
+          resolved.currentIndex === clock.currentIndex
+        ) {
           ;[3, 2, 1].forEach((marker) => {
-            if (prev > marker && nextRemaining <= marker) {
+            if (previousRemaining > marker && resolved.remaining <= marker) {
               Vibration.vibrate(500)
             }
           })
-
-          if (prev > 0 && nextRemaining <= 0) {
-            Vibration.vibrate(1000)
-          }
         }
 
-        return nextRemaining
+        return resolved.remaining
       })
-    }, 250)
 
+      if (resolved.crossedRestToWork && appStateRef.current === 'active') {
+        playDing().catch((error) => {
+          console.error('Foreground rest-to-work cue failed', error)
+        })
+      }
+
+      if (resolved.finished) {
+        timerClockRef.current = { currentIndex: resolved.currentIndex, phaseEndAt: null }
+        setIsRunning(false)
+        setIsFinished(true)
+        setRemaining(0)
+        setPhaseEndAt(null)
+        return
+      }
+
+      if (resolved.currentIndex !== clock.currentIndex) {
+        setCurrentIndex(resolved.currentIndex)
+      }
+
+      if (resolved.phaseEndAt !== clock.phaseEndAt) {
+        setPhaseEndAt(resolved.phaseEndAt)
+      }
+    }
+
+    tick()
+    const id = setInterval(tick, 250)
     return () => clearInterval(id)
-  }, [isRunning, isFinished, timeline.length, currentPhase?.kind])
-
-  useEffect(() => {
-    if (!isRunning || isFinished || remaining > 0 || !timeline.length) {
-      return
-    }
-
-    let overflow = Math.abs(remaining)
-    let nextIndex = currentIndex
-    let nextRemaining = 0
-    let reachedEnd = false
-
-    while (!reachedEnd) {
-      const fromStep = timeline[nextIndex]
-      const toStep = timeline[nextIndex + 1]
-
-      if (!toStep) {
-        reachedEnd = true
-        break
-      }
-
-      if (fromStep?.kind === 'rest' && toStep.kind === 'work') {
-        if (appStateRef.current === 'active') {
-          playDing().catch((error) => {
-            console.error('Foreground rest-to-work cue failed', error)
-          })
-        }
-      }
-
-      nextIndex += 1
-
-      if (overflow < toStep.duration) {
-        nextRemaining = toStep.duration - overflow
-        overflow = 0
-        break
-      }
-
-      overflow -= toStep.duration
-      nextRemaining = 0
-    }
-
-    if (reachedEnd) {
-      setIsRunning(false)
-      setIsFinished(true)
-      setRemaining(0)
-      return
-    }
-
-    setCurrentIndex(nextIndex)
-    setRemaining(nextRemaining)
-  }, [isRunning, isFinished, remaining, timeline, currentIndex])
+  }, [isRunning, isFinished, timeline])
 
   const playDing = async () => {
     let sound = null
@@ -883,8 +701,10 @@ export default function App() {
     const nextSession = sessions[sessionName]
     const nextTimeline = createTimeline(nextSession)
     setSelectedSessionName(sessionName)
+    timerClockRef.current = { currentIndex: 0, phaseEndAt: null }
     setCurrentIndex(0)
     setRemaining(nextTimeline[0]?.duration ?? 0)
+    setPhaseEndAt(null)
     setIsRunning(false)
     setIsFinished(false)
     setHasStarted(false)
@@ -898,24 +718,50 @@ export default function App() {
       return
     }
 
+    const now = Date.now()
+
     if (isFinished) {
+      const firstDuration = timeline[0]?.duration ?? 0
+      const firstPhaseEndAt = now + firstDuration * 1000
+      timerClockRef.current = { currentIndex: 0, phaseEndAt: firstPhaseEndAt }
       setCurrentIndex(0)
-      setRemaining(timeline[0].duration)
+      setRemaining(firstDuration)
+      setPhaseEndAt(firstPhaseEndAt)
       setIsFinished(false)
-      markStarted()
+      setHasStarted(true)
+      setStartedAt(now)
+      setNowTimestamp(now)
       setIsRunning(true)
       return
     }
 
-    if (remaining <= 0) {
-      setRemaining(timeline[currentIndex].duration)
+    if (isRunning) {
+      const clock = timerClockRef.current
+      const resolved = resolveTimerPosition(timeline, clock.currentIndex, clock.phaseEndAt, now)
+
+      if (resolved.finished) {
+        setIsRunning(false)
+        setIsFinished(true)
+        setRemaining(0)
+        setPhaseEndAt(null)
+        return
+      }
+
+      timerClockRef.current = { currentIndex: resolved.currentIndex, phaseEndAt: null }
+      setCurrentIndex(resolved.currentIndex)
+      setRemaining(resolved.remaining)
+      setPhaseEndAt(null)
+      setIsRunning(false)
+      return
     }
 
-    if (!isRunning) {
-      markStarted()
-    }
-
-    setIsRunning((prev) => !prev)
+    markStarted()
+    const nextRemaining = remaining > 0 ? remaining : timeline[currentIndex]?.duration ?? 0
+    const nextPhaseEndAt = now + nextRemaining * 1000
+    timerClockRef.current = { currentIndex, phaseEndAt: nextPhaseEndAt }
+    setRemaining(nextRemaining)
+    setPhaseEndAt(nextPhaseEndAt)
+    setIsRunning(true)
   }
 
   const skipCurrent = () => {
@@ -923,27 +769,62 @@ export default function App() {
       return
     }
 
+    const now = Date.now()
+    const clock = timerClockRef.current
+    let baseIndex = isRunning ? clock.currentIndex : currentIndex
+
+    if (
+      isRunning &&
+      clock.phaseEndAt != null &&
+      Number.isFinite(Number(clock.phaseEndAt))
+    ) {
+      const resolved = resolveTimerPosition(
+        timeline,
+        clock.currentIndex,
+        clock.phaseEndAt,
+        now,
+      )
+
+      if (resolved.finished) {
+        timerClockRef.current = { currentIndex: resolved.currentIndex, phaseEndAt: null }
+        setIsFinished(true)
+        setIsRunning(false)
+        setRemaining(0)
+        setPhaseEndAt(null)
+        return
+      }
+
+      baseIndex = resolved.currentIndex
+    }
+
     markStarted()
-    const nextIndex = currentIndex + 1
+    const nextIndex = baseIndex + 1
     const nextStep = timeline[nextIndex]
 
     if (!nextStep) {
+      timerClockRef.current = { currentIndex: baseIndex, phaseEndAt: null }
       setIsFinished(true)
       setIsRunning(false)
       setRemaining(0)
+      setPhaseEndAt(null)
       return
     }
 
+    const nextPhaseEndAt = isRunning ? now + nextStep.duration * 1000 : null
+    timerClockRef.current = { currentIndex: nextIndex, phaseEndAt: nextPhaseEndAt }
     setCurrentIndex(nextIndex)
     setRemaining(nextStep.duration)
+    setPhaseEndAt(nextPhaseEndAt)
   }
 
   const resetTimerSession = () => {
     if (!timeline.length) {
       return
     }
+    timerClockRef.current = { currentIndex: 0, phaseEndAt: null }
     setCurrentIndex(0)
     setRemaining(timeline[0].duration)
+    setPhaseEndAt(null)
     setIsRunning(false)
     setIsFinished(false)
     setHasStarted(false)
@@ -1037,7 +918,9 @@ export default function App() {
     if (pendingAction === 'leave-session') {
       setScreen('home')
       setSelectedSessionName(null)
+      timerClockRef.current = { currentIndex: 0, phaseEndAt: null }
       setIsRunning(false)
+      setPhaseEndAt(null)
       closeConfirm()
       return
     }

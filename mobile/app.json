@@ -13,9 +13,8 @@
       "package": "com.chronosport.mobile",
       "permissions": [
         "FOREGROUND_SERVICE",
-        "FOREGROUND_SERVICE_DATA_SYNC",
+        "FOREGROUND_SERVICE_SPECIAL_USE",
         "POST_NOTIFICATIONS",
-        "REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
         "WAKE_LOCK"
       ],
       "adaptiveIcon": {
