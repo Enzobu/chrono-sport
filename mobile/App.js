@@ -608,6 +608,7 @@ export default function App() {
       }
 
       if (resolved.finished) {
+        timerClockRef.current = { currentIndex: resolved.currentIndex, phaseEndAt: null }
         setIsRunning(false)
         setIsFinished(true)
         setRemaining(0)
@@ -749,12 +750,23 @@ export default function App() {
     }
 
     const now = Date.now()
-    let baseIndex = currentIndex
+    const clock = timerClockRef.current
+    let baseIndex = isRunning ? clock.currentIndex : currentIndex
 
-    if (isRunning && phaseEndAt != null && Number.isFinite(Number(phaseEndAt))) {
-      const resolved = resolveTimerPosition(timeline, currentIndex, phaseEndAt, now)
+    if (
+      isRunning &&
+      clock.phaseEndAt != null &&
+      Number.isFinite(Number(clock.phaseEndAt))
+    ) {
+      const resolved = resolveTimerPosition(
+        timeline,
+        clock.currentIndex,
+        clock.phaseEndAt,
+        now,
+      )
 
       if (resolved.finished) {
+        timerClockRef.current = { currentIndex: resolved.currentIndex, phaseEndAt: null }
         setIsFinished(true)
         setIsRunning(false)
         setRemaining(0)
@@ -770,6 +782,7 @@ export default function App() {
     const nextStep = timeline[nextIndex]
 
     if (!nextStep) {
+      timerClockRef.current = { currentIndex: baseIndex, phaseEndAt: null }
       setIsFinished(true)
       setIsRunning(false)
       setRemaining(0)
@@ -777,15 +790,18 @@ export default function App() {
       return
     }
 
+    const nextPhaseEndAt = isRunning ? now + nextStep.duration * 1000 : null
+    timerClockRef.current = { currentIndex: nextIndex, phaseEndAt: nextPhaseEndAt }
     setCurrentIndex(nextIndex)
     setRemaining(nextStep.duration)
-    setPhaseEndAt(isRunning ? now + nextStep.duration * 1000 : null)
+    setPhaseEndAt(nextPhaseEndAt)
   }
 
   const resetTimerSession = () => {
     if (!timeline.length) {
       return
     }
+    timerClockRef.current = { currentIndex: 0, phaseEndAt: null }
     setCurrentIndex(0)
     setRemaining(timeline[0].duration)
     setPhaseEndAt(null)
@@ -882,6 +898,7 @@ export default function App() {
     if (pendingAction === 'leave-session') {
       setScreen('home')
       setSelectedSessionName(null)
+      timerClockRef.current = { currentIndex: 0, phaseEndAt: null }
       setIsRunning(false)
       setPhaseEndAt(null)
       closeConfirm()
