@@ -55,7 +55,7 @@ export function resolveTimerPosition(timeline, currentIndex, phaseEndAt, now = D
   const safeIndex = Math.min(Math.max(0, currentIndex), timeline.length - 1)
   const safeEndAt = Number(phaseEndAt)
 
-  if (!Number.isFinite(safeEndAt)) {
+  if (phaseEndAt == null || !Number.isFinite(safeEndAt)) {
     return {
       currentIndex: safeIndex,
       remaining: timeline[safeIndex]?.duration ?? 0,
