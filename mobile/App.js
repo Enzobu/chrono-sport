@@ -1,9 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Audio } from 'expo-av'
-import * as Notifications from 'expo-notifications'
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AppState, PermissionsAndroid, Platform, SafeAreaView, StyleSheet, Vibration } from 'react-native'
+import { AppState, NativeModules, PermissionsAndroid, Platform, SafeAreaView, StyleSheet, Vibration } from 'react-native'
 import { authRequest } from './src/api/auth'
 import {
   createSession,
@@ -26,6 +25,8 @@ import { HomeScreen } from './src/screens/HomeScreen'
 import { SessionFormScreen } from './src/screens/SessionFormScreen'
 import { TimerScreen } from './src/screens/TimerScreen'
 import { colors } from './src/styles/theme'
+
+const { TimerNotification } = NativeModules
 
 export default function App() {
   const [authToken, setAuthToken] = useState('')
@@ -66,7 +67,6 @@ export default function App() {
   const soundRef = useRef(null)
   const weightOverlayTimeoutRef = useRef(null)
   const appStateRef = useRef(AppState.currentState)
-  const scheduledRestCueIdsRef = useRef([])
 
   const ensureNotificationPermission = async () => {
     if (Platform.OS !== 'android' || Platform.Version < 33) {
@@ -142,28 +142,6 @@ export default function App() {
     ensureNotificationPermission().catch(() => {
       console.error('Notification permission request failed')
     })
-  }, [])
-
-  useEffect(() => {
-    Notifications.setNotificationHandler({
-      handleNotification: async () => ({
-        shouldShowAlert: appStateRef.current !== 'active',
-        shouldPlaySound: true,
-        shouldSetBadge: false,
-      }),
-    })
-
-    if (Platform.OS === 'android') {
-      Notifications.setNotificationChannelAsync('rest-finished', {
-        name: 'Fin de repos',
-        importance: Notifications.AndroidImportance.MAX,
-        sound: 'default',
-        vibrationPattern: [0, 250, 150, 250],
-        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
-      }).catch((error) => {
-        console.error('Notification channel setup failed', error)
-      })
-    }
   }, [])
 
   useEffect(() => {
@@ -479,23 +457,53 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    scheduleAllRestCueNotifications().catch((error) => {
-      console.error('Scheduling rest cues failed', error)
-    })
+    const syncNativeTimer = async () => {
+      if (Platform.OS !== 'android' || !TimerNotification) {
+        return
+      }
 
-    return () => {
-      clearScheduledRestCueNotifications().catch(() => {
-        // no-op
-      })
+      if (
+        !isRunning ||
+        isFinished ||
+        !timeline.length ||
+        phaseEndAt == null ||
+        !Number.isFinite(Number(phaseEndAt))
+      ) {
+        TimerNotification.stop()
+        return
+      }
+
+      const permissionGranted = await ensureNotificationPermission()
+      if (!permissionGranted) {
+        TimerNotification.stop()
+        return
+      }
+
+      const restEndTimestamps = []
+      const now = Date.now()
+      let boundaryAt = Number(phaseEndAt)
+
+      for (let index = currentIndex; index < timeline.length - 1; index += 1) {
+        const phase = timeline[index]
+        const next = timeline[index + 1]
+
+        if (phase.kind === 'rest' && next.kind === 'work' && boundaryAt > now) {
+          restEndTimestamps.push(boundaryAt)
+        }
+
+        boundaryAt += Math.max(0, Number(next.duration) || 0) * 1000
+      }
+
+      TimerNotification.sync(restEndTimestamps)
     }
-  }, [isRunning, isFinished, currentIndex, phaseEndAt, timeline.length])
+
+    syncNativeTimer().catch((error) => {
+      console.error('Native timer notification sync failed', error)
+    })
+  }, [isRunning, isFinished, currentIndex, phaseEndAt, timeline])
 
   useEffect(() => {
     return () => {
-      clearScheduledRestCueNotifications().catch(() => {
-        // no-op
-      })
-
       if (weightOverlayTimeoutRef.current) {
         clearTimeout(weightOverlayTimeoutRef.current)
       }
@@ -536,72 +544,6 @@ export default function App() {
   const openConfirm = (action) => {
     setPendingAction(action)
     setConfirmVisible(true)
-  }
-
-  const clearScheduledRestCueNotifications = async () => {
-    const ids = scheduledRestCueIdsRef.current
-    if (!ids.length) {
-      return
-    }
-
-    await Promise.all(
-      ids.map((id) =>
-        Notifications.cancelScheduledNotificationAsync(id).catch(() => {
-          // no-op
-        }),
-      ),
-    )
-
-    scheduledRestCueIdsRef.current = []
-  }
-
-  const scheduleAllRestCueNotifications = async () => {
-    await clearScheduledRestCueNotifications()
-
-    if (
-      Platform.OS !== 'android' ||
-      !isRunning ||
-      isFinished ||
-      !timeline.length ||
-      phaseEndAt == null || !Number.isFinite(Number(phaseEndAt))
-    ) {
-      return
-    }
-
-    const permissionGranted = await ensureNotificationPermission()
-    if (!permissionGranted) {
-      return
-    }
-
-    const scheduledIds = []
-    const now = Date.now()
-    let boundaryAt = Number(phaseEndAt)
-
-    for (let index = currentIndex; index < timeline.length - 1; index += 1) {
-      const phase = timeline[index]
-      const next = timeline[index + 1]
-
-      if (phase.kind === 'rest' && next.kind === 'work' && boundaryAt > now) {
-        const id = await Notifications.scheduleNotificationAsync({
-          content: {
-            title: 'Chrono-Sport',
-            body: 'Repos termine, on repart.',
-            sound: 'default',
-            channelId: 'rest-finished',
-            priority: Notifications.AndroidNotificationPriority.MAX,
-          },
-          trigger: {
-            seconds: Math.max(1, Math.ceil((boundaryAt - now) / 1000)),
-          },
-        })
-
-        scheduledIds.push(id)
-      }
-
-      boundaryAt += Math.max(0, Number(next.duration) || 0) * 1000
-    }
-
-    scheduledRestCueIdsRef.current = scheduledIds
   }
 
   useEffect(() => {
