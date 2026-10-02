@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { useMemo, useState } from 'react'
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { createTimeline, formatHoursMinutesSeconds } from '../lib/timer'
 import { useTheme } from '../theme/ThemeContext'
 
@@ -53,6 +53,17 @@ export function HomeScreen({
 }) {
   const { colors } = useTheme()
   const styles = useMemo(() => createStyles(colors), [colors])
+  const [query, setQuery] = useState('')
+  const visibleSessions = useMemo(() => {
+    const normalized = query.trim().toLowerCase()
+    return Object.keys(sessions)
+      .filter((name) => !normalized || name.toLowerCase().includes(normalized))
+      .sort((a, b) => {
+        const aFavorite = Boolean(sessionItems.find((session) => session.name === a)?.favorite)
+        const bFavorite = Boolean(sessionItems.find((session) => session.name === b)?.favorite)
+        return Number(bFavorite) - Number(aFavorite)
+      })
+  }, [query, sessions, sessionItems])
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -69,17 +80,28 @@ export function HomeScreen({
         </Pressable>
       </View>
 
+      <View style={styles.searchWrap}>
+        <Text style={styles.searchIcon}>⌕</Text>
+        <TextInput
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Rechercher une séance..."
+          placeholderTextColor={colors.muted}
+          style={styles.searchInput}
+        />
+      </View>
+
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Programme</Text>
         <View style={styles.countPill}>
-          <Text style={styles.countPillText}>{Object.keys(sessions).length}</Text>
+          <Text style={styles.countPillText}>{visibleSessions.length}</Text>
         </View>
       </View>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {isLoading ? <Text style={styles.loading}>Chargement des séances...</Text> : null}
 
-      {Object.keys(sessions).map((name) => {
+      {visibleSessions.map((name) => {
         const item = sessionItems.find((session) => session.name === name)
         return (
         <SessionCard
@@ -97,10 +119,10 @@ export function HomeScreen({
         )
       })}
 
-      {!isLoading && !Object.keys(sessions).length ? (
+      {!isLoading && !visibleSessions.length ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyTitle}>Aucune séance</Text>
-          <Text style={styles.emptyText}>Crée ta première séance pour commencer.</Text>
+          <Text style={styles.emptyTitle}>{query ? 'Aucun résultat' : 'Aucune séance'}</Text>
+          <Text style={styles.emptyText}>{query ? 'Essaie avec un autre nom.' : 'Crée ta première séance pour commencer.'}</Text>
         </View>
       ) : null}
     </ScrollView>
@@ -159,6 +181,9 @@ const createStyles = (colors) =>
       fontSize: 15,
       fontWeight: '900',
     },
+    searchWrap:{height:50,borderRadius:16,borderWidth:1,borderColor:colors.border,backgroundColor:colors.surface,flexDirection:'row',alignItems:'center',paddingHorizontal:14,gap:10},
+    searchIcon:{color:colors.muted,fontSize:22,fontWeight:'800'},
+    searchInput:{flex:1,color:colors.text,fontSize:14},
     sectionHeader: {
       marginTop: 6,
       flexDirection: 'row',
