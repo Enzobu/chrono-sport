@@ -1,5 +1,6 @@
+import { useMemo } from 'react'
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
-import { colors } from '../styles/theme'
+import { useTheme } from '../theme/ThemeContext'
 
 export function AuthScreen({
   authMode,
@@ -12,6 +13,9 @@ export function AuthScreen({
   onModeToggle,
   onSubmit,
 }) {
+  const { colors } = useTheme()
+  const styles = useMemo(() => createStyles(colors), [colors])
+
   return (
     <View style={styles.wrapper}>
       <View style={styles.card}>
@@ -64,17 +68,17 @@ export function AuthScreen({
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   wrapper: {
     flex: 1,
     justifyContent: 'center',
-    padding: 16,
+    padding: 20,
   },
   card: {
-    backgroundColor: colors.panel,
+    backgroundColor: colors.surface,
     borderColor: colors.border,
     borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: 24,
     padding: 16,
   },
   badge: {
@@ -92,8 +96,8 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.text,
-    fontSize: 26,
-    fontWeight: '700',
+    fontSize: 32,
+    fontWeight: '800',
   },
   subtitle: {
     marginTop: 6,
@@ -108,11 +112,11 @@ const styles = StyleSheet.create({
   input: {
     borderColor: colors.border,
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 16,
     height: 42,
     paddingHorizontal: 12,
     color: colors.text,
-    backgroundColor: colors.bg,
+    backgroundColor: colors.panel,
   },
   error: {
     color: colors.danger,
@@ -120,14 +124,14 @@ const styles = StyleSheet.create({
   },
   primaryBtn: {
     marginTop: 14,
-    backgroundColor: colors.accent,
+    backgroundColor: colors.primary,
     borderRadius: 10,
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
   primaryText: {
-    color: '#090909',
+    color: colors.onPrimary,
     fontWeight: '700',
   },
   secondaryBtn: {
