@@ -1,4 +1,5 @@
-import { Check, LogOut, Monitor, Moon, Sun } from 'lucide-react'
+import { useState } from 'react'
+import { Check, LogOut, Monitor, Moon, RotateCcw, Sun } from 'lucide-react'
 import { Button } from '../components/ui/button'
 
 const accents = {
@@ -17,6 +18,14 @@ const modes = [
 ]
 
 export function SettingsPage({ themeMode, accent, resolvedTheme, onThemeModeChange, onAccentChange, onLogout, weightUnit = 'kg', onWeightUnitChange, workoutSoundEnabled = true, onWorkoutSoundChange, history = [], isLoadingHistory = false }) {
+  const [confirmAppearanceReset, setConfirmAppearanceReset] = useState(false)
+
+  const resetAppearance = () => {
+    onThemeModeChange('system')
+    onAccentChange('blue')
+    setConfirmAppearanceReset(false)
+  }
+
   return (
     <main className="mx-auto w-full max-w-4xl px-4 pb-28 pt-8 sm:px-6 lg:pt-12">
       <div className="mb-8">
@@ -88,6 +97,30 @@ export function SettingsPage({ themeMode, accent, resolvedTheme, onThemeModeChan
             )
           })}
         </div>
+      </section>
+
+      <section className="theme-surface mt-4 rounded-[1.6rem] border p-5 sm:p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="theme-text text-xl font-black">Réinitialiser l'apparence</h2>
+            <p className="theme-muted mt-1 text-sm">Restaure le thème Système et la couleur bleue par défaut.</p>
+          </div>
+          <RotateCcw className="theme-muted h-5 w-5 shrink-0" />
+        </div>
+        {confirmAppearanceReset ? (
+          <div className="theme-panel mt-4 rounded-2xl border p-4">
+            <p className="theme-text text-sm font-bold">Réinitialiser les réglages visuels ?</p>
+            <p className="theme-muted mt-1 text-xs">Le thème et la couleur primaire reviendront aux valeurs par défaut.</p>
+            <div className="mt-3 flex gap-2">
+              <Button variant="outline" className="theme-outline flex-1 rounded-2xl" onClick={() => setConfirmAppearanceReset(false)}>Annuler</Button>
+              <Button className="theme-primary flex-1 rounded-2xl font-black" onClick={resetAppearance}>Réinitialiser</Button>
+            </div>
+          </div>
+        ) : (
+          <Button variant="outline" className="theme-outline mt-4 rounded-2xl" onClick={() => setConfirmAppearanceReset(true)}>
+            <RotateCcw className="h-4 w-4" /> Réinitialiser l'apparence
+          </Button>
+        )}
       </section>
 
       <section className="theme-surface mt-4 rounded-[1.6rem] border p-5 sm:p-6">
