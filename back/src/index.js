@@ -185,6 +185,26 @@ app.get('/sessions', authRequired, async (req, res) => {
   return res.json({ sessions: sessions.map(toSessionPayload) })
 })
 
+app.patch('/sessions/:id/favorite', authRequired, async (req, res) => {
+  const id = Number(req.params.id)
+  if (!Number.isInteger(id)) return res.status(400).json({ message: 'Invalid session id' })
+  const parsed = z.object({ favorite: z.boolean() }).safeParse(req.body)
+  if (!parsed.success) return res.status(400).json({ message: 'Invalid payload' })
+
+  const existing = await prisma.workoutSession.findFirst({
+    where: { id, userId: req.userId },
+    select: { id: true },
+  })
+  if (!existing) return res.status(404).json({ message: 'Session not found' })
+
+  const session = await prisma.workoutSession.update({
+    where: { id },
+    data: { favorite: parsed.data.favorite },
+    include: { exercises: { include: { sets: true } } },
+  })
+  return res.json({ session: toSessionPayload(session) })
+})
+
 app.get('/sessions/:id', authRequired, async (req, res) => {
   const id = Number(req.params.id)
   if (!Number.isInteger(id)) {
