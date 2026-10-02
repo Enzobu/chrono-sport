@@ -9,3 +9,5 @@ dist/
 !.env.*.example
 
 seance.sql
+
+db_volume/
