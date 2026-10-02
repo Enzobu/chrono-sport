@@ -1121,6 +1121,7 @@ function AppContent() {
 
     const initialExercises = target.exercises.map((exercise) => ({
         name: exercise.name,
+        note: exercise.note ?? '',
         sets: exercise.sets.map((set) => ({
           type: set.type,
           time: Number(set.time),
