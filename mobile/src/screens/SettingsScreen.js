@@ -18,18 +18,17 @@ const labels = {
   cyan: 'Cyan',
 }
 
-export function SettingsScreen({ onBack }) {
+export function SettingsScreen({ onLogout }) {
   const { colors, mode, accent, resolvedScheme, setMode, setAccent } = useTheme()
   const styles = useMemo(() => createStyles(colors), [colors])
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.header}>
-        <Pressable style={styles.backBtn} onPress={onBack}><Text style={styles.backTxt}>‹</Text></Pressable>
         <View style={styles.headerCopy}>
-          <Text style={styles.eyebrow}>PERSONNALISATION</Text>
-          <Text style={styles.title}>Réglages</Text>
-          <Text style={styles.subtitle}>Adapte Chrono-Sport à ton style.</Text>
+          <Text style={styles.eyebrow}>COMPTE</Text>
+          <Text style={styles.title}>Compte & réglages</Text>
+          <Text style={styles.subtitle}>Personnalise l'app et gère ton compte.</Text>
         </View>
       </View>
 
@@ -70,6 +69,12 @@ export function SettingsScreen({ onBack }) {
         </View>
       </View>
 
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Compte</Text>
+        <Text style={styles.hint}>Déconnexion de ton compte Chrono-Sport.</Text>
+        <Pressable style={styles.logoutBtn} onPress={onLogout}><Text style={styles.logoutTxt}>Se déconnecter</Text></Pressable>
+      </View>
+
       <View style={styles.preview}>
         <Text style={styles.previewEyebrow}>APERÇU</Text>
         <Text style={styles.previewTimer}>01:42</Text>
@@ -84,8 +89,6 @@ export function SettingsScreen({ onBack }) {
 const createStyles = (colors) => StyleSheet.create({
   container: { padding: 18, gap: 18, paddingBottom: 36, backgroundColor: colors.bg },
   header: { flexDirection: 'row', gap: 14, alignItems: 'flex-start' },
-  backBtn: { width: 46, height: 46, borderRadius: 16, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
-  backTxt: { color: colors.text, fontSize: 34, lineHeight: 36, marginTop: -2 },
   headerCopy: { flex: 1, gap: 3, paddingTop: 2 },
   eyebrow: { color: colors.primary, fontSize: 11, fontWeight: '800', letterSpacing: 1.4 },
   title: { color: colors.text, fontSize: 32, fontWeight: '800', letterSpacing: -0.6 },
@@ -116,4 +119,6 @@ const createStyles = (colors) => StyleSheet.create({
   fill: { width: '62%', height: '100%', backgroundColor: colors.primary, borderRadius: 999 },
   primaryBtn: { marginTop: 6, height: 48, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary },
   primaryTxt: { color: colors.onPrimary, fontWeight: '800', fontSize: 15 },
+  logoutBtn:{height:46,borderRadius:14,borderWidth:1,borderColor:colors.danger,alignItems:'center',justifyContent:'center',marginTop:4},
+  logoutTxt:{color:colors.danger,fontWeight:'800'},
 })

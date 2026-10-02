@@ -7,6 +7,7 @@ import {
   updateSession as updateSessionApi,
 } from './api/sessions'
 import { ConfirmDialog } from './components/ConfirmDialog'
+import { BottomNav } from './components/BottomNav'
 import { ToastBanner } from './components/ToastBanner'
 import { createDefaultExercise, createDefaultSet, mapApiSessionsToClient } from './lib/sessions'
 import {
@@ -18,6 +19,7 @@ import {
 } from './lib/timer'
 import { AuthPage } from './pages/AuthPage'
 import { CreateSessionPage } from './pages/CreateSessionPage'
+import { DashboardPage } from './pages/DashboardPage'
 import { HomePage } from './pages/HomePage'
 import { TimerPage } from './pages/TimerPage'
 import { SettingsPage } from './pages/SettingsPage'
@@ -28,7 +30,7 @@ function App() {
   const [systemTheme, setSystemTheme] = useState(() =>
     window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
   )
-  const [showSettings, setShowSettings] = useState(false)
+  const [mainTab, setMainTab] = useState('home')
   const [authToken, setAuthToken] = useState(() => localStorage.getItem('auth_token') ?? '')
   const [authMode, setAuthMode] = useState('login')
   const [authEmail, setAuthEmail] = useState('')
@@ -185,6 +187,7 @@ function App() {
     setSessionItems([])
     setSessions({})
     setIsCreateMode(false)
+    setMainTab('home')
     setEditingSessionId(null)
     setSelectedSessionName(null)
     setSessionsError('')
@@ -1037,17 +1040,31 @@ function App() {
   if (!selectedSessionName) {
     return (
       <>
-        <HomePage
-          sessions={sessions}
-          sessionsError={sessionsError}
-          isLoadingSessions={isLoadingSessions}
-          onOpenCreate={openCreateMode}
-          onOpenSettings={() => setShowSettings(true)}
-          onLogout={logout}
-          onOpenSession={openSession}
-          onEditSession={openEditMode}
-          onDeleteSession={askDeleteSession}
-        />
+        {mainTab === 'home' ? (
+          <DashboardPage sessions={sessions} onOpenSessions={() => setMainTab('sessions')} />
+        ) : null}
+        {mainTab === 'sessions' ? (
+          <HomePage
+            sessions={sessions}
+            sessionsError={sessionsError}
+            isLoadingSessions={isLoadingSessions}
+            onOpenCreate={openCreateMode}
+            onOpenSession={openSession}
+            onEditSession={openEditMode}
+            onDeleteSession={askDeleteSession}
+          />
+        ) : null}
+        {mainTab === 'account' ? (
+          <SettingsPage
+            themeMode={themeMode}
+            accent={accent}
+            resolvedTheme={resolvedTheme}
+            onThemeModeChange={setThemeMode}
+            onAccentChange={setAccent}
+            onLogout={logout}
+          />
+        ) : null}
+        <BottomNav active={mainTab} onChange={setMainTab} />
 
         <ConfirmDialog
           open={isConfirmOpen}
