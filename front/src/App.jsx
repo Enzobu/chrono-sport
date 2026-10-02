@@ -272,7 +272,7 @@ function App() {
     setEditingSessionId(null)
     setDraftSessionName(name)
     setDraftExercises(exercises)
-    setDraftInitialSnapshot(JSON.stringify({ name, exercises }))
+    setDraftInitialSnapshot(JSON.stringify({ name: target.name, exercises }))
     setDraftError('')
     setSelectedSessionName(null)
     setIsCreateMode(true)
