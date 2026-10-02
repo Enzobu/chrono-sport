@@ -10,6 +10,7 @@ export function TimerPage({
   weightOverlayLabel,
   showWeightOverlay,
   displayedExercise,
+  exerciseNote,
   displayedPhase,
   progressPct,
   isRunning,
@@ -82,6 +83,12 @@ export function TimerPage({
           </button>
 
           <p className="theme-text text-center text-base font-bold sm:text-lg">{displayedExercise}</p>
+          {exerciseNote ? (
+            <div className="theme-panel mx-auto mt-3 max-w-xl rounded-2xl border px-4 py-3 text-sm">
+              <span className="theme-accent font-black">Note · </span>
+              <span className="theme-muted">{exerciseNote}</span>
+            </div>
+          ) : null}
 
           <div className="mt-7">
             <div className="mb-2 flex items-center justify-between text-xs font-bold">

@@ -42,6 +42,7 @@ export function SessionFormScreen({
   onSave,
   onSessionNameChange,
   onExerciseNameChange,
+  onExerciseNoteChange,
   onRemoveExercise,
   onDuplicateExercise,
   onMoveExercise,
@@ -312,6 +313,15 @@ export function SessionFormScreen({
                     placeholder="Nom de l'exercice"
                     placeholderTextColor={colors.muted}
                   />
+                  <TextInput
+                    value={exercise.note ?? ''}
+                    onChangeText={(value) => onExerciseNoteChange(exerciseIndex, value)}
+                    style={styles.noteInput}
+                    placeholder="Note facultative : placement, prise, tempo..."
+                    placeholderTextColor={colors.muted}
+                    multiline
+                    textAlignVertical="top"
+                  />
 
                   {exercise.sets.map((set, setIndex) => {
                     const setKey = setAccordionKey(exerciseIndex, setIndex)
@@ -485,6 +495,7 @@ const createStyles = (colors) => StyleSheet.create({
     color: colors.text,
     backgroundColor: colors.panel,
   },
+  noteInput:{borderColor:colors.border,borderWidth:1,borderRadius:14,minHeight:76,paddingHorizontal:12,paddingVertical:10,color:colors.text,backgroundColor:colors.panel},
   weightRow: {
     flexDirection: 'row',
     alignItems: 'center',

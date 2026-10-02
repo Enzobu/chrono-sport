@@ -34,6 +34,7 @@ export function TimerScreen({
   weightOverlayLabel,
   showWeightOverlay,
   exerciseLabel,
+  exerciseNote,
   progressPct,
   totalRemainingLabel,
   elapsedLabel,
@@ -104,6 +105,11 @@ export function TimerScreen({
         </Pressable>
 
         <Text style={styles.exerciseText}>{exerciseLabel}</Text>
+        {exerciseNote ? (
+          <View style={styles.noteCard}>
+            <Text style={styles.noteText}><Text style={styles.noteLabel}>Note · </Text>{exerciseNote}</Text>
+          </View>
+        ) : null}
 
         <View style={styles.progressHeader}>
           <Text style={styles.progressLabel}>Progression</Text>
@@ -309,6 +315,9 @@ const createStyles = (colors) =>
       fontWeight: '700',
       lineHeight: 22,
     },
+    noteCard:{backgroundColor:colors.panel,borderWidth:1,borderColor:colors.border,borderRadius:14,padding:11},
+    noteText:{color:colors.muted,fontSize:12,lineHeight:18},
+    noteLabel:{color:colors.primary,fontWeight:'900'},
     progressHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',

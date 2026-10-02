@@ -373,6 +373,13 @@ function AppContent() {
     return `${currentPhase.exerciseName} - ${currentPhase.setNumber}/${currentPhase.setTotal}`
   }, [currentPhase, nextPhase, isFinished])
 
+  const displayedExerciseNote = useMemo(() => {
+    const exerciseName = currentPhase?.kind === 'rest' ? nextPhase?.exerciseName : currentPhase?.exerciseName
+    if (!exerciseName || !selectedSessionName) return ''
+    const sourceSession = sessionItems.find((session) => session.name === selectedSessionName)
+    return sourceSession?.exercises?.find((exercise) => exercise.name === exerciseName)?.note ?? ''
+  }, [currentPhase, nextPhase, selectedSessionName, sessionItems])
+
   const displayedPhase = useMemo(() => {
     if (isFinished) {
       return null
@@ -931,6 +938,7 @@ function AppContent() {
       name: draftSessionName.trim(),
       exercises: draftExercises.map((exercise) => ({
         name: exercise.name.trim(),
+        note: exercise.note?.trim() ?? '',
         sets: exercise.sets.map((set) => ({
           type: set.type,
           time: Number(set.time),
@@ -1054,6 +1062,7 @@ function AppContent() {
     if (!target) return
     const exercises = (target.exercises ?? []).map((exercise) => ({
       name: exercise.name,
+      note: exercise.note ?? '',
       sets: (exercise.sets ?? []).map((set) => ({
         type: set.type,
         time: Number(set.time) || 60,
@@ -1084,6 +1093,14 @@ function AppContent() {
     setDraftExercises((prev) =>
       prev.map((exercise, index) =>
         index === exerciseIndex ? { ...exercise, name: value } : exercise,
+      ),
+    )
+  }
+
+  const updateExerciseNote = (exerciseIndex, value) => {
+    setDraftExercises((prev) =>
+      prev.map((exercise, index) =>
+        index === exerciseIndex ? { ...exercise, note: value } : exercise,
       ),
     )
   }
@@ -1286,6 +1303,7 @@ function AppContent() {
           onSave={saveSessionDraft}
           onSessionNameChange={setDraftSessionName}
           onExerciseNameChange={updateExerciseName}
+          onExerciseNoteChange={updateExerciseNote}
           onRemoveExercise={removeExercise}
           onDuplicateExercise={duplicateExercise}
           onMoveExercise={moveExercise}
@@ -1316,6 +1334,7 @@ function AppContent() {
           weightOverlayLabel={displayedWeightLabel}
           showWeightOverlay={showWeightOverlay && Boolean(displayedWeightLabel) && !isFinished}
           exerciseLabel={displayedExercise}
+          exerciseNote={displayedExerciseNote}
           progressPct={progressPct}
           totalRemainingLabel={`${formatHoursMinutesSeconds(totalRemaining)}・${formatEndTime(totalRemaining)}`}
           elapsedLabel={formatHoursMinutesSeconds(elapsedSinceStart)}

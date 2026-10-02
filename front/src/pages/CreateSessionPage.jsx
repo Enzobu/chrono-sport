@@ -21,6 +21,7 @@ export function CreateSessionPage({
   onSave,
   onSessionNameChange,
   onExerciseNameChange,
+  onExerciseNoteChange,
   onRemoveExercise,
   onDuplicateExercise,
   onMoveExercise,
@@ -252,13 +253,22 @@ export function CreateSessionPage({
                     }`}
                   >
                     <div className="overflow-hidden">
-                      <input
-                        value={exercise.name}
-                        onChange={(event) => onExerciseNameChange(exerciseIndex, event.target.value)}
-                        className="h-10 w-full rounded-2xl border theme-panel px-3 text-sm theme-text outline-none focus:border-[var(--brand)]"
-                        placeholder="Nom de l'exercice"
-                        tabIndex={exerciseExpanded ? 0 : -1}
-                      />
+                      <div className="space-y-2">
+                        <input
+                          value={exercise.name}
+                          onChange={(event) => onExerciseNameChange(exerciseIndex, event.target.value)}
+                          className="h-10 w-full rounded-2xl border theme-panel px-3 text-sm theme-text outline-none focus:border-[var(--brand)]"
+                          placeholder="Nom de l'exercice"
+                          tabIndex={exerciseExpanded ? 0 : -1}
+                        />
+                        <textarea
+                          value={exercise.note ?? ''}
+                          onChange={(event) => onExerciseNoteChange(exerciseIndex, event.target.value)}
+                          className="min-h-20 w-full resize-y rounded-2xl border theme-panel px-3 py-2 text-sm theme-text outline-none focus:border-[var(--brand)]"
+                          placeholder="Note facultative : placement, prise, tempo..."
+                          tabIndex={exerciseExpanded ? 0 : -1}
+                        />
+                      </div>
                     </div>
                   </div>
                 </CardHeader>

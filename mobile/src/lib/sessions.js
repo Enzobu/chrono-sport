@@ -20,5 +20,5 @@ export function createDefaultSet() {
 }
 
 export function createDefaultExercise() {
-  return { name: '', sets: [createDefaultSet()] }
+  return { name: '', note: '', sets: [createDefaultSet()] }
 }
