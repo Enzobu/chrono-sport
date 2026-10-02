@@ -20,8 +20,15 @@ import { AuthPage } from './pages/AuthPage'
 import { CreateSessionPage } from './pages/CreateSessionPage'
 import { HomePage } from './pages/HomePage'
 import { TimerPage } from './pages/TimerPage'
+import { SettingsPage } from './pages/SettingsPage'
 
 function App() {
+  const [themeMode, setThemeMode] = useState(() => localStorage.getItem('theme_mode') ?? 'system')
+  const [accent, setAccent] = useState(() => localStorage.getItem('theme_accent') ?? 'blue')
+  const [systemTheme, setSystemTheme] = useState(() =>
+    window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
+  )
+  const [showSettings, setShowSettings] = useState(false)
   const [authToken, setAuthToken] = useState(() => localStorage.getItem('auth_token') ?? '')
   const [authMode, setAuthMode] = useState('login')
   const [authEmail, setAuthEmail] = useState('')
@@ -60,6 +67,21 @@ function App() {
   const weightOverlayTimeoutRef = useRef(null)
 
   const showToast = (type, message) => setToast({ type, message, id: Date.now() })
+  const resolvedTheme = themeMode === 'system' ? systemTheme : themeMode
+
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-color-scheme: dark)')
+    const onChange = (event) => setSystemTheme(event.matches ? 'dark' : 'light')
+    media.addEventListener('change', onChange)
+    return () => media.removeEventListener('change', onChange)
+  }, [])
+
+  useEffect(() => {
+    localStorage.setItem('theme_mode', themeMode)
+    localStorage.setItem('theme_accent', accent)
+    document.documentElement.dataset.theme = resolvedTheme
+    document.documentElement.dataset.accent = accent
+  }, [themeMode, accent, resolvedTheme])
 
   useEffect(() => {
     if (!toast) {
@@ -928,6 +950,19 @@ function App() {
     )
   }
 
+  if (showSettings && authToken) {
+    return (
+      <SettingsPage
+        themeMode={themeMode}
+        accent={accent}
+        resolvedTheme={resolvedTheme}
+        onThemeModeChange={setThemeMode}
+        onAccentChange={setAccent}
+        onBack={() => setShowSettings(false)}
+      />
+    )
+  }
+
   if (isCreateMode) {
     return (
       <>
@@ -962,6 +997,7 @@ function App() {
           sessionsError={sessionsError}
           isLoadingSessions={isLoadingSessions}
           onOpenCreate={openCreateMode}
+          onOpenSettings={() => setShowSettings(true)}
           onLogout={logout}
           onOpenSession={openSession}
           onEditSession={openEditMode}
