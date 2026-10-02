@@ -130,6 +130,17 @@ export function CreateSessionPage({
       </Card>
 
       <div className="space-y-4">
+        <div className="flex justify-center">
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-dashed border-zinc-700 bg-transparent theme-muted hover:bg-[var(--app-panel-alt)] hover:text-[var(--app-text)]"
+            onClick={() => handleInsertExercise(0)}
+          >
+            <Plus className="h-4 w-4" /> Ajouter ici
+          </Button>
+        </div>
+
         {draftExercises.map((exercise, exerciseIndex) => {
           const exerciseExpanded = expandedExercises.has(exerciseIndex)
 
@@ -381,13 +392,14 @@ export function CreateSessionPage({
         })}
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-3">
+      <div className="mt-4 flex justify-center">
         <Button
           variant="outline"
-          className="theme-outline"
-          onClick={handleAddExercise}
+          size="sm"
+          className="border-dashed border-zinc-700 bg-transparent theme-muted hover:bg-[var(--app-panel-alt)] hover:text-[var(--app-text)]"
+          onClick={() => handleInsertExercise(draftExercises.length)}
         >
-          <Plus className="h-4 w-4" /> Ajouter un exercice
+          <Plus className="h-4 w-4" /> Ajouter ici
         </Button>
       </div>
 
