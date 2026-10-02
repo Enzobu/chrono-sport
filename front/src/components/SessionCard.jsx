@@ -21,7 +21,7 @@ export function SessionCard({ sessionName, sessionData, favorite = false, onTogg
         <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-2xl theme-accent-soft theme-accent">
           <ArrowUpRight className="h-5 w-5" />
         </div>
-        <CardTitle className="theme-text text-xl font-black capitalize">{sessionName}</CardTitle>
+        <CardTitle className="theme-text max-w-[calc(100%-3.5rem)] break-words pr-2 text-xl font-black capitalize">{sessionName}</CardTitle>
         <CardDescription className="theme-muted">
           {exercisesCount} exercices • {formatHoursMinutes(sessionDuration)}
         </CardDescription>
