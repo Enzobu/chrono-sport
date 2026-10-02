@@ -47,6 +47,7 @@ function App() {
   const [draftExercises, setDraftExercises] = useState([createDefaultExercise()])
   const [draftError, setDraftError] = useState('')
   const [isSavingDraft, setIsSavingDraft] = useState(false)
+  const [draftInitialSnapshot, setDraftInitialSnapshot] = useState('')
 
   const [selectedSessionName, setSelectedSessionName] = useState(null)
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -170,9 +171,11 @@ function App() {
   }
 
   const resetDraft = () => {
+    const initialExercises = [createDefaultExercise()]
     setEditingSessionId(null)
     setDraftSessionName('')
-    setDraftExercises([createDefaultExercise()])
+    setDraftExercises(initialExercises)
+    setDraftInitialSnapshot(JSON.stringify({ name: '', exercises: initialExercises }))
     setDraftError('')
   }
 
@@ -206,10 +209,7 @@ function App() {
       return
     }
 
-    setEditingSessionId(target.id)
-    setDraftSessionName(target.name)
-    setDraftExercises(
-      (target.exercises ?? []).map((exercise) => ({
+    const initialExercises = (target.exercises ?? []).map((exercise) => ({
         name: exercise.name,
         sets: (exercise.sets ?? []).map((set) => ({
           type: set.type,
@@ -217,8 +217,12 @@ function App() {
           wait: Number(set.wait) || 0,
           weight: Number(set.weight) || 0,
         })),
-      })),
-    )
+      }))
+
+    setEditingSessionId(target.id)
+    setDraftSessionName(target.name)
+    setDraftExercises(initialExercises)
+    setDraftInitialSnapshot(JSON.stringify({ name: target.name, exercises: initialExercises }))
     setDraftError('')
     setSelectedSessionName(null)
     setIsCreateMode(true)
@@ -398,6 +402,7 @@ function App() {
 
       await refreshSessions(authToken)
       closeCreateMode()
+      setDraftInitialSnapshot('')
       resetDraft()
       showToast('success', editingSessionId ? 'Seance mise a jour.' : 'Seance creee.')
     } catch (error) {
@@ -674,6 +679,13 @@ function App() {
     ? formatHoursMinutesSeconds(elapsedSinceStart)
     : formatHoursMinutes(elapsedSinceStart)
 
+  const draftSnapshot = useMemo(
+    () => JSON.stringify({ name: draftSessionName, exercises: draftExercises }),
+    [draftSessionName, draftExercises],
+  )
+  const hasUnsavedDraftChanges =
+    isCreateMode && Boolean(draftInitialSnapshot) && draftSnapshot !== draftInitialSnapshot
+
   const isGuardActive = Boolean(selectedSessionName && hasStarted && !isFinished)
   const shouldConfirmDestructive = hasStarted && !isFinished
 
@@ -689,6 +701,13 @@ function App() {
       return {
         title: 'Quitter la seance ?',
         message: 'Ta progression en cours sera perdue.',
+        confirmLabel: 'Quitter',
+      }
+    }
+    if (pendingAction === 'leave-editor') {
+      return {
+        title: 'Quitter sans enregistrer ?',
+        message: 'Tes modifications seront perdues.',
         confirmLabel: 'Quitter',
       }
     }
@@ -743,11 +762,29 @@ function App() {
       resetAllState()
       return
     }
+    if (pendingAction === 'leave-editor') {
+      setIsCreateMode(false)
+      setEditingSessionId(null)
+      setDraftInitialSnapshot('')
+      setDraftError('')
+      closeConfirmModal()
+      return
+    }
     if (pendingAction === 'reset-session') {
       resetCurrentSessionState()
       return
     }
     closeConfirmModal()
+  }
+
+  const requestEditorBack = () => {
+    if (hasUnsavedDraftChanges) {
+      setPendingAction('leave-editor')
+      setIsConfirmOpen(true)
+      return
+    }
+    closeCreateMode()
+    setDraftInitialSnapshot('')
   }
 
   const requestAction = (actionName) => {
@@ -972,7 +1009,7 @@ function App() {
           draftExercises={draftExercises}
           draftError={draftError}
           isSavingDraft={isSavingDraft}
-          onBack={closeCreateMode}
+          onBack={requestEditorBack}
           onSave={saveDraftSession}
           onSessionNameChange={setDraftSessionName}
           onExerciseNameChange={updateExerciseName}
@@ -983,6 +1020,14 @@ function App() {
           onRemoveSet={removeSet}
           onAddSet={addSet}
           onAddExercise={addExercise}
+        />
+        <ConfirmDialog
+          open={isConfirmOpen}
+          title={modalContent.title}
+          message={modalContent.message}
+          confirmLabel={modalContent.confirmLabel}
+          onCancel={closeConfirmModal}
+          onConfirm={executePendingAction}
         />
         <ToastBanner toast={toast} />
       </>
