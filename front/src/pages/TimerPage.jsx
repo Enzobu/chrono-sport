@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { ArrowLeft, Lock, Pause, Play, RotateCcw, SkipForward, Unlock } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import { SessionDetailsAccordion } from '../components/SessionDetailsAccordion'
+import { formatWeight } from '../lib/weight'
 
 export function TimerPage({
   selectedSessionName,
@@ -12,6 +13,7 @@ export function TimerPage({
   showWeightOverlay,
   displayedExercise,
   exerciseNote,
+  nextSetPreview,
   displayedPhase,
   progressPct,
   isRunning,
@@ -97,6 +99,18 @@ export function TimerPage({
           </button>
 
           <p className="theme-text text-center text-base font-bold sm:text-lg">{displayedExercise}</p>
+          {nextSetPreview ? (
+            <div className="theme-panel mx-auto mt-4 max-w-xl rounded-2xl border p-4">
+              <div className="theme-accent text-[10px] font-black uppercase tracking-[0.16em]">Prochaine série</div>
+              <div className="theme-text mt-1 text-lg font-black">{nextSetPreview.exerciseName}</div>
+              <div className="theme-muted mt-1 text-sm">
+                Série {nextSetPreview.setNumber}/{nextSetPreview.setTotal}
+                {nextSetPreview.trackWeight ? ` · ${formatWeight(nextSetPreview.weight, weightUnit)}` : ''}
+                {nextSetPreview.setType === 'echauffement' ? ' · Échauffement' : ''}
+              </div>
+            </div>
+          ) : null}
+
           {exerciseNote ? (
             <div className="theme-panel mx-auto mt-3 max-w-xl rounded-2xl border px-4 py-3 text-sm">
               <span className="theme-accent font-black">Note · </span>

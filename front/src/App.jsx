@@ -693,6 +693,20 @@ function App() {
     return `${currentPhase.exerciseName} - ${currentPhase.setNumber}/${currentPhase.setTotal}`
   }, [currentPhase, nextPhase, isFinished])
 
+  const nextSetPreview = useMemo(() => {
+    if (currentPhase?.kind !== 'rest' || nextPhase?.kind !== 'work' || !selectedSessionName) return null
+    const sourceSession = sessionItems.find((session) => session.name === selectedSessionName)
+    const sourceExercise = sourceSession?.exercises?.find((exercise) => exercise.name === nextPhase.exerciseName)
+    return {
+      exerciseName: nextPhase.exerciseName,
+      setNumber: nextPhase.setNumber,
+      setTotal: nextPhase.setTotal,
+      setType: nextPhase.setType,
+      weight: nextPhase.weight,
+      trackWeight: sourceExercise?.trackWeight !== false,
+    }
+  }, [currentPhase, nextPhase, selectedSessionName, sessionItems])
+
   const displayedTracksWeight = useMemo(() => {
     const exerciseName = currentPhase?.kind === 'rest' ? nextPhase?.exerciseName : currentPhase?.exerciseName
     if (!exerciseName || !selectedSessionName) return true
@@ -1281,6 +1295,7 @@ function App() {
         showWeightOverlay={showWeightOverlay}
         displayedExercise={displayedExercise}
         exerciseNote={displayedExerciseNote}
+        nextSetPreview={nextSetPreview}
         displayedPhase={displayedPhase}
         progressPct={progressPct}
         isRunning={isRunning}

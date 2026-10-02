@@ -31,6 +31,7 @@ export function TimerScreen({
   showWeightOverlay,
   exerciseLabel,
   exerciseNote,
+  nextSetPreview,
   progressPct,
   totalRemainingLabel,
   elapsedLabel,
@@ -111,6 +112,18 @@ export function TimerScreen({
         </Pressable>
 
         <Text style={styles.exerciseText}>{exerciseLabel}</Text>
+        {nextSetPreview ? (
+          <View style={styles.nextSetCard}>
+            <Text style={styles.nextSetEyebrow}>PROCHAINE SÉRIE</Text>
+            <Text style={styles.nextSetTitle}>{nextSetPreview.exerciseName}</Text>
+            <Text style={styles.nextSetMeta}>
+              Série {nextSetPreview.setNumber}/{nextSetPreview.setTotal}
+              {nextSetPreview.trackWeight ? ` · ${formatWeight(nextSetPreview.weight, weightUnit)}` : ''}
+              {nextSetPreview.setType === 'echauffement' ? ' · Échauffement' : ''}
+            </Text>
+          </View>
+        ) : null}
+
         {exerciseNote ? (
           <View style={styles.noteCard}>
             <Text style={styles.noteText}><Text style={styles.noteLabel}>Note · </Text>{exerciseNote}</Text>
@@ -345,6 +358,10 @@ const createStyles = (colors) =>
       fontWeight: '700',
       lineHeight: 22,
     },
+    nextSetCard:{backgroundColor:colors.panel,borderWidth:1,borderColor:colors.primaryBorder,borderRadius:16,padding:13,gap:3},
+    nextSetEyebrow:{color:colors.primary,fontSize:10,fontWeight:'900',letterSpacing:1.1},
+    nextSetTitle:{color:colors.text,fontSize:16,fontWeight:'900'},
+    nextSetMeta:{color:colors.muted,fontSize:12,fontWeight:'700'},
     noteCard:{backgroundColor:colors.panel,borderWidth:1,borderColor:colors.border,borderRadius:14,padding:11},
     noteText:{color:colors.muted,fontSize:12,lineHeight:18},
     noteLabel:{color:colors.primary,fontWeight:'900'},
