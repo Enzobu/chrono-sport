@@ -124,14 +124,16 @@ const createStyles = (colors) => StyleSheet.create({
   },
   primaryBtn: {
     marginTop: 14,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.ctaBg,
+    borderWidth: 1,
+    borderColor: colors.ctaBorder,
     borderRadius: 10,
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
   primaryText: {
-    color: colors.onPrimary,
+    color: colors.ctaText,
     fontWeight: '700',
   },
   secondaryBtn: {

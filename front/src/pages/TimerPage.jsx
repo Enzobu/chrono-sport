@@ -61,7 +61,7 @@ export function TimerPage({
           <button
             type="button"
             onClick={onTimerClick}
-            className="theme-text my-6 w-full select-none bg-transparent text-center font-mono text-6xl font-black tracking-[-0.06em] outline-none transition active:scale-[0.985] sm:text-8xl"
+            className={`${isWork ? 'theme-work' : 'theme-text'} my-6 w-full select-none bg-transparent text-center font-mono text-6xl font-black tracking-[-0.06em] outline-none transition active:scale-[0.985] sm:text-8xl`}
           >
             {isFinished ? (
               <span className="text-4xl sm:text-5xl">Séance terminée</span>

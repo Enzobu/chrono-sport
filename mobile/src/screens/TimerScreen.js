@@ -94,10 +94,10 @@ export function TimerScreen({
           style={({ pressed }) => [styles.timerPressable, pressed && styles.timerPressablePressed]}
         >
           <View style={styles.timerWrap}>
-            <Animated.Text style={[styles.timerText, { opacity: chronoOpacity }]}>
+            <Animated.Text style={[styles.timerText, phaseIsWork && styles.timerWork, { opacity: chronoOpacity }]}>
               {chronoLabel}
             </Animated.Text>
-            <Animated.Text style={[styles.timerText, styles.timerOverlay, { opacity: overlayOpacity }]}>
+            <Animated.Text style={[styles.timerText, styles.timerOverlay, phaseIsWork && styles.timerWork, { opacity: overlayOpacity }]}>
               {weightOverlayLabel ?? ''}
             </Animated.Text>
           </View>
@@ -293,6 +293,9 @@ const createStyles = (colors) =>
       letterSpacing: -2,
       fontVariant: ['tabular-nums'],
     },
+    timerWork: {
+      color: colors.work,
+    },
     timerOverlay: {
       position: 'absolute',
       left: 0,
@@ -343,7 +346,9 @@ const createStyles = (colors) =>
       flex: 1,
     },
     primaryBtn: {
-      backgroundColor: colors.primary,
+      backgroundColor: colors.ctaBg,
+      borderWidth: 1,
+      borderColor: colors.ctaBorder,
       borderRadius: 17,
       height: 50,
       paddingHorizontal: 16,
@@ -351,7 +356,7 @@ const createStyles = (colors) =>
       justifyContent: 'center',
     },
     primaryText: {
-      color: colors.onPrimary,
+      color: colors.ctaText,
       fontWeight: '900',
       fontSize: 15,
     },

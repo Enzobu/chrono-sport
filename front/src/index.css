@@ -34,6 +34,7 @@
   --app-muted: #98a2b3;
   --app-border: #262d3a;
   --app-danger: #ff6b6b;
+  --work: #ff6f7d;
   --brand: #5b8cff;
   --brand-soft: rgba(91, 140, 255, 0.14);
   --brand-border: rgba(91, 140, 255, 0.42);
@@ -69,6 +70,7 @@
   --app-muted: #667085;
   --app-border: #dde2ea;
   --app-danger: #d64545;
+  --work: #d94b5b;
   --brand-soft: rgba(91, 140, 255, 0.1);
   --brand-border: rgba(91, 140, 255, 0.34);
 }
@@ -112,6 +114,16 @@
   .theme-panel { background: var(--app-panel); border-color: var(--app-border); }
   .theme-outline { background: var(--app-surface); border-color: var(--app-border); color: var(--app-text); }
   .theme-primary { background: var(--brand); }
+  button.theme-primary {
+    background: color-mix(in srgb, var(--brand) 16%, transparent);
+    border: 1px solid color-mix(in srgb, var(--brand) 44%, transparent);
+    color: var(--brand) !important;
+  }
+  button.theme-primary:hover {
+    background: color-mix(in srgb, var(--brand) 22%, transparent);
+    color: var(--brand) !important;
+  }
+  .theme-work { color: var(--work); }
   .theme-accent-soft { background: color-mix(in srgb, var(--brand) 14%, transparent); }
   .theme-accent-border { border-color: color-mix(in srgb, var(--brand) 44%, transparent); }
   .theme-track { background: var(--app-elevated); }

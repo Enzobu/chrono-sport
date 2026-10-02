@@ -497,7 +497,7 @@ const createStyles = (colors) => StyleSheet.create({
     justifyContent: 'center',
   },
   typeBtnActive: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.ctaBg,
   },
   typeTxt: {
     color: colors.muted,
@@ -505,18 +505,20 @@ const createStyles = (colors) => StyleSheet.create({
     fontWeight: '600',
   },
   typeTxtActive: {
-    color: colors.onPrimary,
+    color: colors.ctaText,
   },
   primaryBtn: {
     flex: 1,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.ctaBg,
+    borderWidth: 1,
+    borderColor: colors.ctaBorder,
     borderRadius: 14,
     height: 42,
     alignItems: 'center',
     justifyContent: 'center',
   },
   primaryText: {
-    color: colors.onPrimary,
+    color: colors.ctaText,
     fontWeight: '700',
   },
   secondaryBtn: {
