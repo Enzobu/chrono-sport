@@ -60,23 +60,29 @@ const createStyles = (colors) => StyleSheet.create({
     gap: 8,
   },
   button: {
-    borderRadius: 10,
-    paddingHorizontal: 14,
+    minHeight: 44,
+    borderRadius: 14,
+    paddingHorizontal: 16,
     paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   cancel: {
     borderColor: colors.border,
     borderWidth: 1,
+    backgroundColor: colors.panel,
   },
   confirm: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.ctaBg,
+    borderColor: colors.ctaBorder,
+    borderWidth: 1,
   },
   cancelText: {
     color: colors.text,
     fontWeight: '600',
   },
   confirmText: {
-    color: colors.onPrimary,
-    fontWeight: '700',
+    color: colors.ctaText,
+    fontWeight: '800',
   },
 })

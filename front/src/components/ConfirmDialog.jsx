@@ -24,7 +24,7 @@ export function ConfirmDialog({ open, title, message, confirmLabel, onCancel, on
           >
             Annuler
           </Button>
-          <Button className="theme-primary rounded-xl text-white hover:opacity-90" onClick={onConfirm}>
+          <Button className="theme-primary rounded-xl font-bold" onClick={onConfirm}>
             {confirmLabel}
           </Button>
         </DialogFooter>
