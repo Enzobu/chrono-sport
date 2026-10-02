@@ -256,6 +256,28 @@ function App() {
     }
   }
 
+  const duplicateSession = (sessionName) => {
+    const target = sessionItems.find((session) => session.name === sessionName)
+    if (!target) return
+    const exercises = (target.exercises ?? []).map((exercise) => ({
+      name: exercise.name,
+      sets: (exercise.sets ?? []).map((set) => ({
+        type: set.type,
+        time: Number(set.time) || 60,
+        wait: Number(set.wait) || 0,
+        weight: Number(set.weight) || 0,
+      })),
+    }))
+    const name = `${target.name} copie`
+    setEditingSessionId(null)
+    setDraftSessionName(name)
+    setDraftExercises(exercises)
+    setDraftInitialSnapshot(JSON.stringify({ name, exercises }))
+    setDraftError('')
+    setSelectedSessionName(null)
+    setIsCreateMode(true)
+  }
+
   const askDeleteSession = (sessionName) => {
     const target = sessionItems.find((session) => session.name === sessionName)
     if (!target) {
@@ -1087,6 +1109,7 @@ function App() {
             onOpenCreate={openCreateMode}
             onOpenSession={openSession}
             onEditSession={openEditMode}
+            onDuplicateSession={duplicateSession}
             onDeleteSession={askDeleteSession}
             sessionItems={sessionItems}
             onToggleFavorite={toggleFavorite}

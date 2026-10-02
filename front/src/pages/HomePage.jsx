@@ -10,6 +10,7 @@ export function HomePage({
   onOpenCreate,
   onOpenSession,
   onEditSession,
+  onDuplicateSession,
   onDeleteSession,
   sessionItems = [],
   onToggleFavorite,
@@ -80,6 +81,7 @@ export function HomePage({
             sessionData={sessions[sessionName]}
             onOpen={onOpenSession}
             onEdit={onEditSession}
+            onDuplicate={onDuplicateSession}
             favorite={Boolean(item?.favorite)}
             onToggleFavorite={onToggleFavorite}
             onDelete={onDeleteSession}
