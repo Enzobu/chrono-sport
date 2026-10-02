@@ -10,6 +10,7 @@ export function toSessionPayload(session) {
       .map((exercise) => ({
         id: exercise.id,
         name: exercise.name,
+        note: exercise.note ?? '',
         sets: exercise.sets
           .sort((a, b) => a.orderIndex - b.orderIndex)
           .map((set) => ({
