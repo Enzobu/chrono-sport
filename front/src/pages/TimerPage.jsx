@@ -23,6 +23,7 @@ export function TimerPage({
   onBack,
   onToggleRun,
   onSkip,
+  onAdjustRest,
   onReset,
   onTimerClick,
 }) {
@@ -103,6 +104,17 @@ export function TimerPage({
               />
             </div>
           </div>
+
+          {currentPhase?.kind === 'rest' && !isFinished ? (
+            <div className="mt-5 flex justify-center gap-2">
+              <Button variant="outline" className="theme-outline rounded-2xl" onClick={() => onAdjustRest(-15)}>
+                -15s
+              </Button>
+              <Button variant="outline" className="theme-outline rounded-2xl" onClick={() => onAdjustRest(15)}>
+                +15s
+              </Button>
+            </div>
+          ) : null}
 
           <div className="mt-6 flex flex-wrap gap-2">
             <Button

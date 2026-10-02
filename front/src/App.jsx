@@ -1089,6 +1089,17 @@ function App() {
     setIsRunning((prev) => !prev)
   }
 
+  const adjustRestTime = (deltaSeconds) => {
+    if (currentPhase?.kind !== 'rest' || isFinished) return
+    const nextRemaining = Math.max(0, remaining + deltaSeconds)
+    if (nextRemaining === 0) {
+      markStartedNow()
+      advancePhase()
+      return
+    }
+    setRemaining(nextRemaining)
+  }
+
   const skipCurrentPhase = () => {
     if (!timeline.length || isFinished) {
       return
@@ -1245,6 +1256,7 @@ function App() {
         onBack={() => requestAction('leave-session')}
         onToggleRun={toggleRun}
         onSkip={skipCurrentPhase}
+        onAdjustRest={adjustRestTime}
         onReset={() => requestAction('reset-session')}
         onTimerClick={handleTimerLabelClick}
       />

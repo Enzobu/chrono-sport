@@ -876,6 +876,23 @@ function AppContent() {
     setIsRunning(true)
   }
 
+  const adjustRestTime = (deltaSeconds) => {
+    if (currentPhase?.kind !== 'rest' || isFinished) return
+
+    const nextRemaining = Math.max(0, remaining + deltaSeconds)
+    if (nextRemaining === 0) {
+      skipCurrent()
+      return
+    }
+
+    setRemaining(nextRemaining)
+    if (isRunning) {
+      const nextPhaseEndAt = Date.now() + nextRemaining * 1000
+      timerClockRef.current = { currentIndex, phaseEndAt: nextPhaseEndAt }
+      setPhaseEndAt(nextPhaseEndAt)
+    }
+  }
+
   const skipCurrent = () => {
     if (!timeline.length || isFinished) {
       return
@@ -1418,6 +1435,7 @@ function AppContent() {
           onBack={() => openConfirm('leave-session')}
           onToggleRun={toggleRun}
           onSkip={skipCurrent}
+          onAdjustRest={adjustRestTime}
           onReset={() => openConfirm('reset-session')}
           onTimerPress={showCurrentOrNextWeight}
         />
