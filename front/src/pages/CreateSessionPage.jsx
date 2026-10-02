@@ -93,7 +93,7 @@ export function CreateSessionPage({
           <ArrowLeft className="h-4 w-4" /> Retour
         </Button>
         <Button
-          className="theme-primary theme-text hover:opacity-90"
+          className="theme-primary rounded-2xl font-black text-white hover:opacity-90"
           onClick={onSave}
           disabled={isSavingDraft}
         >
@@ -123,7 +123,7 @@ export function CreateSessionPage({
             id="session-name"
             value={draftSessionName}
             onChange={(event) => onSessionNameChange(event.target.value)}
-            className="h-11 w-full rounded-2xl border theme-panel px-3 text-sm theme-text outline-none focus:border-zinc-500"
+            className="h-11 w-full rounded-2xl border theme-panel px-3 text-sm theme-text outline-none focus:border-[var(--brand)]"
             placeholder="ex: Push volume"
           />
         </CardContent>
@@ -187,7 +187,7 @@ export function CreateSessionPage({
                     <input
                       value={exercise.name}
                       onChange={(event) => onExerciseNameChange(exerciseIndex, event.target.value)}
-                      className="h-10 w-full rounded-2xl border theme-panel px-3 text-sm theme-text outline-none focus:border-zinc-500"
+                      className="h-10 w-full rounded-2xl border theme-panel px-3 text-sm theme-text outline-none focus:border-[var(--brand)]"
                       placeholder="Nom de l'exercice"
                     />
                   ) : null}
@@ -243,7 +243,7 @@ export function CreateSessionPage({
                                       }
                                       className={`rounded text-xs font-medium transition ${
                                         set.type === 'entrainement'
-                                          ? 'bg-zinc-200 text-zinc-900'
+                                          ? 'theme-primary text-white'
                                           : 'theme-muted hover:bg-[var(--app-panel-alt)]'
                                       }`}
                                     >
@@ -261,7 +261,7 @@ export function CreateSessionPage({
                                       }
                                       className={`rounded text-xs font-medium transition ${
                                         set.type === 'echauffement'
-                                          ? 'bg-zinc-200 text-zinc-900'
+                                          ? 'theme-primary text-white'
                                           : 'theme-muted hover:bg-[var(--app-panel-alt)]'
                                       }`}
                                     >
@@ -329,7 +329,7 @@ export function CreateSessionPage({
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="theme-muted hover:bg-[var(--app-panel-alt)] hover:theme-text"
+                                    className="theme-muted hover:bg-[var(--app-panel-alt)] hover:text-[var(--app-text)]"
                                     onClick={() => onRemoveSet(exerciseIndex, setIndex)}
                                   >
                                     <Trash2 className="h-4 w-4" />
@@ -369,7 +369,7 @@ export function CreateSessionPage({
                   <Button
                     variant="outline"
                     size="sm"
-                    className="border-dashed border-zinc-700 bg-transparent theme-muted hover:bg-[var(--app-panel-alt)] hover:theme-text"
+                    className="border-dashed border-zinc-700 bg-transparent theme-muted hover:bg-[var(--app-panel-alt)] hover:text-[var(--app-text)]"
                     onClick={() => handleInsertExercise(exerciseIndex + 1)}
                   >
                     <Plus className="h-4 w-4" /> Ajouter ici
