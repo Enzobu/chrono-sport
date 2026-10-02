@@ -1,15 +1,23 @@
-import { ArrowUpRight, Pencil, Trash2 } from 'lucide-react'
+import { ArrowUpRight, Pencil, Star, Trash2 } from 'lucide-react'
 import { Button } from './ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { createTimeline, formatHoursMinutes } from '../lib/timer'
 
-export function SessionCard({ sessionName, sessionData, onOpen, onEdit, onDelete }) {
+export function SessionCard({ sessionName, sessionData, favorite = false, onToggleFavorite, onOpen, onEdit, onDelete }) {
   const exercisesCount = Object.keys(sessionData).length
   const sessionDuration = createTimeline(sessionData).reduce((sum, step) => sum + step.duration, 0)
 
   return (
     <Card className="theme-surface rounded-[1.5rem] border shadow-none">
-      <CardHeader className="pb-4">
+      <CardHeader className="relative pb-4">
+        <button
+          type="button"
+          aria-label={favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+          className={`absolute right-5 top-5 rounded-xl p-2 transition ${favorite ? 'theme-accent-soft theme-accent' : 'theme-muted'}`}
+          onClick={() => onToggleFavorite(sessionName)}
+        >
+          <Star className="h-5 w-5" fill={favorite ? 'currentColor' : 'none'} />
+        </button>
         <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-2xl theme-accent-soft theme-accent">
           <ArrowUpRight className="h-5 w-5" />
         </div>

@@ -16,11 +16,12 @@ function getSuggestedSession(history, sessions) {
   return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null
 }
 
-export function DashboardScreen({ sessions, history = [], onOpenSessions, onOpenSession }) {
+export function DashboardScreen({ sessions, sessionItems = [], history = [], onOpenSessions, onOpenSession }) {
   const { colors } = useTheme()
   const styles = useMemo(() => createStyles(colors), [colors])
   const count = Object.keys(sessions).length
   const suggestion = getSuggestedSession(history, sessions)
+  const favorites = sessionItems.filter((session) => session.favorite && sessions[session.name])
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.eyebrow}>CHRONO-SPORT</Text>
@@ -39,6 +40,14 @@ export function DashboardScreen({ sessions, history = [], onOpenSessions, onOpen
           <Text style={styles.primaryText}>{suggestion ? 'Lancer la séance' : 'Voir mes séances'}</Text>
         </Pressable>
       </View>
+
+      <Text style={styles.sectionTitle}>Favoris</Text>
+      {favorites.length ? favorites.map((session) => (
+        <Pressable key={session.id} style={styles.favoriteCard} onPress={() => onOpenSession(session.name)}>
+          <Text style={styles.cardEyebrow}>★ FAVORI</Text>
+          <Text style={styles.favoriteTitle}>{session.name}</Text>
+        </Pressable>
+      )) : <View style={styles.card}><Text style={styles.cardText}>Épingle tes séances préférées depuis l'onglet Séances.</Text></View>}
 
       <View style={styles.statsRow}>
         <View style={[styles.card, styles.statCard]}>
@@ -67,6 +76,9 @@ const createStyles = (colors) => StyleSheet.create({
   count:{color:colors.text,fontSize:36,fontWeight:'900'},
   primaryBtn:{marginTop:8,height:48,borderRadius:16,backgroundColor:colors.ctaBg,borderWidth:1,borderColor:colors.ctaBorder,alignItems:'center',justifyContent:'center'},
   primaryText:{color:colors.ctaText,fontWeight:'900'},
+  sectionTitle:{color:colors.text,fontSize:19,fontWeight:'900',marginTop:2},
+  favoriteCard:{backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border,borderRadius:18,padding:14,gap:4},
+  favoriteTitle:{color:colors.text,fontSize:17,fontWeight:'900',textTransform:'capitalize'},
   statsRow:{flexDirection:'row',gap:10},
   statCard:{flex:1},
 })

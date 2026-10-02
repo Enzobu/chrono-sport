@@ -10,6 +10,8 @@ export function HomePage({
   onOpenSession,
   onEditSession,
   onDeleteSession,
+  sessionItems = [],
+  onToggleFavorite,
 }) {
   return (
     <main className="mx-auto w-full max-w-6xl px-4 pb-28 pt-8 sm:px-6 lg:pt-12">
@@ -46,16 +48,21 @@ export function HomePage({
       ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {Object.keys(sessions).map((sessionName) => (
+        {Object.keys(sessions).map((sessionName) => {
+          const item = sessionItems.find((session) => session.name === sessionName)
+          return (
           <SessionCard
             key={sessionName}
             sessionName={sessionName}
             sessionData={sessions[sessionName]}
             onOpen={onOpenSession}
             onEdit={onEditSession}
+            favorite={Boolean(item?.favorite)}
+            onToggleFavorite={onToggleFavorite}
             onDelete={onDeleteSession}
           />
-        ))}
+          )
+        })}
       </div>
 
       {!isLoadingSessions && !Object.keys(sessions).length ? (

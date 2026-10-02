@@ -19,9 +19,10 @@ function getSuggestedSession(history, sessions) {
   return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null
 }
 
-export function DashboardPage({ sessions, history = [], onOpenSessions, onOpenSession }) {
+export function DashboardPage({ sessions, sessionItems = [], history = [], onOpenSessions, onOpenSession }) {
   const count = Object.keys(sessions).length
   const suggestion = getSuggestedSession(history, sessions)
+  const favorites = sessionItems.filter((session) => session.favorite && sessions[session.name])
   return (
     <main className="mx-auto w-full max-w-6xl px-4 pb-28 pt-8 sm:px-6 lg:pt-12">
       <p className="theme-accent text-xs font-black uppercase tracking-[0.22em]">Chrono-Sport</p>
@@ -49,6 +50,23 @@ export function DashboardPage({ sessions, history = [], onOpenSessions, onOpenSe
             </Button>
           </>
         )}
+      </section>
+
+      <section className="mt-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="theme-text text-xl font-black">Favoris</h2>
+          <span className="theme-muted text-xs">{favorites.length}</span>
+        </div>
+        {favorites.length ? (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {favorites.map((session) => (
+              <button key={session.id} type="button" onClick={() => onOpenSession(session.name)} className="theme-surface rounded-2xl border p-4 text-left">
+                <div className="theme-accent text-xs font-black">★ FAVORI</div>
+                <div className="theme-text mt-1 text-lg font-black capitalize">{session.name}</div>
+              </button>
+            ))}
+          </div>
+        ) : <div className="theme-surface rounded-2xl border p-4 theme-muted text-sm">Épingle tes séances préférées depuis l'onglet Séances.</div>}
       </section>
 
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
