@@ -27,6 +27,7 @@ export function createDefaultSet() {
 export function createDefaultExercise() {
   return {
     name: '',
+    note: '',
     sets: [createDefaultSet()],
   }
 }
