@@ -34,6 +34,32 @@ export function SettingsPage({ themeMode, accent, resolvedTheme, onThemeModeChan
         <p className="theme-muted mt-2">Personnalise l'app et gère ton compte.</p>
       </div>
 
+      <div className="mb-3 mt-2">
+        <p className="theme-accent text-xs font-black uppercase tracking-[0.18em]">Compte</p>
+        <p className="theme-muted mt-1 text-sm">Ton activité et les actions liées à ton compte.</p>
+      </div>
+      <section className="theme-surface mt-4 rounded-[1.6rem] border p-5 sm:p-6">
+        <h2 className="theme-text text-xl font-black">Historique</h2>
+        <p className="theme-muted mt-1 text-sm">Tes dernières séances terminées.</p>
+        <div className="mt-4 space-y-2">
+          {isLoadingHistory ? <p className="theme-muted text-sm">Chargement...</p> : null}
+          {!isLoadingHistory && !history.length ? <p className="theme-muted text-sm">Aucune séance terminée pour le moment.</p> : null}
+          {history.slice(0, 20).map((entry) => (
+            <div key={entry.id} className="theme-panel flex items-center justify-between rounded-2xl border p-3">
+              <div>
+                <div className="theme-text font-bold">{entry.sessionName}</div>
+                <div className="theme-muted text-xs">{new Date(entry.finishedAt).toLocaleString('fr-FR')}</div>
+              </div>
+              <div className="theme-accent text-sm font-black">{Math.floor(entry.durationSeconds / 60)} min</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <div className="mb-3 mt-8">
+        <p className="theme-accent text-xs font-black uppercase tracking-[0.18em]">Paramètres</p>
+        <p className="theme-muted mt-1 text-sm">Préférences et personnalisation de l’application.</p>
+      </div>
       <section className="theme-surface rounded-[1.6rem] border p-5 sm:p-6">
         <div className="mb-5">
           <h2 className="theme-text text-xl font-black">Apparence</h2>
@@ -124,24 +150,6 @@ export function SettingsPage({ themeMode, accent, resolvedTheme, onThemeModeChan
       </section>
 
       <section className="theme-surface mt-4 rounded-[1.6rem] border p-5 sm:p-6">
-        <h2 className="theme-text text-xl font-black">Historique</h2>
-        <p className="theme-muted mt-1 text-sm">Tes dernières séances terminées.</p>
-        <div className="mt-4 space-y-2">
-          {isLoadingHistory ? <p className="theme-muted text-sm">Chargement...</p> : null}
-          {!isLoadingHistory && !history.length ? <p className="theme-muted text-sm">Aucune séance terminée pour le moment.</p> : null}
-          {history.slice(0, 20).map((entry) => (
-            <div key={entry.id} className="theme-panel flex items-center justify-between rounded-2xl border p-3">
-              <div>
-                <div className="theme-text font-bold">{entry.sessionName}</div>
-                <div className="theme-muted text-xs">{new Date(entry.finishedAt).toLocaleString('fr-FR')}</div>
-              </div>
-              <div className="theme-accent text-sm font-black">{Math.floor(entry.durationSeconds / 60)} min</div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="theme-surface mt-4 rounded-[1.6rem] border p-5 sm:p-6">
         <h2 className="theme-text text-xl font-black">Son de séance</h2>
         <p className="theme-muted mt-1 text-sm">Ding joué à la transition repos → travail.</p>
         <button type="button" onClick={() => onWorkoutSoundChange(!workoutSoundEnabled)}
@@ -163,14 +171,6 @@ export function SettingsPage({ themeMode, accent, resolvedTheme, onThemeModeChan
         </div>
       </section>
 
-      <section className="theme-surface mt-4 rounded-[1.6rem] border p-5 sm:p-6">
-        <h2 className="theme-text text-xl font-black">Compte</h2>
-        <p className="theme-muted mt-1 text-sm">Déconnexion de ton compte Chrono-Sport.</p>
-        <Button variant="outline" className="mt-4 rounded-2xl border-red-950 text-red-300 hover:bg-red-950/30" onClick={onLogout}>
-          <LogOut className="h-4 w-4" /> Se déconnecter
-        </Button>
-      </section>
-
       <section className="theme-preview mt-4 rounded-[1.7rem] border p-6">
         <p className="theme-accent text-xs font-black uppercase tracking-[0.2em]">Aperçu</p>
         <div className="theme-text mt-2 font-mono text-6xl font-black tracking-tight">01:42</div>
@@ -182,19 +182,15 @@ export function SettingsPage({ themeMode, accent, resolvedTheme, onThemeModeChan
           Action principale
         </button>
       </section>
-    </main>
-  )
-}      <section className="theme-preview mt-4 rounded-[1.7rem] border p-6">
-        <p className="theme-accent text-xs font-black uppercase tracking-[0.2em]">Aperçu</p>
-        <div className="theme-text mt-2 font-mono text-6xl font-black tracking-tight">01:42</div>
-        <p className="theme-muted mt-1">Développé incliné • Série 3/4</p>
-        <div className="theme-track mt-5 h-2 overflow-hidden rounded-full">
-          <div className="theme-primary h-full w-[62%] rounded-full" />
-        </div>
-        <button type="button" className="theme-primary mt-5 h-12 w-full rounded-2xl font-black text-white">
-          Action principale
-        </button>
+
+      <section className="theme-surface mt-4 rounded-[1.6rem] border p-5 sm:p-6">
+        <h2 className="theme-text text-xl font-black">Compte</h2>
+        <p className="theme-muted mt-1 text-sm">Déconnexion de ton compte Chrono-Sport.</p>
+        <Button variant="outline" className="mt-4 rounded-2xl border-red-950 text-red-300 hover:bg-red-950/30" onClick={onLogout}>
+          <LogOut className="h-4 w-4" /> Se déconnecter
+        </Button>
       </section>
+
     </main>
   )
 }
