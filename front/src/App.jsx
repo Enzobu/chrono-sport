@@ -12,6 +12,7 @@ import { ConfirmDialog } from './components/ConfirmDialog'
 import { BottomNav } from './components/BottomNav'
 import { ToastBanner } from './components/ToastBanner'
 import { createDefaultExercise, createDefaultSet, mapApiSessionsToClient } from './lib/sessions'
+import { formatWeight } from './lib/weight'
 import {
   createTimeline,
   formatEndTime,
@@ -30,6 +31,7 @@ import { SettingsPage } from './pages/SettingsPage'
 function App() {
   const [themeMode, setThemeMode] = useState(() => localStorage.getItem('theme_mode') ?? 'system')
   const [accent, setAccent] = useState(() => localStorage.getItem('theme_accent') ?? 'blue')
+  const [weightUnit, setWeightUnit] = useState(() => localStorage.getItem('weight_unit') ?? 'kg')
   const [systemTheme, setSystemTheme] = useState(() =>
     window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
   )
@@ -89,9 +91,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem('theme_mode', themeMode)
     localStorage.setItem('theme_accent', accent)
+    localStorage.setItem('weight_unit', weightUnit)
     document.documentElement.dataset.theme = resolvedTheme
     document.documentElement.dataset.accent = accent
-  }, [themeMode, accent, resolvedTheme])
+  }, [themeMode, accent, resolvedTheme, weightUnit])
 
   useEffect(() => {
     if (!toast) {
@@ -682,8 +685,8 @@ function App() {
 
     const rawWeight = displayedPhase?.weight
     const weight = Number.isFinite(Number(rawWeight)) ? Number(rawWeight) : 0
-    return `${weight % 1 === 0 ? weight : weight.toFixed(1)}kg`
-  }, [displayedPhase, displayedTracksWeight])
+    return formatWeight(weight, weightUnit)
+  }, [displayedPhase, displayedTracksWeight, weightUnit])
 
   const handleTimerLabelClick = () => {
     if (isFinished || !displayedPhase?.kind) {
@@ -1127,6 +1130,7 @@ function App() {
           onSave={saveDraftSession}
           onSessionNameChange={setDraftSessionName}
           onExerciseNameChange={updateExerciseName}
+          weightUnit={weightUnit}
           onExerciseNoteChange={updateExerciseNote}
           onToggleExerciseWeight={toggleExerciseWeight}
           onRemoveExercise={removeExercise}
@@ -1179,6 +1183,8 @@ function App() {
             onThemeModeChange={setThemeMode}
             onAccentChange={setAccent}
             onLogout={logout}
+            weightUnit={weightUnit}
+            onWeightUnitChange={setWeightUnit}
             history={history}
             isLoadingHistory={isLoadingHistory}
           />
@@ -1230,6 +1236,7 @@ function App() {
         completedExercisesCount={completedExercisesCount}
         exerciseCount={exerciseNames.length}
         sessionOutline={sessionOutline}
+        weightUnit={weightUnit}
         onBack={() => requestAction('leave-session')}
         onToggleRun={toggleRun}
         onSkip={skipCurrentPhase}

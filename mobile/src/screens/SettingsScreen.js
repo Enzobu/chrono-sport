@@ -18,7 +18,7 @@ const labels = {
   cyan: 'Cyan',
 }
 
-export function SettingsScreen({ onLogout, history = [], loadingHistory = false }) {
+export function SettingsScreen({ onLogout, weightUnit = 'kg', onWeightUnitChange, history = [], loadingHistory = false }) {
   const { colors, mode, accent, resolvedScheme, setMode, setAccent } = useTheme()
   const styles = useMemo(() => createStyles(colors), [colors])
 
@@ -86,6 +86,18 @@ export function SettingsScreen({ onLogout, history = [], loadingHistory = false 
       </View>
 
       <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Unités</Text>
+        <Text style={styles.hint}>Choisis l'unité utilisée pour les poids.</Text>
+        <View style={styles.unitRow}>
+          {['kg', 'lb'].map((unit) => (
+            <Pressable key={unit} style={[styles.unitBtn, weightUnit === unit && styles.unitBtnActive]} onPress={() => onWeightUnitChange(unit)}>
+              <Text style={[styles.unitText, weightUnit === unit && styles.unitTextActive]}>{unit.toUpperCase()}</Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.section}>
         <Text style={styles.sectionTitle}>Compte</Text>
         <Text style={styles.hint}>Déconnexion de ton compte Chrono-Sport.</Text>
         <Pressable style={styles.logoutBtn} onPress={onLogout}><Text style={styles.logoutTxt}>Se déconnecter</Text></Pressable>
@@ -135,6 +147,11 @@ const createStyles = (colors) => StyleSheet.create({
   fill: { width: '62%', height: '100%', backgroundColor: colors.primary, borderRadius: 999 },
   primaryBtn: { marginTop: 6, height: 48, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary },
   primaryTxt: { color: colors.onPrimary, fontWeight: '800', fontSize: 15 },
+  unitRow:{flexDirection:'row',gap:8},
+  unitBtn:{flex:1,height:44,borderRadius:14,borderWidth:1,borderColor:colors.border,alignItems:'center',justifyContent:'center'},
+  unitBtnActive:{backgroundColor:colors.primarySoft,borderColor:colors.primaryBorder},
+  unitText:{color:colors.muted,fontWeight:'800'},
+  unitTextActive:{color:colors.primary},
   logoutBtn:{height:46,borderRadius:14,borderWidth:1,borderColor:colors.danger,alignItems:'center',justifyContent:'center',marginTop:4},
   logoutTxt:{color:colors.danger,fontWeight:'800'},
   historyRow:{flexDirection:'row',alignItems:'center',gap:10,borderWidth:1,borderColor:colors.border,backgroundColor:colors.panel,borderRadius:14,padding:12},
