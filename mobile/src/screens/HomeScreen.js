@@ -93,6 +93,11 @@ export function HomeScreen({
           placeholderTextColor={colors.muted}
           style={styles.searchInput}
         />
+        {query ? (
+          <Pressable style={styles.searchClearBtn} onPress={() => setQuery('')}>
+            <Text style={styles.searchClearText}>×</Text>
+          </Pressable>
+        ) : null}
       </View>
 
       <View style={styles.sectionHeader}>
@@ -189,6 +194,8 @@ const createStyles = (colors) =>
     searchWrap:{height:50,borderRadius:16,borderWidth:1,borderColor:colors.border,backgroundColor:colors.surface,flexDirection:'row',alignItems:'center',paddingHorizontal:14,gap:10},
     searchIcon:{color:colors.muted,fontSize:22,fontWeight:'800'},
     searchInput:{flex:1,color:colors.text,fontSize:14},
+    searchClearBtn:{width:34,height:34,borderRadius:11,alignItems:'center',justifyContent:'center',backgroundColor:colors.panelAlt},
+    searchClearText:{color:colors.muted,fontSize:22,lineHeight:24,fontWeight:'800'},
     sectionHeader: {
       marginTop: 6,
       flexDirection: 'row',
