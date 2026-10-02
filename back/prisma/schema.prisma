@@ -20,6 +20,7 @@ model User {
 model WorkoutSession {
   id         Int        @id @default(autoincrement())
   name       String
+  favorite   Boolean    @default(false)
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
   userId     Int

@@ -3,13 +3,16 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { createTimeline, formatHoursMinutesSeconds } from '../lib/timer'
 import { useTheme } from '../theme/ThemeContext'
 
-function SessionCard({ name, data, onOpen, onEdit, onDelete, colors, styles }) {
+function SessionCard({ name, data, favorite, onToggleFavorite, onOpen, onEdit, onDelete, colors, styles }) {
   const duration = createTimeline(data).reduce((sum, step) => sum + step.duration, 0)
   const exercisesCount = Object.keys(data).length
 
   return (
     <View style={styles.card}>
       <View style={styles.cardTop}>
+        <Pressable style={[styles.favoriteBtn, favorite && styles.favoriteBtnActive]} onPress={() => onToggleFavorite(name)}>
+          <Text style={[styles.favoriteText, favorite && styles.favoriteTextActive]}>{favorite ? '★' : '☆'}</Text>
+        </Pressable>
         <View style={styles.cardIcon}>
           <Text style={styles.cardIconText}>↗</Text>
         </View>
@@ -45,6 +48,8 @@ export function HomeScreen({
   onOpenSession,
   onEditSession,
   onDeleteSession,
+  sessionItems = [],
+  onToggleFavorite,
 }) {
   const { colors } = useTheme()
   const styles = useMemo(() => createStyles(colors), [colors])
@@ -74,18 +79,23 @@ export function HomeScreen({
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {isLoading ? <Text style={styles.loading}>Chargement des séances...</Text> : null}
 
-      {Object.keys(sessions).map((name) => (
+      {Object.keys(sessions).map((name) => {
+        const item = sessionItems.find((session) => session.name === name)
+        return (
         <SessionCard
           key={name}
           name={name}
           data={sessions[name]}
           onOpen={onOpenSession}
           onEdit={onEditSession}
+          favorite={Boolean(item?.favorite)}
+          onToggleFavorite={onToggleFavorite}
           onDelete={onDeleteSession}
           colors={colors}
           styles={styles}
         />
-      ))}
+        )
+      })}
 
       {!isLoading && !Object.keys(sessions).length ? (
         <View style={styles.empty}>
@@ -192,9 +202,14 @@ const createStyles = (colors) =>
     },
     cardTop: {
       flexDirection: 'row',
+      position: 'relative',
       gap: 12,
       alignItems: 'center',
     },
+    favoriteBtn:{position:'absolute',right:0,top:0,width:36,height:36,borderRadius:12,alignItems:'center',justifyContent:'center',zIndex:2},
+    favoriteBtnActive:{backgroundColor:colors.primarySoft,borderWidth:1,borderColor:colors.primaryBorder},
+    favoriteText:{color:colors.muted,fontSize:22,fontWeight:'900'},
+    favoriteTextActive:{color:colors.primary},
     cardIcon: {
       width: 44,
       height: 44,

@@ -2,6 +2,7 @@ export function toSessionPayload(session) {
   return {
     id: session.id,
     name: session.name,
+    favorite: Boolean(session.favorite),
     createdAt: session.createdAt,
     updatedAt: session.updatedAt,
     exercises: session.exercises

@@ -10,6 +10,7 @@ import {
   deleteSession,
   fetchSessions,
   updateSession,
+  setSessionFavorite,
 } from './src/api/sessions'
 import { ConfirmModal } from './src/components/ConfirmModal'
 import { BottomNav } from './src/components/BottomNav'
@@ -1037,6 +1038,17 @@ function AppContent() {
     setScreen('create')
   }
 
+  const toggleFavorite = async (sessionName) => {
+    const target = sessionItems.find((session) => session.name === sessionName)
+    if (!target || !authToken) return
+    try {
+      await setSessionFavorite(authToken, target.id, !target.favorite)
+      await refreshSessions(authToken)
+    } catch (error) {
+      showToast('error', error.message || 'Impossible de modifier le favori')
+    }
+  }
+
   const askDelete = (sessionName) => {
     const target = sessionItems.find((session) => session.name === sessionName)
     if (!target) {
@@ -1198,7 +1210,7 @@ function AppContent() {
       ) : null}
 
       {screen === 'dashboard' ? (
-        <DashboardScreen sessions={sessions} history={history} onOpenSessions={() => setScreen('sessions')} onOpenSession={openSession} />
+        <DashboardScreen sessions={sessions} sessionItems={sessionItems} history={history} onOpenSessions={() => setScreen('sessions')} onOpenSession={openSession} />
       ) : null}
 
       {screen === 'sessions' ? (
@@ -1210,6 +1222,8 @@ function AppContent() {
           onOpenSession={openSession}
           onEditSession={openEdit}
           onDeleteSession={askDelete}
+          sessionItems={sessionItems}
+          onToggleFavorite={toggleFavorite}
         />
       ) : null}
 
