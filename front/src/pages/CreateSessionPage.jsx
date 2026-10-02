@@ -1,10 +1,9 @@
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import {
   ArrowDown,
   ArrowLeft,
   ArrowUp,
   ChevronDown,
-  ChevronUp,
   Plus,
   Save,
   Trash2,
@@ -34,6 +33,41 @@ export function CreateSessionPage({
     () => new Set(editingSessionId ? [] : [0]),
   )
   const [expandedSets, setExpandedSets] = useState(() => new Set())
+  const exerciseRefs = useRef(new Map())
+  const exercisePositions = useRef(new Map())
+
+  useLayoutEffect(() => {
+    if (!exercisePositions.current.size) {
+      return
+    }
+
+    draftExercises.forEach((exercise) => {
+      const node = exerciseRefs.current.get(exercise)
+      const previousTop = exercisePositions.current.get(exercise)
+      if (!node || previousTop == null) {
+        return
+      }
+
+      const nextTop = node.getBoundingClientRect().top
+      const delta = previousTop - nextTop
+      if (Math.abs(delta) < 1) {
+        return
+      }
+
+      node.animate(
+        [
+          { transform: `translateY(${delta}px)` },
+          { transform: 'translateY(0)' },
+        ],
+        {
+          duration: 260,
+          easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+        },
+      )
+    })
+
+    exercisePositions.current.clear()
+  }, [draftExercises])
 
   const setAccordionKey = (exerciseIndex, setIndex) => `${exerciseIndex}-${setIndex}`
 
@@ -80,6 +114,16 @@ export function CreateSessionPage({
     onInsertExercise(exerciseIndex)
     setExpandedExercises(new Set([exerciseIndex]))
     setExpandedSets(new Set())
+  }
+
+  const handleMoveExercise = (exerciseIndex, direction) => {
+    exercisePositions.current = new Map(
+      draftExercises.map((exercise) => [
+        exercise,
+        exerciseRefs.current.get(exercise)?.getBoundingClientRect().top,
+      ]),
+    )
+    onMoveExercise(exerciseIndex, direction)
   }
 
   return (
@@ -145,7 +189,14 @@ export function CreateSessionPage({
           const exerciseExpanded = expandedExercises.has(exerciseIndex)
 
           return (
-            <div key={`exercise-${exerciseIndex}`} className="space-y-3">
+            <div
+              key={`exercise-${exerciseIndex}`}
+              ref={(node) => {
+                if (node) exerciseRefs.current.set(exercise, node)
+                else exerciseRefs.current.delete(exercise)
+              }}
+              className="space-y-3"
+            >
               <Card className="theme-surface rounded-[1.6rem] border">
                 <CardHeader className={exerciseExpanded ? 'pb-4' : 'py-3'}>
                   <div className="flex items-center gap-2">
@@ -154,11 +205,11 @@ export function CreateSessionPage({
                       className="flex min-w-0 flex-1 items-center gap-3 text-left"
                       onClick={() => toggleExercise(exerciseIndex)}
                     >
-                      {exerciseExpanded ? (
-                        <ChevronUp className="h-5 w-5 shrink-0 theme-muted" />
-                      ) : (
-                        <ChevronDown className="h-5 w-5 shrink-0 theme-muted" />
-                      )}
+                      <ChevronDown
+                        className={`h-5 w-5 shrink-0 theme-muted transition-transform duration-300 ${
+                          exerciseExpanded ? 'rotate-180' : ''
+                        }`}
+                      />
                       <div className="min-w-0 flex-1">
                         <CardTitle className="truncate text-base theme-text sm:text-lg">
                           {exercise.name.trim() || `Exercice ${exerciseIndex + 1}`}
@@ -175,7 +226,7 @@ export function CreateSessionPage({
                         variant="outline"
                         size="icon"
                         className="theme-outline disabled:opacity-30"
-                        onClick={() => onMoveExercise(exerciseIndex, -1)}
+                        onClick={() => handleMoveExercise(exerciseIndex, -1)}
                         disabled={exerciseIndex === 0}
                         aria-label="Monter l'exercice"
                       >
@@ -185,7 +236,7 @@ export function CreateSessionPage({
                         variant="outline"
                         size="icon"
                         className="theme-outline disabled:opacity-30"
-                        onClick={() => onMoveExercise(exerciseIndex, 1)}
+                        onClick={() => handleMoveExercise(exerciseIndex, 1)}
                         disabled={exerciseIndex === draftExercises.length - 1}
                         aria-label="Descendre l'exercice"
                       >
@@ -194,18 +245,32 @@ export function CreateSessionPage({
                     </div>
                   </div>
 
-                  {exerciseExpanded ? (
-                    <input
-                      value={exercise.name}
-                      onChange={(event) => onExerciseNameChange(exerciseIndex, event.target.value)}
-                      className="h-10 w-full rounded-2xl border theme-panel px-3 text-sm theme-text outline-none focus:border-[var(--brand)]"
-                      placeholder="Nom de l'exercice"
-                    />
-                  ) : null}
+                  <div
+                    className={`grid transition-[grid-template-rows,opacity,margin] duration-300 ease-out ${
+                      exerciseExpanded
+                        ? 'mt-3 grid-rows-[1fr] opacity-100'
+                        : 'mt-0 grid-rows-[0fr] opacity-0'
+                    }`}
+                  >
+                    <div className="overflow-hidden">
+                      <input
+                        value={exercise.name}
+                        onChange={(event) => onExerciseNameChange(exerciseIndex, event.target.value)}
+                        className="h-10 w-full rounded-2xl border theme-panel px-3 text-sm theme-text outline-none focus:border-[var(--brand)]"
+                        placeholder="Nom de l'exercice"
+                        tabIndex={exerciseExpanded ? 0 : -1}
+                      />
+                    </div>
+                  </div>
                 </CardHeader>
 
-                {exerciseExpanded ? (
-                  <CardContent>
+                <div
+                  className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${
+                    exerciseExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+                  }`}
+                >
+                  <div className="overflow-hidden">
+                    <CardContent>
                     <div className="space-y-2">
                       {exercise.sets.map((set, setIndex) => {
                         const setKey = setAccordionKey(exerciseIndex, setIndex)
@@ -230,15 +295,20 @@ export function CreateSessionPage({
                                   {set.time}s · repos {set.wait}s · {Number(set.weight) || 0}kg
                                 </div>
                               </div>
-                              {setExpanded ? (
-                                <ChevronUp className="h-4 w-4 shrink-0 theme-muted" />
-                              ) : (
-                                <ChevronDown className="h-4 w-4 shrink-0 theme-muted" />
-                              )}
+                              <ChevronDown
+                                className={`h-4 w-4 shrink-0 theme-muted transition-transform duration-300 ${
+                                  setExpanded ? 'rotate-180' : ''
+                                }`}
+                              />
                             </button>
 
-                            {setExpanded ? (
-                              <div className="grid gap-3 border-t border-[var(--app-border)] px-3 py-3 md:grid-cols-[1.2fr_1fr_1fr_1fr_auto] md:items-end">
+                            <div
+                              className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${
+                                setExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+                              }`}
+                            >
+                              <div className="overflow-hidden">
+                                <div className="grid gap-3 border-t border-[var(--app-border)] px-3 py-3 md:grid-cols-[1.2fr_1fr_1fr_1fr_auto] md:items-end">
                                 <label className="space-y-1 text-xs theme-muted md:space-y-0 md:text-[0px]">
                                   <span className="md:hidden">Type</span>
                                   <div className="grid h-9 grid-cols-2 rounded-2xl border theme-panel p-1">
@@ -346,8 +416,9 @@ export function CreateSessionPage({
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
                                 </div>
+                                </div>
                               </div>
-                            ) : null}
+                            </div>
                           </div>
                         )
                       })}
@@ -371,8 +442,9 @@ export function CreateSessionPage({
                         <Trash2 className="h-4 w-4" /> Supprimer l'exercice
                       </Button>
                     </div>
-                  </CardContent>
-                ) : null}
+                    </CardContent>
+                  </div>
+                </div>
               </Card>
 
               {exerciseIndex < draftExercises.length - 1 ? (
