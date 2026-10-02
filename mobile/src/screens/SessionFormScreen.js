@@ -1,5 +1,15 @@
-import { useMemo, useState } from 'react'
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
+import { useEffect, useMemo, useState } from 'react'
+import {
+  LayoutAnimation,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  UIManager,
+  View,
+} from 'react-native'
 import { useTheme } from '../theme/ThemeContext'
 
 function TypeToggle({ value, onChange }) {
@@ -45,10 +55,34 @@ export function SessionFormScreen({
   const [expandedExercises, setExpandedExercises] = useState(() => new Set(editing ? [] : [0]))
   const [expandedSets, setExpandedSets] = useState(() => new Set())
 
+  useEffect(() => {
+    if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+      UIManager.setLayoutAnimationEnabledExperimental(true)
+    }
+  }, [])
+
+  const animateLayout = () => {
+    LayoutAnimation.configureNext({
+      duration: 240,
+      create: {
+        type: LayoutAnimation.Types.easeInEaseOut,
+        property: LayoutAnimation.Properties.opacity,
+      },
+      update: {
+        type: LayoutAnimation.Types.easeInEaseOut,
+      },
+      delete: {
+        type: LayoutAnimation.Types.easeInEaseOut,
+        property: LayoutAnimation.Properties.opacity,
+      },
+    })
+  }
+
   const fieldKey = (exerciseIndex, setIndex) => `${exerciseIndex}-${setIndex}`
   const setAccordionKey = (exerciseIndex, setIndex) => `${exerciseIndex}-${setIndex}`
 
   const toggleExercise = (exerciseIndex) => {
+    animateLayout()
     setExpandedExercises((prev) => {
       const next = new Set(prev)
       if (next.has(exerciseIndex)) {
@@ -61,6 +95,7 @@ export function SessionFormScreen({
   }
 
   const toggleSet = (exerciseIndex, setIndex) => {
+    animateLayout()
     const key = setAccordionKey(exerciseIndex, setIndex)
     setExpandedSets((prev) => {
       const next = new Set(prev)
@@ -74,6 +109,7 @@ export function SessionFormScreen({
   }
 
   const handleAddSet = (exerciseIndex) => {
+    animateLayout()
     const newSetIndex = exercises[exerciseIndex]?.sets.length ?? 0
     onAddSet(exerciseIndex)
     setExpandedExercises((prev) => new Set(prev).add(exerciseIndex))
@@ -88,9 +124,25 @@ export function SessionFormScreen({
   }
 
   const handleInsertExercise = (exerciseIndex) => {
+    animateLayout()
     onInsertExercise(exerciseIndex)
     setExpandedExercises(new Set([exerciseIndex]))
     setExpandedSets(new Set())
+  }
+
+  const handleMoveExercise = (exerciseIndex, direction) => {
+    animateLayout()
+    onMoveExercise(exerciseIndex, direction)
+  }
+
+  const handleRemoveExercise = (exerciseIndex) => {
+    animateLayout()
+    onRemoveExercise(exerciseIndex)
+  }
+
+  const handleRemoveSet = (exerciseIndex, setIndex) => {
+    animateLayout()
+    onRemoveSet(exerciseIndex, setIndex)
   }
 
   const onWeightChange = (exerciseIndex, setIndex, value) => {
@@ -176,7 +228,7 @@ export function SessionFormScreen({
                 <View style={styles.exerciseActions}>
                   <Pressable
                     style={[styles.orderBtn, exerciseIndex === 0 && styles.orderBtnDisabled]}
-                    onPress={() => onMoveExercise(exerciseIndex, -1)}
+                    onPress={() => handleMoveExercise(exerciseIndex, -1)}
                     disabled={exerciseIndex === 0}
                   >
                     <Text style={styles.orderBtnText}>↑</Text>
@@ -186,7 +238,7 @@ export function SessionFormScreen({
                       styles.orderBtn,
                       exerciseIndex === exercises.length - 1 && styles.orderBtnDisabled,
                     ]}
-                    onPress={() => onMoveExercise(exerciseIndex, 1)}
+                    onPress={() => handleMoveExercise(exerciseIndex, 1)}
                     disabled={exerciseIndex === exercises.length - 1}
                   >
                     <Text style={styles.orderBtnText}>↓</Text>
@@ -278,7 +330,7 @@ export function SessionFormScreen({
 
                             <Pressable
                               style={styles.deleteBtn}
-                              onPress={() => onRemoveSet(exerciseIndex, setIndex)}
+                              onPress={() => handleRemoveSet(exerciseIndex, setIndex)}
                             >
                               <Text style={styles.deleteTxt}>Supprimer la serie</Text>
                             </Pressable>
@@ -292,7 +344,7 @@ export function SessionFormScreen({
                     <Pressable style={styles.secondaryBtn} onPress={() => handleAddSet(exerciseIndex)}>
                       <Text style={styles.secondaryText}>Ajouter une serie</Text>
                     </Pressable>
-                    <Pressable style={styles.deleteBtnCompact} onPress={() => onRemoveExercise(exerciseIndex)}>
+                    <Pressable style={styles.deleteBtnCompact} onPress={() => handleRemoveExercise(exerciseIndex)}>
                       <Text style={styles.deleteTxt}>Supprimer l'exercice</Text>
                     </Pressable>
                   </View>
