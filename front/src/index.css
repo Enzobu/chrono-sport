@@ -112,8 +112,8 @@
   .theme-panel { background: var(--app-panel); border-color: var(--app-border); }
   .theme-outline { background: var(--app-surface); border-color: var(--app-border); color: var(--app-text); }
   .theme-primary { background: var(--brand); }
-  .theme-accent-soft { background: var(--brand-soft); }
-  .theme-accent-border { border-color: var(--brand-border); }
+  .theme-accent-soft { background: color-mix(in srgb, var(--brand) 14%, transparent); }
+  .theme-accent-border { border-color: color-mix(in srgb, var(--brand) 44%, transparent); }
   .theme-track { background: var(--app-elevated); }
   .theme-preview { background: var(--app-panel); border-color: var(--brand-border); }
   .theme-icon-box {
