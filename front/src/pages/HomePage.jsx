@@ -1,5 +1,4 @@
-import { Plus } from 'lucide-react'
-import { Badge } from '../components/ui/badge'
+import { LogOut, Plus, Settings } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import { SessionCard } from '../components/SessionCard'
 
@@ -8,42 +7,52 @@ export function HomePage({
   sessionsError,
   isLoadingSessions,
   onOpenCreate,
+  onOpenSettings,
   onLogout,
   onOpenSession,
   onEditSession,
   onDeleteSession,
 }) {
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:py-14">
-      <div className="mb-10 space-y-4">
-        <div className="flex justify-end gap-2">
-          <Button
-            variant="outline"
-            className="border-zinc-700 bg-black text-zinc-200 hover:bg-zinc-900"
-            onClick={onOpenCreate}
-          >
-            <Plus className="h-4 w-4" /> Nouvelle seance
+    <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:py-12">
+      <div className="mb-10">
+        <div className="mb-8 flex items-center justify-between">
+          <Button variant="outline" size="icon" className="theme-outline h-12 w-12 rounded-2xl" onClick={onOpenSettings}>
+            <Settings className="h-5 w-5" />
           </Button>
-          <Button
-            variant="outline"
-            className="border-zinc-700 bg-black text-zinc-200 hover:bg-zinc-900"
-            onClick={onLogout}
-          >
-            Deconnexion
+          <Button variant="outline" size="icon" className="theme-outline h-12 w-12 rounded-2xl" onClick={onLogout}>
+            <LogOut className="h-5 w-5" />
           </Button>
         </div>
-        <Badge variant="outline" className="w-fit border-white/20 bg-white/5 uppercase tracking-[0.18em]">
-          Chrono-Sport
-        </Badge>
-        <h1 className="text-4xl font-semibold tracking-tight text-white sm:text-5xl">
-          Choisis ta seance
+
+        <p className="theme-accent text-xs font-black uppercase tracking-[0.22em]">Chrono-Sport</p>
+        <h1 className="theme-text mt-2 text-4xl font-black tracking-[-0.04em] sm:text-6xl">
+          Tes séances
         </h1>
-        {sessionsError ? <p className="text-sm text-red-400">{sessionsError}.</p> : null}
+        <p className="theme-muted mt-3 max-w-2xl text-sm leading-6 sm:text-base">
+          Choisis ta session, lance le chrono et concentre-toi sur le prochain effort.
+        </p>
+
+        <Button
+          className="theme-primary mt-6 h-12 rounded-2xl px-5 font-black text-white hover:opacity-90"
+          onClick={onOpenCreate}
+        >
+          <Plus className="h-4 w-4" /> Nouvelle séance
+        </Button>
       </div>
 
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="theme-text text-xl font-black">Programme</h2>
+        <span className="theme-accent-soft theme-accent theme-accent-border rounded-full border px-3 py-1 text-xs font-black">
+          {Object.keys(sessions).length}
+        </span>
+      </div>
+
+      {sessionsError ? <p className="mb-4 text-sm text-red-400">{sessionsError}.</p> : null}
+
       {isLoadingSessions ? (
-        <div className="rounded-xl border border-white/10 bg-black/50 p-6 text-zinc-300">
-          Chargement des seances...
+        <div className="theme-surface rounded-3xl border p-6 theme-muted">
+          Chargement des séances...
         </div>
       ) : null}
 
@@ -61,8 +70,9 @@ export function HomePage({
       </div>
 
       {!isLoadingSessions && !Object.keys(sessions).length ? (
-        <div className="mt-4 rounded-xl border border-white/10 bg-black/50 p-6 text-zinc-300">
-          Aucune seance en base pour cet utilisateur.
+        <div className="theme-surface mt-4 rounded-3xl border p-6">
+          <h3 className="theme-text font-black">Aucune séance</h3>
+          <p className="theme-muted mt-1 text-sm">Crée ta première séance pour commencer.</p>
         </div>
       ) : null}
     </main>
