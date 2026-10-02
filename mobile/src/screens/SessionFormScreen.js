@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
+  Animated,
   LayoutAnimation,
   Platform,
   Pressable,
@@ -54,6 +55,15 @@ export function SessionFormScreen({
   const [weightInputs, setWeightInputs] = useState({})
   const [expandedExercises, setExpandedExercises] = useState(() => new Set(editing ? [] : [0]))
   const [expandedSets, setExpandedSets] = useState(() => new Set())
+  const exerciseLayoutsRef = useRef(new Map())
+  const exerciseTranslationsRef = useRef(new Map())
+
+  const getExerciseTranslation = (index) => {
+    if (!exerciseTranslationsRef.current.has(index)) {
+      exerciseTranslationsRef.current.set(index, new Animated.Value(0))
+    }
+    return exerciseTranslationsRef.current.get(index)
+  }
 
   useEffect(() => {
     if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -131,8 +141,38 @@ export function SessionFormScreen({
   }
 
   const handleMoveExercise = (exerciseIndex, direction) => {
-    animateLayout()
-    onMoveExercise(exerciseIndex, direction)
+    const targetIndex = exerciseIndex + direction
+    const currentLayout = exerciseLayoutsRef.current.get(exerciseIndex)
+    const targetLayout = exerciseLayoutsRef.current.get(targetIndex)
+
+    if (!currentLayout || !targetLayout) {
+      animateLayout()
+      onMoveExercise(exerciseIndex, direction)
+      return
+    }
+
+    const currentTranslation = getExerciseTranslation(exerciseIndex)
+    const targetTranslation = getExerciseTranslation(targetIndex)
+    const distance = targetLayout.y - currentLayout.y
+
+    Animated.parallel([
+      Animated.timing(currentTranslation, {
+        toValue: distance,
+        duration: 260,
+        useNativeDriver: true,
+      }),
+      Animated.timing(targetTranslation, {
+        toValue: -distance,
+        duration: 260,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      onMoveExercise(exerciseIndex, direction)
+      setTimeout(() => {
+        currentTranslation.setValue(0)
+        targetTranslation.setValue(0)
+      }, 0)
+    })
   }
 
   const handleRemoveExercise = (exerciseIndex) => {
@@ -210,7 +250,16 @@ export function SessionFormScreen({
         const exerciseExpanded = expandedExercises.has(exerciseIndex)
 
         return (
-          <View key={`exercise-${exerciseIndex}`} style={styles.exerciseBlock}>
+          <Animated.View
+            key={`exercise-${exerciseIndex}`}
+            style={[
+              styles.exerciseBlock,
+              { transform: [{ translateY: getExerciseTranslation(exerciseIndex) }] },
+            ]}
+            onLayout={(event) => {
+              exerciseLayoutsRef.current.set(exerciseIndex, event.nativeEvent.layout)
+            }}
+          >
             <View style={styles.card}>
               <View style={styles.exerciseHeader}>
                 <Pressable style={styles.exerciseSummary} onPress={() => toggleExercise(exerciseIndex)}>
@@ -360,7 +409,7 @@ export function SessionFormScreen({
                 <Text style={styles.insertExerciseText}>+ Ajouter ici</Text>
               </Pressable>
             ) : null}
-          </View>
+          </Animated.View>
         )
       })}
 
