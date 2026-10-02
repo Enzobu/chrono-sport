@@ -1,4 +1,5 @@
-import { ArrowLeft, Pause, Play, RotateCcw, SkipForward } from 'lucide-react'
+import { useState } from 'react'
+import { ArrowLeft, Lock, Pause, Play, RotateCcw, SkipForward, Unlock } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import { SessionDetailsAccordion } from '../components/SessionDetailsAccordion'
 
@@ -27,19 +28,29 @@ export function TimerPage({
   onReset,
   onTimerClick,
 }) {
+  const [locked, setLocked] = useState(false)
   const phaseLabel = isFinished ? 'Terminé' : currentPhase?.label || 'Séance'
   const isWork = !isFinished && currentPhase?.kind === 'work'
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-6 sm:px-6 lg:py-10">
       <div className="flex items-center gap-3">
-        <Button variant="outline" size="icon" className="theme-outline h-12 w-12 rounded-2xl" onClick={onBack}>
+        <Button variant="outline" size="icon" className="theme-outline h-12 w-12 rounded-2xl" onClick={onBack} disabled={locked}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="min-w-0">
           <p className="theme-accent text-[11px] font-black uppercase tracking-[0.2em]">{phaseLabel}</p>
           <h1 className="theme-text truncate text-xl font-black">{selectedSessionName}</h1>
         </div>
+        <Button
+          variant="outline"
+          size="icon"
+          className={`ml-auto h-12 w-12 rounded-2xl ${locked ? 'theme-accent-soft theme-accent theme-accent-border' : 'theme-outline'}`}
+          onClick={() => setLocked((value) => !value)}
+          aria-label={locked ? 'Déverrouiller les contrôles' : 'Verrouiller les contrôles'}
+        >
+          {locked ? <Unlock className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
+        </Button>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.8fr_1fr]">
@@ -63,7 +74,8 @@ export function TimerPage({
 
           <button
             type="button"
-            onClick={onTimerClick}
+            onClick={locked ? undefined : onTimerClick}
+            disabled={locked}
             className={`${isWork ? 'theme-work' : 'theme-text'} my-6 w-full select-none bg-transparent text-center font-mono text-6xl font-black tracking-[-0.06em] outline-none transition active:scale-[0.985] sm:text-8xl`}
           >
             {isFinished ? (
@@ -105,7 +117,7 @@ export function TimerPage({
             </div>
           </div>
 
-          {currentPhase?.kind === 'rest' && !isFinished ? (
+          {currentPhase?.kind === 'rest' && !isFinished && !locked ? (
             <div className="mt-5 flex justify-center gap-2">
               <Button variant="outline" className="theme-outline rounded-2xl" onClick={() => onAdjustRest(-15)}>
                 -15s
@@ -116,18 +128,26 @@ export function TimerPage({
             </div>
           ) : null}
 
-          <div className="mt-6 flex flex-wrap gap-2">
+          {locked ? (
+            <div className="theme-panel mt-6 rounded-2xl border px-4 py-3 text-center text-sm">
+              <span className="theme-accent font-black">Contrôles verrouillés</span>
+              <span className="theme-muted"> · Appuie sur le cadenas pour déverrouiller.</span>
+            </div>
+          ) : null}
+
+          <div className={`mt-6 flex flex-wrap gap-2 ${locked ? 'pointer-events-none opacity-35' : ''}`}>
             <Button
               onClick={onToggleRun}
+              disabled={locked}
               className="theme-primary h-12 min-w-32 flex-1 rounded-2xl font-black text-white hover:opacity-90"
             >
               {isFinished ? <Play className="h-4 w-4" /> : isRunning ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
               {isFinished ? 'Relancer' : isRunning ? 'Pause' : 'Lancer'}
             </Button>
-            <Button variant="outline" className="theme-outline h-12 rounded-2xl" onClick={onSkip}>
+            <Button variant="outline" className="theme-outline h-12 rounded-2xl" onClick={onSkip} disabled={locked}>
               <SkipForward className="h-4 w-4" /> Skip
             </Button>
-            <Button variant="outline" className="theme-outline h-12 rounded-2xl" onClick={onReset}>
+            <Button variant="outline" className="theme-outline h-12 rounded-2xl" onClick={onReset} disabled={locked}>
               <RotateCcw className="h-4 w-4" /> Reset
             </Button>
           </div>
