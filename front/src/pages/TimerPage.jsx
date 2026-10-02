@@ -19,6 +19,7 @@ export function TimerPage({
   completedExercisesCount,
   exerciseCount,
   sessionOutline,
+  weightUnit = 'kg',
   onBack,
   onToggleRun,
   onSkip,
@@ -136,7 +137,7 @@ export function TimerPage({
         </div>
       </div>
 
-      <SessionDetailsAccordion sessionOutline={sessionOutline} />
+      <SessionDetailsAccordion sessionOutline={sessionOutline} weightUnit={weightUnit} />
     </main>
   )
 }

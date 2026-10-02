@@ -2,11 +2,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { formatMinutesSeconds } from '../lib/timer'
 import { useTheme } from '../theme/ThemeContext'
-
-const formatWeight = (weight) => {
-  const parsed = Number(weight) || 0
-  return `${parsed % 1 === 0 ? parsed : parsed.toFixed(1)}kg`
-}
+import { formatWeight } from '../lib/weight'
 
 const formatRest = (seconds) => formatMinutesSeconds(seconds).replace(/^0(?=\d:)/, '')
 
@@ -43,6 +39,7 @@ export function TimerScreen({
   isRunning,
   isFinished,
   sessionOutline,
+  weightUnit = 'kg',
   onBack,
   onToggleRun,
   onSkip,
@@ -166,7 +163,7 @@ export function TimerScreen({
             {exercise.sets.map((set) => (
               <Accordion
                 key={set.key}
-                title={`Série ${set.order}/${set.total}${exercise.trackWeight ? ` • ${formatWeight(set.weight)}` : ''} • ${formatRest(set.wait)}`}
+                title={`Série ${set.order}/${set.total}${exercise.trackWeight ? ` • ${formatWeight(set.weight, weightUnit)}` : ''} • ${formatRest(set.wait)}`}
                 status={set.done ? 'fait' : set.current ? 'en cours' : 'a faire'}
                 open={set.current}
                 styles={styles}
