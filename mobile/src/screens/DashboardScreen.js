@@ -2,10 +2,25 @@ import { useMemo } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useTheme } from '../theme/ThemeContext'
 
-export function DashboardScreen({ sessions, history = [], onOpenSessions }) {
+function getSuggestedSession(history, sessions) {
+  if (history.length < 3) return null
+  const chronological = [...history].reverse()
+  const latest = history[0]?.sessionName
+  if (!latest) return null
+  const counts = new Map()
+  for (let index = 0; index < chronological.length - 1; index += 1) {
+    const current = chronological[index]?.sessionName
+    const next = chronological[index + 1]?.sessionName
+    if (current === latest && next && sessions[next]) counts.set(next, (counts.get(next) ?? 0) + 1)
+  }
+  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null
+}
+
+export function DashboardScreen({ sessions, history = [], onOpenSessions, onOpenSession }) {
   const { colors } = useTheme()
   const styles = useMemo(() => createStyles(colors), [colors])
   const count = Object.keys(sessions).length
+  const suggestion = getSuggestedSession(history, sessions)
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.eyebrow}>CHRONO-SPORT</Text>
@@ -14,10 +29,14 @@ export function DashboardScreen({ sessions, history = [], onOpenSessions }) {
 
       <View style={styles.card}>
         <Text style={styles.cardEyebrow}>À SUIVRE</Text>
-        <Text style={styles.cardTitle}>Ta prochaine séance apparaîtra ici</Text>
-        <Text style={styles.cardText}>La suggestion sera alimentée par ton historique de séances.</Text>
-        <Pressable style={styles.primaryBtn} onPress={onOpenSessions}>
-          <Text style={styles.primaryText}>Voir mes séances</Text>
+        <Text style={styles.cardTitle}>{suggestion ?? "Pas encore assez d'historique"}</Text>
+        <Text style={styles.cardText}>
+          {suggestion
+            ? "Basé sur l'ordre de tes séances réellement terminées."
+            : "Après quelques cycles, Chrono-Sport pourra te proposer la suite la plus probable."}
+        </Text>
+        <Pressable style={styles.primaryBtn} onPress={() => suggestion ? onOpenSession(suggestion) : onOpenSessions()}>
+          <Text style={styles.primaryText}>{suggestion ? 'Lancer la séance' : 'Voir mes séances'}</Text>
         </Pressable>
       </View>
 
