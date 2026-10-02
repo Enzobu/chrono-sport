@@ -49,6 +49,7 @@ function AppContent() {
   const [draftExercises, setDraftExercises] = useState([createDefaultExercise()])
   const [draftError, setDraftError] = useState('')
   const [draftSaving, setDraftSaving] = useState(false)
+  const [draftInitialSnapshot, setDraftInitialSnapshot] = useState('')
 
   const [selectedSessionName, setSelectedSessionName] = useState(null)
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -533,6 +534,13 @@ function AppContent() {
     }
   }, [])
 
+  const draftSnapshot = useMemo(
+    () => JSON.stringify({ name: draftSessionName, exercises: draftExercises }),
+    [draftSessionName, draftExercises],
+  )
+  const hasUnsavedDraftChanges =
+    screen === 'create' && Boolean(draftInitialSnapshot) && draftSnapshot !== draftInitialSnapshot
+
   const confirmContent = useMemo(() => {
     if (pendingAction === 'delete-session') {
       return {
@@ -545,6 +553,13 @@ function AppContent() {
       return {
         title: 'Quitter la seance ? ',
         message: 'Ta progression en cours sera perdue.',
+        confirmLabel: 'Quitter',
+      }
+    }
+    if (pendingAction === 'leave-editor') {
+      return {
+        title: 'Quitter sans enregistrer ?',
+        message: 'Tes modifications seront perdues.',
         confirmLabel: 'Quitter',
       }
     }
@@ -896,6 +911,7 @@ function AppContent() {
       setEditingSessionId(null)
       setDraftSessionName('')
       setDraftExercises([createDefaultExercise()])
+      setDraftInitialSnapshot('')
       showToast('success', editingSessionId ? 'Seance mise a jour.' : 'Seance creee.')
     } catch (error) {
       setDraftError(error.message || 'Erreur de sauvegarde')
@@ -927,6 +943,17 @@ function AppContent() {
       return
     }
 
+    if (pendingAction === 'leave-editor') {
+      setScreen('home')
+      setEditingSessionId(null)
+      setDraftSessionName('')
+      setDraftExercises([createDefaultExercise()])
+      setDraftInitialSnapshot('')
+      setDraftError('')
+      closeConfirm()
+      return
+    }
+
     if (pendingAction === 'reset-session') {
       resetTimerSession()
       closeConfirm()
@@ -937,9 +964,11 @@ function AppContent() {
   }
 
   const openCreate = () => {
+    const initialExercises = [createDefaultExercise()]
     setEditingSessionId(null)
     setDraftSessionName('')
-    setDraftExercises([createDefaultExercise()])
+    setDraftExercises(initialExercises)
+    setDraftInitialSnapshot(JSON.stringify({ name: '', exercises: initialExercises }))
     setDraftError('')
     setScreen('create')
   }
@@ -950,10 +979,7 @@ function AppContent() {
       return
     }
 
-    setEditingSessionId(target.id)
-    setDraftSessionName(target.name)
-    setDraftExercises(
-      target.exercises.map((exercise) => ({
+    const initialExercises = target.exercises.map((exercise) => ({
         name: exercise.name,
         sets: exercise.sets.map((set) => ({
           type: set.type,
@@ -961,8 +987,12 @@ function AppContent() {
           wait: Number(set.wait),
           weight: Number(set.weight) || 0,
         })),
-      })),
-    )
+      }))
+
+    setEditingSessionId(target.id)
+    setDraftSessionName(target.name)
+    setDraftExercises(initialExercises)
+    setDraftInitialSnapshot(JSON.stringify({ name: target.name, exercises: initialExercises }))
     setDraftError('')
     setScreen('create')
   }
@@ -1151,7 +1181,14 @@ function AppContent() {
           exercises={draftExercises}
           error={draftError}
           saving={draftSaving}
-          onBack={() => setScreen('home')}
+          onBack={() => {
+            if (hasUnsavedDraftChanges) {
+              openConfirm('leave-editor')
+            } else {
+              setScreen('home')
+              setDraftInitialSnapshot('')
+            }
+          }}
           onSave={saveSessionDraft}
           onSessionNameChange={setDraftSessionName}
           onExerciseNameChange={updateExerciseName}
