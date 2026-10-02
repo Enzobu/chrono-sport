@@ -1,4 +1,4 @@
-import { ArrowLeft, Check, Monitor, Moon, Sun } from 'lucide-react'
+import { Check, LogOut, Monitor, Moon, Sun } from 'lucide-react'
 import { Button } from '../components/ui/button'
 
 const accents = {
@@ -16,18 +16,13 @@ const modes = [
   { key: 'dark', label: 'Sombre', description: 'Interface sombre en permanence', icon: Moon },
 ]
 
-export function SettingsPage({ themeMode, accent, resolvedTheme, onThemeModeChange, onAccentChange, onBack }) {
+export function SettingsPage({ themeMode, accent, resolvedTheme, onThemeModeChange, onAccentChange, onLogout }) {
   return (
-    <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:py-12">
-      <div className="mb-8 flex items-start gap-4">
-        <Button variant="outline" size="icon" className="theme-outline h-12 w-12 rounded-2xl" onClick={onBack}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div>
-          <p className="theme-accent text-xs font-black uppercase tracking-[0.2em]">Personnalisation</p>
-          <h1 className="theme-text mt-1 text-4xl font-black tracking-tight">Réglages</h1>
-          <p className="theme-muted mt-2">Adapte Chrono-Sport à ton style.</p>
-        </div>
+    <main className="mx-auto w-full max-w-4xl px-4 pb-28 pt-8 sm:px-6 lg:pt-12">
+      <div className="mb-8">
+        <p className="theme-accent text-xs font-black uppercase tracking-[0.2em]">Compte</p>
+        <h1 className="theme-text mt-1 text-4xl font-black tracking-tight">Compte & réglages</h1>
+        <p className="theme-muted mt-2">Personnalise l'app et gère ton compte.</p>
       </div>
 
       <section className="theme-surface rounded-[1.6rem] border p-5 sm:p-6">
@@ -93,6 +88,14 @@ export function SettingsPage({ themeMode, accent, resolvedTheme, onThemeModeChan
             )
           })}
         </div>
+      </section>
+
+      <section className="theme-surface mt-4 rounded-[1.6rem] border p-5 sm:p-6">
+        <h2 className="theme-text text-xl font-black">Compte</h2>
+        <p className="theme-muted mt-1 text-sm">Déconnexion de ton compte Chrono-Sport.</p>
+        <Button variant="outline" className="mt-4 rounded-2xl border-red-950 text-red-300 hover:bg-red-950/30" onClick={onLogout}>
+          <LogOut className="h-4 w-4" /> Se déconnecter
+        </Button>
       </section>
 
       <section className="theme-preview mt-4 rounded-[1.7rem] border p-6">

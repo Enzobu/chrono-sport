@@ -1,4 +1,4 @@
-import { LogOut, Plus, Settings } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import { SessionCard } from '../components/SessionCard'
 
@@ -7,30 +7,19 @@ export function HomePage({
   sessionsError,
   isLoadingSessions,
   onOpenCreate,
-  onOpenSettings,
-  onLogout,
   onOpenSession,
   onEditSession,
   onDeleteSession,
 }) {
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:py-12">
+    <main className="mx-auto w-full max-w-6xl px-4 pb-28 pt-8 sm:px-6 lg:pt-12">
       <div className="mb-10">
-        <div className="mb-8 flex items-center justify-between">
-          <Button variant="outline" size="icon" className="theme-outline h-12 w-12 rounded-2xl" onClick={onOpenSettings}>
-            <Settings className="h-5 w-5" />
-          </Button>
-          <Button variant="outline" size="icon" className="theme-outline h-12 w-12 rounded-2xl" onClick={onLogout}>
-            <LogOut className="h-5 w-5" />
-          </Button>
-        </div>
-
         <p className="theme-accent text-xs font-black uppercase tracking-[0.22em]">Chrono-Sport</p>
         <h1 className="theme-text mt-2 text-4xl font-black tracking-[-0.04em] sm:text-6xl">
-          Tes séances
+          Séances
         </h1>
         <p className="theme-muted mt-3 max-w-2xl text-sm leading-6 sm:text-base">
-          Choisis ta session, lance le chrono et concentre-toi sur le prochain effort.
+          Retrouve, crée et organise toutes tes séances.
         </p>
 
         <Button

@@ -11,6 +11,7 @@ import {
   updateSession,
 } from './src/api/sessions'
 import { ConfirmModal } from './src/components/ConfirmModal'
+import { BottomNav } from './src/components/BottomNav'
 import { ToastBanner } from './src/components/ToastBanner'
 import { createDefaultExercise, createDefaultSet, mapApiSessionsToClient } from './src/lib/sessions'
 import {
@@ -21,6 +22,7 @@ import {
   resolveTimerPosition,
 } from './src/lib/timer'
 import { AuthScreen } from './src/screens/AuthScreen'
+import { DashboardScreen } from './src/screens/DashboardScreen'
 import { HomeScreen } from './src/screens/HomeScreen'
 import { SessionFormScreen } from './src/screens/SessionFormScreen'
 import { TimerScreen } from './src/screens/TimerScreen'
@@ -133,7 +135,7 @@ function AppContent() {
     AsyncStorage.getItem('auth_token').then((token) => {
       if (token) {
         setAuthToken(token)
-        setScreen('home')
+        setScreen('dashboard')
       }
     })
   }, [])
@@ -907,7 +909,7 @@ function AppContent() {
       }
 
       await refreshSessions(authToken)
-      setScreen('home')
+      setScreen('dashboard')
       setEditingSessionId(null)
       setDraftSessionName('')
       setDraftExercises([createDefaultExercise()])
@@ -934,7 +936,7 @@ function AppContent() {
     }
 
     if (pendingAction === 'leave-session') {
-      setScreen('home')
+      setScreen('dashboard')
       setSelectedSessionName(null)
       timerClockRef.current = { currentIndex: 0, phaseEndAt: null }
       setIsRunning(false)
@@ -944,7 +946,7 @@ function AppContent() {
     }
 
     if (pendingAction === 'leave-editor') {
-      setScreen('home')
+      setScreen('dashboard')
       setEditingSessionId(null)
       setDraftSessionName('')
       setDraftExercises([createDefaultExercise()])
@@ -1119,7 +1121,7 @@ function AppContent() {
       await AsyncStorage.setItem('auth_token', payload.token)
       setAuthToken(payload.token)
       setAuthPassword('')
-      setScreen('home')
+      setScreen('dashboard')
     } catch (error) {
       setAuthError(error.message || 'Erreur de connexion')
     } finally {
@@ -1156,22 +1158,24 @@ function AppContent() {
         />
       ) : null}
 
-      {screen === 'home' ? (
+      {screen === 'dashboard' ? (
+        <DashboardScreen sessions={sessions} onOpenSessions={() => setScreen('sessions')} />
+      ) : null}
+
+      {screen === 'sessions' ? (
         <HomeScreen
           sessions={sessions}
           isLoading={sessionsLoading}
           error={sessionsError}
           onOpenCreate={openCreate}
-          onOpenSettings={() => setScreen('settings')}
-          onLogout={logout}
           onOpenSession={openSession}
           onEditSession={openEdit}
           onDeleteSession={askDelete}
         />
       ) : null}
 
-      {screen === 'settings' ? (
-        <SettingsScreen onBack={() => setScreen('home')} />
+      {screen === 'account' ? (
+        <SettingsScreen onLogout={logout} />
       ) : null}
 
       {screen === 'create' ? (
@@ -1185,7 +1189,7 @@ function AppContent() {
             if (hasUnsavedDraftChanges) {
               openConfirm('leave-editor')
             } else {
-              setScreen('home')
+              setScreen('dashboard')
               setDraftInitialSnapshot('')
             }
           }}
@@ -1224,6 +1228,10 @@ function AppContent() {
           onReset={() => openConfirm('reset-session')}
           onTimerPress={showCurrentOrNextWeight}
         />
+      ) : null}
+
+      {['dashboard', 'sessions', 'account'].includes(screen) ? (
+        <BottomNav active={screen} onChange={setScreen} />
       ) : null}
 
       <ConfirmModal
