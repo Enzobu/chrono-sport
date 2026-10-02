@@ -1198,7 +1198,7 @@ function AppContent() {
       ) : null}
 
       {screen === 'dashboard' ? (
-        <DashboardScreen sessions={sessions} onOpenSessions={() => setScreen('sessions')} />
+        <DashboardScreen sessions={sessions} history={history} onOpenSessions={() => setScreen('sessions')} />
       ) : null}
 
       {screen === 'sessions' ? (

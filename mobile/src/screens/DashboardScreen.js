@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useTheme } from '../theme/ThemeContext'
 
-export function DashboardScreen({ sessions, onOpenSessions }) {
+export function DashboardScreen({ sessions, history = [], onOpenSessions }) {
   const { colors } = useTheme()
   const styles = useMemo(() => createStyles(colors), [colors])
   const count = Object.keys(sessions).length
@@ -21,10 +21,17 @@ export function DashboardScreen({ sessions, onOpenSessions }) {
         </Pressable>
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.cardText}>Programme</Text>
-        <Text style={styles.count}>{count}</Text>
-        <Text style={styles.cardText}>séance{count > 1 ? 's' : ''} disponible{count > 1 ? 's' : ''}</Text>
+      <View style={styles.statsRow}>
+        <View style={[styles.card, styles.statCard]}>
+          <Text style={styles.cardText}>Programme</Text>
+          <Text style={styles.count}>{count}</Text>
+          <Text style={styles.cardText}>disponible{count > 1 ? 's' : ''}</Text>
+        </View>
+        <View style={[styles.card, styles.statCard]}>
+          <Text style={styles.cardText}>Progression</Text>
+          <Text style={styles.count}>{history.length}</Text>
+          <Text style={styles.cardText}>terminée{history.length > 1 ? 's' : ''}</Text>
+        </View>
       </View>
     </ScrollView>
   )
@@ -41,4 +48,6 @@ const createStyles = (colors) => StyleSheet.create({
   count:{color:colors.text,fontSize:36,fontWeight:'900'},
   primaryBtn:{marginTop:8,height:48,borderRadius:16,backgroundColor:colors.ctaBg,borderWidth:1,borderColor:colors.ctaBorder,alignItems:'center',justifyContent:'center'},
   primaryText:{color:colors.ctaText,fontWeight:'900'},
+  statsRow:{flexDirection:'row',gap:10},
+  statCard:{flex:1},
 })
