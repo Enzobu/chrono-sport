@@ -533,6 +533,7 @@ function App() {
       resetDraft()
       showToast('success', editingSessionId ? 'Seance mise a jour.' : 'Seance creee.')
     } catch (error) {
+      if (error.message === 'Une séance avec ce nom existe déjà.') window.alert(error.message)
       setDraftError(
         error.message ||
           (editingSessionId

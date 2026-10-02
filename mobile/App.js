@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Audio } from 'expo-av'
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AppState, NativeModules, PermissionsAndroid, Platform, SafeAreaView, StyleSheet, Vibration } from 'react-native'
+import { Alert, AppState, NativeModules, PermissionsAndroid, Platform, SafeAreaView, StyleSheet, Vibration } from 'react-native'
 import { authRequest } from './src/api/auth'
 import { createHistoryEntry, fetchHistory } from './src/api/history'
 import {
@@ -1053,6 +1053,7 @@ function AppContent() {
       setDraftInitialSnapshot('')
       showToast('success', editingSessionId ? 'Seance mise a jour.' : 'Seance creee.')
     } catch (error) {
+      if (error.message === 'Une séance avec ce nom existe déjà.') Alert.alert('Nom déjà utilisé', error.message)
       setDraftError(error.message || 'Erreur de sauvegarde')
     } finally {
       setDraftSaving(false)
