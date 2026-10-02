@@ -24,6 +24,8 @@ export function SettingsScreen({
   onWeightUnitChange,
   countdownVibrationEnabled = true,
   onCountdownVibrationChange,
+  workoutSoundEnabled = true,
+  onWorkoutSoundChange,
   history = [],
   loadingHistory = false,
 }) {
@@ -102,6 +104,19 @@ export function SettingsScreen({
         >
           <Text style={[styles.settingToggleText, countdownVibrationEnabled && styles.settingToggleTextActive]}>
             {countdownVibrationEnabled ? 'Activées' : 'Désactivées'}
+          </Text>
+        </Pressable>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Son de séance</Text>
+        <Text style={styles.hint}>Ding joué à la transition repos → travail.</Text>
+        <Pressable
+          style={[styles.settingToggle, workoutSoundEnabled && styles.settingToggleActive]}
+          onPress={() => onWorkoutSoundChange(!workoutSoundEnabled)}
+        >
+          <Text style={[styles.settingToggleText, workoutSoundEnabled && styles.settingToggleTextActive]}>
+            {workoutSoundEnabled ? 'Activé' : 'Désactivé'}
           </Text>
         </Pressable>
       </View>

@@ -40,6 +40,7 @@ function AppContent() {
   const [authToken, setAuthToken] = useState('')
   const [weightUnit, setWeightUnit] = useState('kg')
   const [countdownVibrationEnabled, setCountdownVibrationEnabled] = useState(true)
+  const [workoutSoundEnabled, setWorkoutSoundEnabled] = useState(true)
   const [authMode, setAuthMode] = useState('login')
   const [authEmail, setAuthEmail] = useState('')
   const [authPassword, setAuthPassword] = useState('')
@@ -140,6 +141,16 @@ function AppContent() {
     soundRef.current = sound
     return sound
   }
+
+  useEffect(() => {
+    AsyncStorage.getItem('workout_sound_enabled').then((value) => {
+      if (value != null) setWorkoutSoundEnabled(value !== 'false')
+    })
+  }, [])
+
+  useEffect(() => {
+    AsyncStorage.setItem('workout_sound_enabled', String(workoutSoundEnabled)).catch(() => {})
+  }, [workoutSoundEnabled])
 
   useEffect(() => {
     AsyncStorage.getItem('countdown_vibration_enabled').then((value) => {
@@ -575,13 +586,14 @@ function AppContent() {
         Number(phaseEndAt),
         phaseLabel,
         seriesLabel,
+        workoutSoundEnabled,
       )
     }
 
     syncNativeTimer().catch((error) => {
       console.error('Native timer notification sync failed', error)
     })
-  }, [isRunning, isFinished, currentIndex, phaseEndAt, timeline])
+  }, [isRunning, isFinished, currentIndex, phaseEndAt, timeline, workoutSoundEnabled])
 
   useEffect(() => {
     return () => {
@@ -727,6 +739,7 @@ function AppContent() {
   }, [isRunning, isFinished, timeline, countdownVibrationEnabled])
 
   const playDing = async () => {
+    if (!workoutSoundEnabled) return
     let sound = null
 
     try {
@@ -736,7 +749,6 @@ function AppContent() {
       await sound.playAsync()
     } catch (error) {
       console.error('Ding playback failed', error)
-      Vibration.vibrate(180)
     } finally {
       setTimeout(() => {
         setIdleAudioMode().catch(() => {
@@ -1335,6 +1347,8 @@ function AppContent() {
           onWeightUnitChange={setWeightUnit}
           countdownVibrationEnabled={countdownVibrationEnabled}
           onCountdownVibrationChange={setCountdownVibrationEnabled}
+          workoutSoundEnabled={workoutSoundEnabled}
+          onWorkoutSoundChange={setWorkoutSoundEnabled}
           history={history}
           loadingHistory={historyLoading}
         />
