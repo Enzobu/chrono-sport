@@ -39,6 +39,7 @@ function AppContent() {
   const { colors, resolvedScheme } = useTheme()
   const [authToken, setAuthToken] = useState('')
   const [weightUnit, setWeightUnit] = useState('kg')
+  const [countdownVibrationEnabled, setCountdownVibrationEnabled] = useState(true)
   const [authMode, setAuthMode] = useState('login')
   const [authEmail, setAuthEmail] = useState('')
   const [authPassword, setAuthPassword] = useState('')
@@ -139,6 +140,16 @@ function AppContent() {
     soundRef.current = sound
     return sound
   }
+
+  useEffect(() => {
+    AsyncStorage.getItem('countdown_vibration_enabled').then((value) => {
+      if (value != null) setCountdownVibrationEnabled(value !== 'false')
+    })
+  }, [])
+
+  useEffect(() => {
+    AsyncStorage.setItem('countdown_vibration_enabled', String(countdownVibrationEnabled)).catch(() => {})
+  }, [countdownVibrationEnabled])
 
   useEffect(() => {
     AsyncStorage.getItem('weight_unit').then((unit) => {
@@ -674,11 +685,13 @@ function AppContent() {
           phaseBeforeTick?.kind === 'rest' &&
           resolved.currentIndex === clock.currentIndex
         ) {
-          ;[3, 2, 1].forEach((marker) => {
-            if (previousRemaining > marker && resolved.remaining <= marker) {
-              Vibration.vibrate(500)
-            }
-          })
+          if (countdownVibrationEnabled) {
+            ;[3, 2, 1].forEach((marker) => {
+              if (previousRemaining > marker && resolved.remaining <= marker) {
+                Vibration.vibrate(500)
+              }
+            })
+          }
         }
 
         return resolved.remaining
@@ -711,7 +724,7 @@ function AppContent() {
     tick()
     const id = setInterval(tick, 250)
     return () => clearInterval(id)
-  }, [isRunning, isFinished, timeline])
+  }, [isRunning, isFinished, timeline, countdownVibrationEnabled])
 
   const playDing = async () => {
     let sound = null
@@ -1316,7 +1329,15 @@ function AppContent() {
       ) : null}
 
       {screen === 'account' ? (
-        <SettingsScreen onLogout={logout} weightUnit={weightUnit} onWeightUnitChange={setWeightUnit} history={history} loadingHistory={historyLoading} />
+        <SettingsScreen
+          onLogout={logout}
+          weightUnit={weightUnit}
+          onWeightUnitChange={setWeightUnit}
+          countdownVibrationEnabled={countdownVibrationEnabled}
+          onCountdownVibrationChange={setCountdownVibrationEnabled}
+          history={history}
+          loadingHistory={historyLoading}
+        />
       ) : null}
 
       {screen === 'create' ? (
