@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { formatMinutesSeconds } from '../lib/timer'
 import { useTheme } from '../theme/ThemeContext'
@@ -48,6 +48,7 @@ export function TimerScreen({
   onTimerPress,
 }) {
   const { colors } = useTheme()
+  const [locked, setLocked] = useState(false)
   const styles = useMemo(() => createStyles(colors), [colors])
   const overlayOpacity = useRef(new Animated.Value(showWeightOverlay ? 1 : 0)).current
 
@@ -69,13 +70,19 @@ export function TimerScreen({
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.topBar}>
-        <Pressable style={styles.iconBtn} onPress={onBack}>
+        <Pressable style={[styles.iconBtn, locked && styles.disabledControl]} onPress={locked ? undefined : onBack} disabled={locked}>
           <Text style={styles.iconBtnText}>‹</Text>
         </Pressable>
         <View style={styles.sessionHeader}>
           <Text style={styles.eyebrow}>{phaseLabel.toUpperCase()}</Text>
           <Text style={styles.sessionTitle} numberOfLines={1}>{sessionName}</Text>
         </View>
+        <Pressable
+          style={[styles.lockBtn, locked && styles.lockBtnActive]}
+          onPress={() => setLocked((value) => !value)}
+        >
+          <Text style={[styles.lockBtnText, locked && styles.lockBtnTextActive]}>{locked ? 'Déverrouiller' : 'Verrouiller'}</Text>
+        </Pressable>
       </View>
 
       <View style={[styles.heroCard, phaseIsWork && styles.heroCardActive]}>
@@ -89,7 +96,8 @@ export function TimerScreen({
         </View>
 
         <Pressable
-          onPress={onTimerPress}
+          onPress={locked ? undefined : onTimerPress}
+          disabled={locked}
           style={({ pressed }) => [styles.timerPressable, pressed && styles.timerPressablePressed]}
         >
           <View style={styles.timerWrap}>
@@ -117,7 +125,7 @@ export function TimerScreen({
           <View style={[styles.progressFill, { width: `${progressPct}%` }]} />
         </View>
 
-        {phaseLabel === 'Repos' && !isFinished ? (
+        {phaseLabel === 'Repos' && !isFinished && !locked ? (
           <View style={styles.restAdjustRow}>
             <Pressable style={styles.restAdjustBtn} onPress={() => onAdjustRest(-15)}>
               <Text style={styles.restAdjustText}>-15s</Text>
@@ -128,16 +136,22 @@ export function TimerScreen({
           </View>
         ) : null}
 
-        <View style={styles.timerActions}>
-          <Pressable style={[styles.primaryBtn, styles.flexAction]} onPress={onToggleRun}>
+        {locked ? (
+          <View style={styles.lockedNotice}>
+            <Text style={styles.lockedNoticeText}>Contrôles verrouillés · utilise le bouton en haut pour déverrouiller.</Text>
+          </View>
+        ) : null}
+
+        <View style={[styles.timerActions, locked && styles.disabledControl]}>
+          <Pressable style={[styles.primaryBtn, styles.flexAction]} onPress={locked ? undefined : onToggleRun} disabled={locked}>
             <Text style={styles.primaryText}>
               {isFinished ? 'Relancer' : isRunning ? 'Pause' : 'Lancer'}
             </Text>
           </Pressable>
-          <Pressable style={styles.compactBtn} onPress={onSkip}>
+          <Pressable style={styles.compactBtn} onPress={locked ? undefined : onSkip} disabled={locked}>
             <Text style={styles.compactBtnText}>Skip</Text>
           </Pressable>
-          <Pressable style={styles.compactBtn} onPress={onReset}>
+          <Pressable style={styles.compactBtn} onPress={locked ? undefined : onReset} disabled={locked}>
             <Text style={styles.compactBtnText}>Reset</Text>
           </Pressable>
         </View>
@@ -223,6 +237,13 @@ const createStyles = (colors) =>
       lineHeight: 36,
       marginTop: -2,
     },
+    lockBtn:{height:42,borderRadius:14,borderWidth:1,borderColor:colors.border,paddingHorizontal:12,alignItems:'center',justifyContent:'center',backgroundColor:colors.panelAlt},
+    lockBtnActive:{borderColor:colors.primaryBorder,backgroundColor:colors.primarySoft},
+    lockBtnText:{color:colors.muted,fontSize:11,fontWeight:'900'},
+    lockBtnTextActive:{color:colors.primary},
+    disabledControl:{opacity:0.35},
+    lockedNotice:{borderWidth:1,borderColor:colors.primaryBorder,backgroundColor:colors.primarySoft,borderRadius:14,padding:11},
+    lockedNoticeText:{color:colors.primary,fontSize:11,fontWeight:'800',textAlign:'center'},
     sessionHeader: {
       flex: 1,
       gap: 2,
