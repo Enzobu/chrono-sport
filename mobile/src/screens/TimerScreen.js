@@ -43,6 +43,7 @@ export function TimerScreen({
   onBack,
   onToggleRun,
   onSkip,
+  onAdjustRest,
   onReset,
   onTimerPress,
 }) {
@@ -115,6 +116,17 @@ export function TimerScreen({
         <View style={styles.progressTrack}>
           <View style={[styles.progressFill, { width: `${progressPct}%` }]} />
         </View>
+
+        {phaseLabel === 'Repos' && !isFinished ? (
+          <View style={styles.restAdjustRow}>
+            <Pressable style={styles.restAdjustBtn} onPress={() => onAdjustRest(-15)}>
+              <Text style={styles.restAdjustText}>-15s</Text>
+            </Pressable>
+            <Pressable style={styles.restAdjustBtn} onPress={() => onAdjustRest(15)}>
+              <Text style={styles.restAdjustText}>+15s</Text>
+            </Pressable>
+          </View>
+        ) : null}
 
         <View style={styles.timerActions}>
           <Pressable style={[styles.primaryBtn, styles.flexAction]} onPress={onToggleRun}>
@@ -342,6 +354,9 @@ const createStyles = (colors) =>
       backgroundColor: colors.primary,
       borderRadius: 999,
     },
+    restAdjustRow:{flexDirection:'row',justifyContent:'center',gap:8},
+    restAdjustBtn:{height:42,minWidth:82,borderRadius:14,borderWidth:1,borderColor:colors.border,backgroundColor:colors.panelAlt,alignItems:'center',justifyContent:'center'},
+    restAdjustText:{color:colors.text,fontWeight:'900',fontSize:13},
     timerActions: {
       flexDirection: 'row',
       gap: 8,
