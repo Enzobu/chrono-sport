@@ -63,6 +63,14 @@ const sessionSchema = z.object({
   exercises: z.array(exerciseSchema).min(1),
 })
 
+const historySchema = z.object({
+  sessionId: z.number().int().positive().nullable().optional(),
+  sessionName: z.string().min(1),
+  durationSeconds: z.number().int().min(0),
+  exercisesCompleted: z.number().int().min(0).default(0),
+  setsCompleted: z.number().int().min(0).default(0),
+})
+
 app.get('/health', async (_req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`
@@ -122,6 +130,43 @@ app.get('/auth/me', authRequired, async (req, res) => {
   })
 
   return res.json({ user })
+})
+
+app.get('/history', authRequired, async (req, res) => {
+  const history = await prisma.workoutHistory.findMany({
+    where: { userId: req.userId },
+    orderBy: { finishedAt: 'desc' },
+  })
+  return res.json({ history })
+})
+
+app.post('/history', authRequired, async (req, res) => {
+  const parsed = historySchema.safeParse(req.body)
+  if (!parsed.success) {
+    return res.status(400).json({ message: 'Invalid payload' })
+  }
+
+  const data = parsed.data
+  let sessionId = data.sessionId ?? null
+  if (sessionId != null) {
+    const owned = await prisma.workoutSession.findFirst({
+      where: { id: sessionId, userId: req.userId },
+      select: { id: true },
+    })
+    if (!owned) sessionId = null
+  }
+
+  const entry = await prisma.workoutHistory.create({
+    data: {
+      userId: req.userId,
+      sessionId,
+      sessionName: data.sessionName,
+      durationSeconds: data.durationSeconds,
+      exercisesCompleted: data.exercisesCompleted,
+      setsCompleted: data.setsCompleted,
+    },
+  })
+  return res.status(201).json({ entry })
 })
 
 app.get('/sessions', authRequired, async (req, res) => {

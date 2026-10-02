@@ -16,7 +16,7 @@ const modes = [
   { key: 'dark', label: 'Sombre', description: 'Interface sombre en permanence', icon: Moon },
 ]
 
-export function SettingsPage({ themeMode, accent, resolvedTheme, onThemeModeChange, onAccentChange, onLogout }) {
+export function SettingsPage({ themeMode, accent, resolvedTheme, onThemeModeChange, onAccentChange, onLogout, history = [], isLoadingHistory = false }) {
   return (
     <main className="mx-auto w-full max-w-4xl px-4 pb-28 pt-8 sm:px-6 lg:pt-12">
       <div className="mb-8">
@@ -87,6 +87,24 @@ export function SettingsPage({ themeMode, accent, resolvedTheme, onThemeModeChan
               </button>
             )
           })}
+        </div>
+      </section>
+
+      <section className="theme-surface mt-4 rounded-[1.6rem] border p-5 sm:p-6">
+        <h2 className="theme-text text-xl font-black">Historique</h2>
+        <p className="theme-muted mt-1 text-sm">Tes dernières séances terminées.</p>
+        <div className="mt-4 space-y-2">
+          {isLoadingHistory ? <p className="theme-muted text-sm">Chargement...</p> : null}
+          {!isLoadingHistory && !history.length ? <p className="theme-muted text-sm">Aucune séance terminée pour le moment.</p> : null}
+          {history.slice(0, 20).map((entry) => (
+            <div key={entry.id} className="theme-panel flex items-center justify-between rounded-2xl border p-3">
+              <div>
+                <div className="theme-text font-bold">{entry.sessionName}</div>
+                <div className="theme-muted text-xs">{new Date(entry.finishedAt).toLocaleString('fr-FR')}</div>
+              </div>
+              <div className="theme-accent text-sm font-black">{Math.floor(entry.durationSeconds / 60)} min</div>
+            </div>
+          ))}
         </div>
       </section>
 

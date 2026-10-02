@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { authRequest } from './api/auth'
+import { createHistoryEntry, fetchHistory } from './api/history'
 import {
   createSession as createSessionApi,
   deleteSession as deleteSessionApi,
@@ -42,6 +43,8 @@ function App() {
   const [sessions, setSessions] = useState({})
   const [isLoadingSessions, setIsLoadingSessions] = useState(true)
   const [sessionsError, setSessionsError] = useState('')
+  const [history, setHistory] = useState([])
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false)
 
   const [isCreateMode, setIsCreateMode] = useState(false)
   const [editingSessionId, setEditingSessionId] = useState(null)
@@ -68,6 +71,7 @@ function App() {
   const [showWeightOverlay, setShowWeightOverlay] = useState(false)
   const audioContextRef = useRef(null)
   const weightOverlayTimeoutRef = useRef(null)
+  const historyRecordedRef = useRef(false)
 
   const showToast = (type, message) => setToast({ type, message, id: Date.now() })
   const resolvedTheme = themeMode === 'system' ? systemTheme : themeMode
@@ -98,6 +102,12 @@ function App() {
     return () => window.clearTimeout(timeoutId)
   }, [toast])
 
+  const refreshHistory = async (token) => {
+    if (!token) { setHistory([]); return }
+    setIsLoadingHistory(true)
+    try { setHistory(await fetchHistory(token)) } finally { setIsLoadingHistory(false) }
+  }
+
   const refreshSessions = async (token) => {
     if (!token) {
       setSessionItems([])
@@ -126,7 +136,7 @@ function App() {
       setSessionsError('')
 
       try {
-        await refreshSessions(authToken)
+        await Promise.all([refreshSessions(authToken), refreshHistory(authToken)])
       } catch (error) {
         if (error?.message?.includes('401')) {
           localStorage.removeItem('auth_token')
@@ -186,6 +196,7 @@ function App() {
     setAuthToken('')
     setSessionItems([])
     setSessions({})
+    setHistory([])
     setIsCreateMode(false)
     setMainTab('home')
     setEditingSessionId(null)
@@ -927,6 +938,7 @@ function App() {
     const nextSession = sessions[sessionName]
     const nextTimeline = createTimeline(nextSession)
     setIsCreateMode(false)
+    historyRecordedRef.current = false
     setSelectedSessionName(sessionName)
     setCurrentIndex(0)
     setRemaining(nextTimeline[0]?.duration ?? 0)
@@ -937,6 +949,20 @@ function App() {
     setNowTimestamp(Date.now())
     closeConfirmModal()
   }
+
+  useEffect(() => {
+    if (!isFinished || !hasStarted || !selectedSessionName || historyRecordedRef.current || !authToken) return
+    historyRecordedRef.current = true
+    const target = sessionItems.find((session) => session.name === selectedSessionName)
+    const setsCompleted = timeline.filter((step) => step.kind === 'work').length
+    createHistoryEntry(authToken, {
+      sessionId: target?.id ?? null,
+      sessionName: selectedSessionName,
+      durationSeconds: Math.max(0, elapsedSinceStart),
+      exercisesCompleted: exerciseNames.length,
+      setsCompleted,
+    }).then(() => refreshHistory(authToken)).catch(() => { historyRecordedRef.current = false })
+  }, [isFinished, hasStarted, selectedSessionName, authToken, elapsedSinceStart, exerciseNames.length, timeline, sessionItems])
 
   const toggleRun = () => {
     if (!timeline.length) {
@@ -1049,6 +1075,8 @@ function App() {
             onThemeModeChange={setThemeMode}
             onAccentChange={setAccent}
             onLogout={logout}
+            history={history}
+            isLoadingHistory={isLoadingHistory}
           />
         ) : null}
         <BottomNav active={mainTab} onChange={setMainTab} />
