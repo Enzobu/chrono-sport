@@ -24,11 +24,13 @@ import { AuthScreen } from './src/screens/AuthScreen'
 import { HomeScreen } from './src/screens/HomeScreen'
 import { SessionFormScreen } from './src/screens/SessionFormScreen'
 import { TimerScreen } from './src/screens/TimerScreen'
-import { colors } from './src/styles/theme'
+import { SettingsScreen } from './src/screens/SettingsScreen'
+import { ThemeProvider, useTheme } from './src/theme/ThemeContext'
 
 const { TimerNotification } = NativeModules
 
-export default function App() {
+function AppContent() {
+  const { colors, resolvedScheme } = useTheme()
   const [authToken, setAuthToken] = useState('')
   const [authMode, setAuthMode] = useState('login')
   const [authEmail, setAuthEmail] = useState('')
@@ -1104,8 +1106,8 @@ export default function App() {
   }
 
   return (
-    <SafeAreaView style={styles.root}>
-      <ExpoStatusBar style="light" backgroundColor={colors.bg} translucent={false} />
+    <SafeAreaView style={[styles.root, { backgroundColor: colors.bg }]}>
+      <ExpoStatusBar style={resolvedScheme === 'dark' ? 'light' : 'dark'} backgroundColor={colors.bg} translucent={false} />
 
       {screen === 'auth' ? (
         <AuthScreen
@@ -1130,11 +1132,16 @@ export default function App() {
           isLoading={sessionsLoading}
           error={sessionsError}
           onOpenCreate={openCreate}
+          onOpenSettings={() => setScreen('settings')}
           onLogout={logout}
           onOpenSession={openSession}
           onEditSession={openEdit}
           onDeleteSession={askDelete}
         />
+      ) : null}
+
+      {screen === 'settings' ? (
+        <SettingsScreen onBack={() => setScreen('home')} />
       ) : null}
 
       {screen === 'create' ? (
@@ -1199,6 +1206,13 @@ export default function App() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.bg,
   },
 })
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
+  )
+}
