@@ -990,19 +990,6 @@ function App() {
     )
   }
 
-  if (showSettings && authToken) {
-    return (
-      <SettingsPage
-        themeMode={themeMode}
-        accent={accent}
-        resolvedTheme={resolvedTheme}
-        onThemeModeChange={setThemeMode}
-        onAccentChange={setAccent}
-        onBack={() => setShowSettings(false)}
-      />
-    )
-  }
-
   if (isCreateMode) {
     return (
       <>

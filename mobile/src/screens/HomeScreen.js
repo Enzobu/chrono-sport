@@ -102,7 +102,7 @@ const createStyles = (colors) =>
     container: {
       padding: 18,
       gap: 14,
-      paddingBottom: 34,
+      paddingBottom: 96,
       backgroundColor: colors.bg,
     },
     header: {

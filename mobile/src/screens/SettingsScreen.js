@@ -87,7 +87,7 @@ export function SettingsScreen({ onLogout }) {
 }
 
 const createStyles = (colors) => StyleSheet.create({
-  container: { padding: 18, gap: 18, paddingBottom: 36, backgroundColor: colors.bg },
+  container: { padding: 18, gap: 18, paddingBottom: 96, backgroundColor: colors.bg },
   header: { flexDirection: 'row', gap: 14, alignItems: 'flex-start' },
   headerCopy: { flex: 1, gap: 3, paddingTop: 2 },
   eyebrow: { color: colors.primary, fontSize: 11, fontWeight: '800', letterSpacing: 1.4 },

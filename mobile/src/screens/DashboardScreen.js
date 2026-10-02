@@ -30,7 +30,7 @@ export function DashboardScreen({ sessions, onOpenSessions }) {
   )
 }
 const createStyles = (colors) => StyleSheet.create({
-  container:{padding:18,gap:14,paddingBottom:30,backgroundColor:colors.bg},
+  container:{padding:18,gap:14,paddingBottom:96,backgroundColor:colors.bg},
   eyebrow:{color:colors.primary,fontSize:11,fontWeight:'900',letterSpacing:1.6},
   title:{color:colors.text,fontSize:36,fontWeight:'900',letterSpacing:-1},
   subtitle:{color:colors.muted,fontSize:14,lineHeight:21,marginBottom:8},
