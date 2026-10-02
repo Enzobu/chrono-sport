@@ -4,6 +4,7 @@ import { StatusBar as ExpoStatusBar } from 'expo-status-bar'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AppState, NativeModules, PermissionsAndroid, Platform, SafeAreaView, StyleSheet, Vibration } from 'react-native'
 import { authRequest } from './src/api/auth'
+import { createHistoryEntry, fetchHistory } from './src/api/history'
 import {
   createSession,
   deleteSession,
@@ -44,6 +45,8 @@ function AppContent() {
   const [sessions, setSessions] = useState({})
   const [sessionsLoading, setSessionsLoading] = useState(true)
   const [sessionsError, setSessionsError] = useState('')
+  const [history, setHistory] = useState([])
+  const [historyLoading, setHistoryLoading] = useState(false)
 
   const [screen, setScreen] = useState('auth')
   const [editingSessionId, setEditingSessionId] = useState(null)
@@ -73,6 +76,7 @@ function AppContent() {
   const timerClockRef = useRef({ currentIndex: 0, phaseEndAt: null })
   const weightOverlayTimeoutRef = useRef(null)
   const appStateRef = useRef(AppState.currentState)
+  const historyRecordedRef = useRef(false)
 
   const ensureNotificationPermission = async () => {
     if (Platform.OS !== 'android' || Platform.Version < 33) {
@@ -186,6 +190,12 @@ function AppContent() {
     return () => clearTimeout(timeoutId)
   }, [toast])
 
+  const refreshHistory = async (token) => {
+    if (!token) { setHistory([]); return }
+    setHistoryLoading(true)
+    try { setHistory(await fetchHistory(token)) } finally { setHistoryLoading(false) }
+  }
+
   const refreshSessions = async (token) => {
     if (!token) {
       setSessionItems([])
@@ -209,7 +219,7 @@ function AppContent() {
       setSessionsLoading(true)
       setSessionsError('')
       try {
-        await refreshSessions(authToken)
+        await Promise.all([refreshSessions(authToken), refreshHistory(authToken)])
       } catch (error) {
         if (!cancelled) {
           setSessionsError(
@@ -719,6 +729,7 @@ function AppContent() {
   const openSession = (sessionName) => {
     const nextSession = sessions[sessionName]
     const nextTimeline = createTimeline(nextSession)
+    historyRecordedRef.current = false
     setSelectedSessionName(sessionName)
     timerClockRef.current = { currentIndex: 0, phaseEndAt: null }
     setCurrentIndex(0)
@@ -731,6 +742,20 @@ function AppContent() {
     setNowTimestamp(Date.now())
     setScreen('timer')
   }
+
+  useEffect(() => {
+    if (!isFinished || !hasStarted || !selectedSessionName || historyRecordedRef.current || !authToken) return
+    historyRecordedRef.current = true
+    const target = sessionItems.find((session) => session.name === selectedSessionName)
+    const setsCompleted = timeline.filter((step) => step.kind === 'work').length
+    createHistoryEntry(authToken, {
+      sessionId: target?.id ?? null,
+      sessionName: selectedSessionName,
+      durationSeconds: Math.max(0, elapsedSinceStart),
+      exercisesCompleted: exerciseNames.length,
+      setsCompleted,
+    }).then(() => refreshHistory(authToken)).catch(() => { historyRecordedRef.current = false })
+  }, [isFinished, hasStarted, selectedSessionName, authToken, elapsedSinceStart, exerciseNames.length, timeline, sessionItems])
 
   const toggleRun = () => {
     if (!timeline.length) {
@@ -1134,6 +1159,7 @@ function AppContent() {
     setAuthToken('')
     setSessionItems([])
     setSessions({})
+    setHistory([])
     setScreen('auth')
   }
 
@@ -1175,7 +1201,7 @@ function AppContent() {
       ) : null}
 
       {screen === 'account' ? (
-        <SettingsScreen onLogout={logout} />
+        <SettingsScreen onLogout={logout} history={history} loadingHistory={historyLoading} />
       ) : null}
 
       {screen === 'create' ? (

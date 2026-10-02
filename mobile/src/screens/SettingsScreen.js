@@ -18,7 +18,7 @@ const labels = {
   cyan: 'Cyan',
 }
 
-export function SettingsScreen({ onLogout }) {
+export function SettingsScreen({ onLogout, history = [], loadingHistory = false }) {
   const { colors, mode, accent, resolvedScheme, setMode, setAccent } = useTheme()
   const styles = useMemo(() => createStyles(colors), [colors])
 
@@ -67,6 +67,22 @@ export function SettingsScreen({ onLogout }) {
             )
           })}
         </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Historique</Text>
+        <Text style={styles.hint}>Tes dernières séances terminées.</Text>
+        {loadingHistory ? <Text style={styles.hint}>Chargement...</Text> : null}
+        {!loadingHistory && !history.length ? <Text style={styles.hint}>Aucune séance terminée pour le moment.</Text> : null}
+        {history.slice(0, 20).map((entry) => (
+          <View key={entry.id} style={styles.historyRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.optionTitle}>{entry.sessionName}</Text>
+              <Text style={styles.optionDescription}>{new Date(entry.finishedAt).toLocaleString('fr-FR')}</Text>
+            </View>
+            <Text style={styles.historyDuration}>{Math.floor(entry.durationSeconds / 60)} min</Text>
+          </View>
+        ))}
       </View>
 
       <View style={styles.section}>
@@ -121,4 +137,6 @@ const createStyles = (colors) => StyleSheet.create({
   primaryTxt: { color: colors.onPrimary, fontWeight: '800', fontSize: 15 },
   logoutBtn:{height:46,borderRadius:14,borderWidth:1,borderColor:colors.danger,alignItems:'center',justifyContent:'center',marginTop:4},
   logoutTxt:{color:colors.danger,fontWeight:'800'},
+  historyRow:{flexDirection:'row',alignItems:'center',gap:10,borderWidth:1,borderColor:colors.border,backgroundColor:colors.panel,borderRadius:14,padding:12},
+  historyDuration:{color:colors.primary,fontWeight:'900',fontSize:13},
 })
