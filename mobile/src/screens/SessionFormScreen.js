@@ -147,6 +147,13 @@ export function SessionFormScreen({
         />
       </View>
 
+      <Pressable
+        style={styles.insertExerciseBtn}
+        onPress={() => handleInsertExercise(0)}
+      >
+        <Text style={styles.insertExerciseText}>+ Ajouter ici</Text>
+      </Pressable>
+
       {exercises.map((exercise, exerciseIndex) => {
         const exerciseExpanded = expandedExercises.has(exerciseIndex)
 
@@ -305,8 +312,11 @@ export function SessionFormScreen({
         )
       })}
 
-      <Pressable style={styles.secondaryBtn} onPress={handleAddExercise}>
-        <Text style={styles.secondaryText}>Ajouter un exercice</Text>
+      <Pressable
+        style={styles.insertExerciseBtn}
+        onPress={() => handleInsertExercise(exercises.length)}
+      >
+        <Text style={styles.insertExerciseText}>+ Ajouter ici</Text>
       </Pressable>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
