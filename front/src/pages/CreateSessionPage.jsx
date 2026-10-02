@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import {
   ArrowDown,
   ArrowLeft,
@@ -34,40 +34,6 @@ export function CreateSessionPage({
   )
   const [expandedSets, setExpandedSets] = useState(() => new Set())
   const exerciseRefs = useRef(new Map())
-  const exercisePositions = useRef(new Map())
-
-  useLayoutEffect(() => {
-    if (!exercisePositions.current.size) {
-      return
-    }
-
-    draftExercises.forEach((exercise) => {
-      const node = exerciseRefs.current.get(exercise)
-      const previousTop = exercisePositions.current.get(exercise)
-      if (!node || previousTop == null) {
-        return
-      }
-
-      const nextTop = node.getBoundingClientRect().top
-      const delta = previousTop - nextTop
-      if (Math.abs(delta) < 1) {
-        return
-      }
-
-      node.animate(
-        [
-          { transform: `translateY(${delta}px)` },
-          { transform: 'translateY(0)' },
-        ],
-        {
-          duration: 260,
-          easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
-        },
-      )
-    })
-
-    exercisePositions.current.clear()
-  }, [draftExercises])
 
   const setAccordionKey = (exerciseIndex, setIndex) => `${exerciseIndex}-${setIndex}`
 
@@ -117,13 +83,39 @@ export function CreateSessionPage({
   }
 
   const handleMoveExercise = (exerciseIndex, direction) => {
-    exercisePositions.current = new Map(
-      draftExercises.map((exercise) => [
-        exercise,
-        exerciseRefs.current.get(exercise)?.getBoundingClientRect().top,
-      ]),
+    const targetIndex = exerciseIndex + direction
+    const currentNode = exerciseRefs.current.get(exerciseIndex)
+    const targetNode = exerciseRefs.current.get(targetIndex)
+
+    if (!currentNode || !targetNode) {
+      onMoveExercise(exerciseIndex, direction)
+      return
+    }
+
+    const currentRect = currentNode.getBoundingClientRect()
+    const targetRect = targetNode.getBoundingClientRect()
+    const distance = targetRect.top - currentRect.top
+
+    const options = {
+      duration: 260,
+      easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+      fill: 'forwards',
+    }
+
+    const currentAnimation = currentNode.animate(
+      [{ transform: 'translateY(0)' }, { transform: `translateY(${distance}px)` }],
+      options,
     )
-    onMoveExercise(exerciseIndex, direction)
+    const targetAnimation = targetNode.animate(
+      [{ transform: 'translateY(0)' }, { transform: `translateY(${-distance}px)` }],
+      options,
+    )
+
+    Promise.all([currentAnimation.finished, targetAnimation.finished]).then(() => {
+      currentAnimation.cancel()
+      targetAnimation.cancel()
+      onMoveExercise(exerciseIndex, direction)
+    })
   }
 
   return (
@@ -192,8 +184,8 @@ export function CreateSessionPage({
             <div
               key={`exercise-${exerciseIndex}`}
               ref={(node) => {
-                if (node) exerciseRefs.current.set(exercise, node)
-                else exerciseRefs.current.delete(exercise)
+                if (node) exerciseRefs.current.set(exerciseIndex, node)
+                else exerciseRefs.current.delete(exerciseIndex)
               }}
               className="space-y-3"
             >
