@@ -321,6 +321,21 @@ function App() {
     })
   }
 
+  const duplicateExercise = (exerciseIndex) => {
+    setDraftExercises((prev) => {
+      const source = prev[exerciseIndex]
+      if (!source) return prev
+      const copy = {
+        ...source,
+        name: source.name ? `${source.name} copie` : '',
+        sets: source.sets.map((set) => ({ ...set })),
+      }
+      const next = [...prev]
+      next.splice(exerciseIndex + 1, 0, copy)
+      return next
+    })
+  }
+
   const removeExercise = (exerciseIndex) => {
     setDraftExercises((prev) => prev.filter((_, index) => index !== exerciseIndex))
   }
@@ -1075,6 +1090,7 @@ function App() {
           onSessionNameChange={setDraftSessionName}
           onExerciseNameChange={updateExerciseName}
           onRemoveExercise={removeExercise}
+          onDuplicateExercise={duplicateExercise}
           onMoveExercise={moveExercise}
           onInsertExercise={insertExercise}
           onSetFieldChange={updateSetField}

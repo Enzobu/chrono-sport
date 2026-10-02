@@ -43,6 +43,7 @@ export function SessionFormScreen({
   onSessionNameChange,
   onExerciseNameChange,
   onRemoveExercise,
+  onDuplicateExercise,
   onMoveExercise,
   onInsertExercise,
   onSetFieldChange,
@@ -130,6 +131,13 @@ export function SessionFormScreen({
     const newExerciseIndex = exercises.length
     onAddExercise()
     setExpandedExercises(new Set([newExerciseIndex]))
+    setExpandedSets(new Set())
+  }
+
+  const handleDuplicateExercise = (exerciseIndex) => {
+    animateLayout()
+    onDuplicateExercise(exerciseIndex)
+    setExpandedExercises(new Set([exerciseIndex + 1]))
     setExpandedSets(new Set())
   }
 
@@ -392,6 +400,9 @@ export function SessionFormScreen({
                   <View style={styles.exerciseFooter}>
                     <Pressable style={styles.secondaryBtn} onPress={() => handleAddSet(exerciseIndex)}>
                       <Text style={styles.secondaryText}>Ajouter une serie</Text>
+                    </Pressable>
+                    <Pressable style={styles.secondaryBtn} onPress={() => handleDuplicateExercise(exerciseIndex)}>
+                      <Text style={styles.secondaryText}>Dupliquer l'exercice</Text>
                     </Pressable>
                     <Pressable style={styles.deleteBtnCompact} onPress={() => handleRemoveExercise(exerciseIndex)}>
                       <Text style={styles.deleteTxt}>Supprimer l'exercice</Text>

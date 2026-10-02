@@ -22,6 +22,7 @@ export function CreateSessionPage({
   onSessionNameChange,
   onExerciseNameChange,
   onRemoveExercise,
+  onDuplicateExercise,
   onMoveExercise,
   onInsertExercise,
   onSetFieldChange,
@@ -73,6 +74,12 @@ export function CreateSessionPage({
     const newExerciseIndex = draftExercises.length
     onAddExercise()
     setExpandedExercises(new Set([newExerciseIndex]))
+    setExpandedSets(new Set())
+  }
+
+  const handleDuplicateExercise = (exerciseIndex) => {
+    onDuplicateExercise(exerciseIndex)
+    setExpandedExercises(new Set([exerciseIndex + 1]))
     setExpandedSets(new Set())
   }
 
@@ -424,6 +431,14 @@ export function CreateSessionPage({
                         onClick={() => handleAddSet(exerciseIndex)}
                       >
                         <Plus className="h-4 w-4" /> Ajouter une serie
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="theme-outline"
+                        onClick={() => handleDuplicateExercise(exerciseIndex)}
+                      >
+                        <Plus className="h-4 w-4" /> Dupliquer l'exercice
                       </Button>
                       <Button
                         variant="outline"
