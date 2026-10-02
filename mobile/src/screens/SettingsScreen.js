@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { accentPalette } from '../styles/theme'
 import { useTheme } from '../theme/ThemeContext'
@@ -31,6 +31,13 @@ export function SettingsScreen({
 }) {
   const { colors, mode, accent, resolvedScheme, setMode, setAccent } = useTheme()
   const styles = useMemo(() => createStyles(colors), [colors])
+  const [confirmAppearanceReset, setConfirmAppearanceReset] = useState(false)
+
+  const resetAppearance = () => {
+    setMode('system')
+    setAccent('blue')
+    setConfirmAppearanceReset(false)
+  }
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -77,6 +84,29 @@ export function SettingsScreen({
             )
           })}
         </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Réinitialiser l'apparence</Text>
+        <Text style={styles.hint}>Restaure le thème Système et la couleur bleue par défaut.</Text>
+        {confirmAppearanceReset ? (
+          <View style={styles.resetConfirm}>
+            <Text style={styles.optionTitle}>Réinitialiser les réglages visuels ?</Text>
+            <Text style={styles.optionDescription}>Le thème et la couleur primaire reviendront aux valeurs par défaut.</Text>
+            <View style={styles.resetActions}>
+              <Pressable style={styles.resetCancelBtn} onPress={() => setConfirmAppearanceReset(false)}>
+                <Text style={styles.resetCancelText}>Annuler</Text>
+              </Pressable>
+              <Pressable style={styles.resetConfirmBtn} onPress={resetAppearance}>
+                <Text style={styles.resetConfirmText}>Réinitialiser</Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : (
+          <Pressable style={styles.settingToggle} onPress={() => setConfirmAppearanceReset(true)}>
+            <Text style={styles.settingToggleText}>Réinitialiser l'apparence</Text>
+          </Pressable>
+        )}
       </View>
 
       <View style={styles.section}>
@@ -183,6 +213,12 @@ const createStyles = (colors) => StyleSheet.create({
   fill: { width: '62%', height: '100%', backgroundColor: colors.primary, borderRadius: 999 },
   primaryBtn: { marginTop: 6, height: 48, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary },
   primaryTxt: { color: colors.onPrimary, fontWeight: '800', fontSize: 15 },
+  resetConfirm:{borderWidth:1,borderColor:colors.border,backgroundColor:colors.panel,borderRadius:14,padding:12,gap:6},
+  resetActions:{flexDirection:'row',gap:8,marginTop:4},
+  resetCancelBtn:{flex:1,height:42,borderRadius:13,borderWidth:1,borderColor:colors.border,alignItems:'center',justifyContent:'center'},
+  resetCancelText:{color:colors.text,fontWeight:'800'},
+  resetConfirmBtn:{flex:1,height:42,borderRadius:13,borderWidth:1,borderColor:colors.ctaBorder,backgroundColor:colors.ctaBg,alignItems:'center',justifyContent:'center'},
+  resetConfirmText:{color:colors.ctaText,fontWeight:'900'},
   settingToggle:{height:44,borderRadius:14,borderWidth:1,borderColor:colors.border,alignItems:'center',justifyContent:'center'},
   settingToggleActive:{backgroundColor:colors.primarySoft,borderColor:colors.primaryBorder},
   settingToggleText:{color:colors.muted,fontWeight:'800'},
