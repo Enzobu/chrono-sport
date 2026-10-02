@@ -20,11 +20,7 @@ export function HomePage({
     const normalized = query.trim().toLowerCase()
     return Object.keys(sessions)
       .filter((name) => !normalized || name.toLowerCase().includes(normalized))
-      .sort((a, b) => {
-        const aFavorite = Boolean(sessionItems.find((session) => session.name === a)?.favorite)
-        const bFavorite = Boolean(sessionItems.find((session) => session.name === b)?.favorite)
-        return Number(bFavorite) - Number(aFavorite)
-      })
+      
   }, [query, sessions, sessionItems])
 
   return (
