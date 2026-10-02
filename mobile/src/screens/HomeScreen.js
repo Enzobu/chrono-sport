@@ -3,6 +3,18 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { createTimeline, formatHoursMinutesSeconds } from '../lib/timer'
 import { useTheme } from '../theme/ThemeContext'
 
+function LogoutIcon({ color, styles }) {
+  return (
+    <View style={styles.logoutIcon}>
+      <View style={[styles.logoutDoor, { borderColor: color }]} />
+      <View style={styles.logoutArrow}>
+        <View style={[styles.logoutArrowLine, { backgroundColor: color }]} />
+        <View style={[styles.logoutArrowHead, { borderColor: color }]} />
+      </View>
+    </View>
+  )
+}
+
 function SessionCard({ name, data, onOpen, onEdit, onDelete, colors, styles }) {
   const duration = createTimeline(data).reduce((sum, step) => sum + step.duration, 0)
   const exercisesCount = Object.keys(data).length
@@ -59,7 +71,7 @@ export function HomeScreen({
             <Text style={styles.iconBtnText}>⚙</Text>
           </Pressable>
           <Pressable style={styles.iconBtn} onPress={onLogout}>
-            <Text style={styles.iconBtnText}>↪</Text>
+            <LogoutIcon color={colors.text} styles={styles} />
           </Pressable>
         </View>
 
@@ -139,6 +151,42 @@ const createStyles = (colors) =>
       color: colors.text,
       fontSize: 21,
       fontWeight: '700',
+    },
+    logoutIcon: {
+      width: 24,
+      height: 24,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    logoutDoor: {
+      width: 9,
+      height: 18,
+      borderLeftWidth: 2,
+      borderTopWidth: 2,
+      borderBottomWidth: 2,
+      borderRadius: 3,
+      marginRight: -2,
+    },
+    logoutArrow: {
+      width: 15,
+      height: 18,
+      justifyContent: 'center',
+      position: 'relative',
+    },
+    logoutArrowLine: {
+      width: 13,
+      height: 2,
+      borderRadius: 999,
+    },
+    logoutArrowHead: {
+      position: 'absolute',
+      right: 0,
+      width: 7,
+      height: 7,
+      borderTopWidth: 2,
+      borderRightWidth: 2,
+      transform: [{ rotate: '45deg' }],
     },
     eyebrow: {
       color: colors.primary,
