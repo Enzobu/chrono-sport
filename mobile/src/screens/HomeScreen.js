@@ -17,7 +17,7 @@ function SessionCard({ name, data, favorite, onToggleFavorite, onOpen, onEdit, o
           <Text style={styles.cardIconText}>↗</Text>
         </View>
         <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>{name}</Text>
+          <Text style={styles.cardTitle} numberOfLines={2} ellipsizeMode="tail">{name}</Text>
           <Text style={styles.cardMeta}>
             {exercisesCount} exercices • {formatHoursMinutesSeconds(duration)}
           </Text>
@@ -255,6 +255,8 @@ const createStyles = (colors) =>
     },
     cardHeader: {
       flex: 1,
+      minWidth: 0,
+      paddingRight: 42,
       gap: 4,
     },
     cardTitle: {
