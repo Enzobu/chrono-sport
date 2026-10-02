@@ -19,6 +19,7 @@ const modes = [
 
 export function SettingsPage({ themeMode, accent, resolvedTheme, onThemeModeChange, onAccentChange, onLogout, weightUnit = 'kg', onWeightUnitChange, workoutSoundEnabled = true, onWorkoutSoundChange, history = [], isLoadingHistory = false }) {
   const [confirmAppearanceReset, setConfirmAppearanceReset] = useState(false)
+  const [historyExpanded, setHistoryExpanded] = useState(false)
 
   const resetAppearance = () => {
     onThemeModeChange('system')
@@ -44,7 +45,7 @@ export function SettingsPage({ themeMode, accent, resolvedTheme, onThemeModeChan
         <div className="mt-4 space-y-2">
           {isLoadingHistory ? <p className="theme-muted text-sm">Chargement...</p> : null}
           {!isLoadingHistory && !history.length ? <p className="theme-muted text-sm">Aucune séance terminée pour le moment.</p> : null}
-          {history.slice(0, 20).map((entry) => (
+          {(historyExpanded ? history : history.slice(0, 5)).map((entry) => (
             <div key={entry.id} className="theme-panel flex items-center justify-between rounded-2xl border p-3">
               <div>
                 <div className="theme-text font-bold">{entry.sessionName}</div>
@@ -54,6 +55,11 @@ export function SettingsPage({ themeMode, accent, resolvedTheme, onThemeModeChan
             </div>
           ))}
         </div>
+        {history.length > 5 ? (
+          <button type="button" className="theme-outline mt-4 w-full rounded-2xl border px-4 py-3 text-sm font-black" onClick={() => setHistoryExpanded((value) => !value)}>
+            {historyExpanded ? 'Réduire l’historique' : `Afficher tout l’historique (${history.length})`}
+          </button>
+        ) : null}
       </section>
 
       <div className="mb-3 mt-8">

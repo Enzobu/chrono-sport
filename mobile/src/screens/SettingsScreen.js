@@ -32,6 +32,7 @@ export function SettingsScreen({
   const { colors, mode, accent, resolvedScheme, setMode, setAccent } = useTheme()
   const styles = useMemo(() => createStyles(colors), [colors])
   const [confirmAppearanceReset, setConfirmAppearanceReset] = useState(false)
+  const [historyExpanded, setHistoryExpanded] = useState(false)
 
   const resetAppearance = () => {
     setMode('system')
@@ -58,7 +59,7 @@ export function SettingsScreen({
         <Text style={styles.hint}>Tes dernières séances terminées.</Text>
         {loadingHistory ? <Text style={styles.hint}>Chargement...</Text> : null}
         {!loadingHistory && !history.length ? <Text style={styles.hint}>Aucune séance terminée pour le moment.</Text> : null}
-        {history.slice(0, 20).map((entry) => (
+        {(historyExpanded ? history : history.slice(0, 5)).map((entry) => (
           <View key={entry.id} style={styles.historyRow}>
             <View style={{ flex: 1 }}>
               <Text style={styles.optionTitle}>{entry.sessionName}</Text>
@@ -67,6 +68,11 @@ export function SettingsScreen({
             <Text style={styles.historyDuration}>{Math.floor(entry.durationSeconds / 60)} min</Text>
           </View>
         ))}
+        {history.length > 5 ? (
+          <Pressable style={styles.settingToggle} onPress={() => setHistoryExpanded((value) => !value)}>
+            <Text style={styles.settingToggleText}>{historyExpanded ? 'Réduire l’historique' : `Afficher tout l’historique (${history.length})`}</Text>
+          </Pressable>
+        ) : null}
       </View>
 
       <View style={{ marginTop: 4, gap: 2 }}>
