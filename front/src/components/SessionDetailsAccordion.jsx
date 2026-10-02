@@ -1,4 +1,3 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { formatMinutesSeconds } from '../lib/timer'
 
 const formatWeight = (weight) => `${Number(weight) % 1 === 0 ? Number(weight) : Number(weight).toFixed(1)}kg`
@@ -6,65 +5,70 @@ const formatRest = (seconds) => formatMinutesSeconds(seconds).replace(/^0(?=\d:)
 
 export function SessionDetailsAccordion({ sessionOutline }) {
   return (
-    <Card className="border-white/10 bg-black/60 shadow-[0_0_0_1px_rgba(255,255,255,0.03)_inset] backdrop-blur">
-      <CardHeader>
-        <CardTitle className="text-white">Details de la seance</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-2">
+    <section className="theme-surface rounded-[1.6rem] border p-4 sm:p-5">
+      <div className="mb-4">
+        <p className="theme-accent text-[10px] font-black uppercase tracking-[0.2em]">Programme</p>
+        <h2 className="theme-text mt-1 text-xl font-black">Détails de la séance</h2>
+      </div>
+
+      <div className="space-y-2">
         {sessionOutline.map((exercise, exerciseIndex) => (
           <details
             key={exercise.exerciseName}
-            className="rounded-md border border-zinc-800 bg-zinc-950/40"
+            className="theme-panel overflow-hidden rounded-2xl border"
             open={exercise.hasCurrent || (!exercise.done && exerciseIndex === 0)}
           >
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-sm text-white marker:content-none">
-              <span className="truncate">{exercise.exerciseName}</span>
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 marker:content-none">
+              <span className="theme-text truncate text-sm font-bold">{exercise.exerciseName}</span>
               <span
-                className={`rounded-full border px-2 py-0.5 text-[11px] uppercase tracking-wide ${
+                className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${
                   exercise.done
-                    ? 'border-emerald-700/70 bg-emerald-950/50 text-emerald-300'
-                    : 'border-zinc-700 bg-zinc-900 text-zinc-300'
+                    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-500'
+                    : exercise.hasCurrent
+                      ? 'theme-accent-border theme-accent-soft theme-accent'
+                      : 'theme-muted'
                 }`}
               >
-                {exercise.done ? 'Fait' : 'A faire'}
+                {exercise.done ? 'Fait' : exercise.hasCurrent ? 'En cours' : 'À faire'}
               </span>
             </summary>
 
-            <div className="space-y-2 border-t border-zinc-900 px-3 py-3">
+            <div className="space-y-2 border-t px-3 py-3" style={{ borderColor: 'var(--app-border)' }}>
               {exercise.sets.map((set) => (
                 <details
                   key={set.key}
-                  className="rounded-md border border-zinc-800 bg-black/30"
+                  className="overflow-hidden rounded-xl border"
+                  style={{ borderColor: 'var(--app-border)', background: 'var(--app-surface)' }}
                   open={set.current}
                 >
-                    <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-xs text-zinc-200 marker:content-none">
-                      <span>
-                        Serie {set.order}/{set.total}・{formatWeight(set.weight)}・{formatRest(set.wait)}
-                      </span>
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 marker:content-none">
+                    <span className="theme-text text-xs font-bold">
+                      Série {set.order}/{set.total} • {formatWeight(set.weight)} • {formatRest(set.wait)}
+                    </span>
                     <span
-                      className={`rounded-full border px-2 py-0.5 uppercase tracking-wide ${
+                      className={`rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-wide ${
                         set.done
-                          ? 'border-emerald-700/70 bg-emerald-950/40 text-emerald-300'
+                          ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-500'
                           : set.current
-                            ? 'border-blue-700/70 bg-blue-950/40 text-blue-300'
-                            : 'border-zinc-700 bg-zinc-900 text-zinc-300'
+                            ? 'theme-accent-border theme-accent-soft theme-accent'
+                            : 'theme-muted'
                       }`}
                     >
-                      {set.done ? 'Fait' : set.current ? 'En cours' : 'A faire'}
+                      {set.done ? 'Fait' : set.current ? 'En cours' : 'À faire'}
                     </span>
                   </summary>
 
-                  <div className="grid gap-1 border-t border-zinc-900 px-3 py-2 text-xs text-zinc-400 sm:grid-cols-3">
-                    <p>Type: {set.type}</p>
-                    <p>Travail: {formatMinutesSeconds(set.time)}</p>
-                    <p>Repos: {formatMinutesSeconds(set.wait)}</p>
+                  <div className="theme-muted grid gap-1 border-t px-3 py-2 text-xs sm:grid-cols-3" style={{ borderColor: 'var(--app-border)' }}>
+                    <p>Type : {set.type}</p>
+                    <p>Travail : {formatMinutesSeconds(set.time)}</p>
+                    <p>Repos : {formatMinutesSeconds(set.wait)}</p>
                   </div>
                 </details>
               ))}
             </div>
           </details>
         ))}
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   )
 }

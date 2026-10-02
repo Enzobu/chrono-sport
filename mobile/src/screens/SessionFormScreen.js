@@ -1,8 +1,11 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
-import { colors } from '../styles/theme'
+import { useTheme } from '../theme/ThemeContext'
 
 function TypeToggle({ value, onChange }) {
+  const { colors } = useTheme()
+  const styles = useMemo(() => createStyles(colors), [colors])
+
   return (
     <View style={styles.typeWrap}>
       {['entrainement', 'echauffement'].map((type) => (
@@ -36,6 +39,8 @@ export function SessionFormScreen({
   onAddSet,
   onAddExercise,
 }) {
+  const { colors } = useTheme()
+  const styles = useMemo(() => createStyles(colors), [colors])
   const [weightInputs, setWeightInputs] = useState({})
   const [expandedExercises, setExpandedExercises] = useState(() => new Set(editing ? [] : [0]))
   const [expandedSets, setExpandedSets] = useState(() => new Set())
@@ -309,7 +314,7 @@ export function SessionFormScreen({
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: {
     padding: 16,
     gap: 12,
@@ -326,8 +331,8 @@ const styles = StyleSheet.create({
   card: {
     borderColor: colors.border,
     borderWidth: 1,
-    borderRadius: 14,
-    backgroundColor: colors.panel,
+    borderRadius: 22,
+    backgroundColor: colors.surface,
     padding: 12,
     gap: 8,
   },
@@ -352,11 +357,11 @@ const styles = StyleSheet.create({
   input: {
     borderColor: colors.border,
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 14,
     height: 42,
     paddingHorizontal: 12,
     color: colors.text,
-    backgroundColor: colors.bg,
+    backgroundColor: colors.panel,
   },
   weightRow: {
     flexDirection: 'row',
@@ -369,7 +374,7 @@ const styles = StyleSheet.create({
   weightStepBtn: {
     borderColor: colors.border,
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 14,
     height: 42,
     minWidth: 62,
     alignItems: 'center',
@@ -407,7 +412,7 @@ const styles = StyleSheet.create({
     height: 40,
     borderColor: colors.border,
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -433,7 +438,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderRadius: 10,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     marginHorizontal: 20,
@@ -445,8 +450,8 @@ const styles = StyleSheet.create({
   setCard: {
     borderColor: colors.border,
     borderWidth: 1,
-    borderRadius: 12,
-    backgroundColor: colors.bg,
+    borderRadius: 16,
+    backgroundColor: colors.panel,
     overflow: 'hidden',
   },
   setSummary: {
@@ -480,7 +485,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     borderColor: colors.border,
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 14,
     padding: 4,
     gap: 4,
   },
@@ -492,7 +497,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   typeBtnActive: {
-    backgroundColor: colors.accent,
+    backgroundColor: colors.ctaBg,
   },
   typeTxt: {
     color: colors.muted,
@@ -500,24 +505,26 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   typeTxtActive: {
-    color: '#090909',
+    color: colors.ctaText,
   },
   primaryBtn: {
     flex: 1,
-    backgroundColor: colors.accent,
-    borderRadius: 10,
+    backgroundColor: colors.ctaBg,
+    borderWidth: 1,
+    borderColor: colors.ctaBorder,
+    borderRadius: 14,
     height: 42,
     alignItems: 'center',
     justifyContent: 'center',
   },
   primaryText: {
-    color: '#090909',
+    color: colors.ctaText,
     fontWeight: '700',
   },
   secondaryBtn: {
     borderColor: colors.border,
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 14,
     height: 40,
     paddingHorizontal: 12,
     alignItems: 'center',
@@ -531,7 +538,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
     borderColor: '#7f1d1d',
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 14,
     height: 36,
     alignItems: 'center',
     justifyContent: 'center',
@@ -539,7 +546,7 @@ const styles = StyleSheet.create({
   deleteBtnCompact: {
     borderColor: '#7f1d1d',
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 14,
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',

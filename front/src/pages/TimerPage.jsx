@@ -1,9 +1,5 @@
-import { ArrowLeft, Gauge, Pause, Play, RotateCcw, SkipForward } from 'lucide-react'
-import { Badge } from '../components/ui/badge'
+import { ArrowLeft, Pause, Play, RotateCcw, SkipForward } from 'lucide-react'
 import { Button } from '../components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
-import { Progress } from '../components/ui/progress'
-import { Separator } from '../components/ui/separator'
 import { SessionDetailsAccordion } from '../components/SessionDetailsAccordion'
 
 export function TimerPage({
@@ -28,142 +24,109 @@ export function TimerPage({
   onReset,
   onTimerClick,
 }) {
+  const phaseLabel = isFinished ? 'Terminé' : currentPhase?.label || 'Séance'
+  const isWork = !isFinished && currentPhase?.kind === 'work'
+
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-6 sm:px-6 lg:py-10">
-      <Button
-        variant="outline"
-        className="w-fit border-white/15 bg-black/40 text-zinc-200 hover:bg-white/10 hover:text-white"
-        onClick={onBack}
-      >
-        <ArrowLeft className="h-4 w-4" /> Retour aux seances
-      </Button>
+      <div className="flex items-center gap-3">
+        <Button variant="outline" size="icon" className="theme-outline h-12 w-12 rounded-2xl" onClick={onBack}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div className="min-w-0">
+          <p className="theme-accent text-[11px] font-black uppercase tracking-[0.2em]">{phaseLabel}</p>
+          <h1 className="theme-text truncate text-xl font-black">{selectedSessionName}</h1>
+        </div>
+      </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.8fr_1fr]">
-        <Card className="border-white/10 bg-black/60 shadow-[0_0_0_1px_rgba(255,255,255,0.03)_inset] backdrop-blur">
-          <CardHeader className="space-y-6 pb-4">
-            <div className="flex items-center justify-between">
-              <Badge
-                variant="outline"
-                className={
-                  currentPhase?.kind === 'rest'
-                    ? 'border-zinc-700 bg-zinc-900 text-zinc-200'
-                    : 'border-white/20 bg-white/10 text-white'
-                }
-              >
-                {isFinished ? 'Termine' : currentPhase?.label || 'Seance'}
-              </Badge>
-              <Badge variant="outline" className="border-zinc-700 text-zinc-300">
-                Seance {selectedSessionName}
-              </Badge>
-            </div>
-            <button
-              type="button"
-              onClick={onTimerClick}
-              className={`w-full select-none bg-transparent text-center font-mono text-6xl font-semibold tracking-tight outline-none transition duration-150 active:scale-[0.98] sm:text-7xl ${
-                !isFinished && currentPhase?.kind === 'work' ? 'text-red-500' : 'text-white'
-              }`}
-            >
-              {isFinished ? (
-                'Seance terminee'
-              ) : (
-                <span className="relative block">
-                  <span
-                    className={`block transition-opacity duration-300 ${
-                      showWeightOverlay ? 'opacity-0' : 'opacity-100'
-                    }`}
-                  >
-                    {remainingLabel}
-                  </span>
-                  <span
-                    className={`pointer-events-none absolute inset-0 block transition-opacity duration-300 ${
-                      showWeightOverlay ? 'opacity-100' : 'opacity-0'
-                    }`}
-                  >
-                    {weightOverlayLabel ?? ''}
-                  </span>
-                </span>
-              )}
-            </button>
-            <CardDescription className="text-center text-sm text-zinc-300 sm:text-base">
-              Exercice : {displayedExercise}
-            </CardDescription>
+        <section className={`theme-surface rounded-[1.8rem] border p-5 sm:p-7 ${
+          isWork ? 'theme-accent-border' : ''
+        }`}>
+          <div className="flex items-center justify-between gap-3">
+            <span className={`rounded-full border px-3 py-1.5 text-xs font-black ${
+              isWork
+                ? 'theme-accent-soft theme-accent theme-accent-border'
+                : 'theme-panel theme-muted'
+            }`}>
+              {phaseLabel}
+            </span>
             {displayedPhase?.setType === 'echauffement' ? (
-              <div className="flex justify-center">
-                <Badge variant="outline" className="border-amber-700/60 bg-amber-950/40 text-amber-300">
-                  Echauffement
-                </Badge>
-              </div>
+              <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-black text-amber-500">
+                Échauffement
+              </span>
             ) : null}
-          </CardHeader>
+          </div>
 
-          <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm text-zinc-400">
-                <span>Progression de la seance</span>
-                <span>{Math.round(progressPct)}%</span>
-              </div>
-              <Progress className="h-2 bg-zinc-900" value={progressPct} />
-            </div>
+          <button
+            type="button"
+            onClick={onTimerClick}
+            className={`${isWork ? 'theme-work' : 'theme-text'} my-6 w-full select-none bg-transparent text-center font-mono text-6xl font-black tracking-[-0.06em] outline-none transition active:scale-[0.985] sm:text-8xl`}
+          >
+            {isFinished ? (
+              <span className="text-4xl sm:text-5xl">Séance terminée</span>
+            ) : (
+              <span className="relative block">
+                <span className={showWeightOverlay ? 'block opacity-0' : 'block opacity-100'}>
+                  {remainingLabel}
+                </span>
+                <span
+                  className={`pointer-events-none absolute inset-0 block transition-opacity duration-300 ${
+                    showWeightOverlay ? 'opacity-100' : 'opacity-0'
+                  }`}
+                >
+                  {weightOverlayLabel ?? ''}
+                </span>
+              </span>
+            )}
+          </button>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <Button onClick={onToggleRun} className="min-w-28 bg-white text-black hover:bg-zinc-100">
-                {isFinished ? (
-                  <>
-                    <Play className="h-4 w-4" /> Relancer
-                  </>
-                ) : isRunning ? (
-                  <>
-                    <Pause className="h-4 w-4" /> Pause
-                  </>
-                ) : (
-                  <>
-                    <Play className="h-4 w-4" /> Lancer
-                  </>
-                )}
-              </Button>
-              <Button
-                variant="secondary"
-                className="bg-zinc-900 text-zinc-100 hover:bg-zinc-800"
-                onClick={onSkip}
-              >
-                <SkipForward className="h-4 w-4" /> Skip
-              </Button>
-              <Button
-                variant="outline"
-                className="border-zinc-700 bg-black text-zinc-200 hover:bg-zinc-900"
-                onClick={onReset}
-              >
-                <RotateCcw className="h-4 w-4" /> Reinitialiser
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+          <p className="theme-text text-center text-base font-bold sm:text-lg">{displayedExercise}</p>
 
-        <Card className="border-white/10 bg-black/60 shadow-[0_0_0_1px_rgba(255,255,255,0.03)_inset] backdrop-blur">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg text-white">
-              <Gauge className="h-4 w-4 text-zinc-300" /> Statistiques
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 text-sm">
-            <div>
-              <p className="text-zinc-500">Temps restant global</p>
-              <p className="text-2xl font-semibold text-white">{totalRemainingLabel}</p>
+          <div className="mt-7">
+            <div className="mb-2 flex items-center justify-between text-xs font-bold">
+              <span className="theme-muted">Progression</span>
+              <span className="theme-accent">{Math.round(progressPct)}%</span>
             </div>
-            <Separator className="bg-zinc-800" />
-            <div>
-              <p className="text-zinc-500">Depuis le debut</p>
-              <p className="text-2xl font-semibold text-white">{elapsedLabel}</p>
+            <div className="theme-track h-2.5 overflow-hidden rounded-full">
+              <div
+                className="theme-primary h-full rounded-full transition-[width] duration-300"
+                style={{ width: `${progressPct}%` }}
+              />
             </div>
-            <Separator className="bg-zinc-800" />
-            <div>
-              <p className="text-zinc-500">Exercices</p>
-              <p className="text-2xl font-semibold text-white">
-                {completedExercisesCount}/{exerciseCount}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+
+          <div className="mt-6 flex flex-wrap gap-2">
+            <Button
+              onClick={onToggleRun}
+              className="theme-primary h-12 min-w-32 flex-1 rounded-2xl font-black text-white hover:opacity-90"
+            >
+              {isFinished ? <Play className="h-4 w-4" /> : isRunning ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+              {isFinished ? 'Relancer' : isRunning ? 'Pause' : 'Lancer'}
+            </Button>
+            <Button variant="outline" className="theme-outline h-12 rounded-2xl" onClick={onSkip}>
+              <SkipForward className="h-4 w-4" /> Skip
+            </Button>
+            <Button variant="outline" className="theme-outline h-12 rounded-2xl" onClick={onReset}>
+              <RotateCcw className="h-4 w-4" /> Reset
+            </Button>
+          </div>
+        </section>
+
+        <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+          <section className="theme-surface rounded-[1.5rem] border p-5 sm:col-span-3 lg:col-span-1">
+            <p className="theme-muted text-xs font-bold uppercase tracking-[0.12em]">Temps restant</p>
+            <p className="theme-text mt-2 text-2xl font-black tracking-tight">{totalRemainingLabel}</p>
+          </section>
+          <section className="theme-surface rounded-[1.5rem] border p-5">
+            <p className="theme-muted text-xs font-bold uppercase tracking-[0.12em]">Écoulé</p>
+            <p className="theme-text mt-2 text-2xl font-black">{elapsedLabel}</p>
+          </section>
+          <section className="theme-surface rounded-[1.5rem] border p-5">
+            <p className="theme-muted text-xs font-bold uppercase tracking-[0.12em]">Exercices</p>
+            <p className="theme-text mt-2 text-2xl font-black">{completedExercisesCount}/{exerciseCount}</p>
+          </section>
+        </div>
       </div>
 
       <SessionDetailsAccordion sessionOutline={sessionOutline} />

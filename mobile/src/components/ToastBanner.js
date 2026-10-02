@@ -1,7 +1,11 @@
+import { useMemo } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
-import { colors } from '../styles/theme'
+import { useTheme } from '../theme/ThemeContext'
 
 export function ToastBanner({ toast }) {
+  const { colors } = useTheme()
+  const styles = useMemo(() => createStyles(colors), [colors])
+
   if (!toast) {
     return null
   }
@@ -18,7 +22,7 @@ export function ToastBanner({ toast }) {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: {
     position: 'absolute',
     right: 16,

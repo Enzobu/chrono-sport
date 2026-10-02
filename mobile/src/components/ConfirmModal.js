@@ -1,7 +1,11 @@
+import { useMemo } from 'react'
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native'
-import { colors } from '../styles/theme'
+import { useTheme } from '../theme/ThemeContext'
 
 export function ConfirmModal({ visible, title, message, confirmLabel, onCancel, onConfirm }) {
+  const { colors } = useTheme()
+  const styles = useMemo(() => createStyles(colors), [colors])
+
   return (
     <Modal transparent animationType="fade" visible={visible} onRequestClose={onCancel}>
       <Pressable style={styles.overlay} onPress={onCancel}>
@@ -22,7 +26,7 @@ export function ConfirmModal({ visible, title, message, confirmLabel, onCancel, 
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.7)',
@@ -33,10 +37,10 @@ const styles = StyleSheet.create({
   panel: {
     width: '100%',
     maxWidth: 380,
-    backgroundColor: colors.panel,
+    backgroundColor: colors.surface,
     borderColor: colors.border,
     borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: 22,
     padding: 16,
   },
   title: {
@@ -56,23 +60,29 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   button: {
-    borderRadius: 10,
-    paddingHorizontal: 14,
+    minHeight: 44,
+    borderRadius: 14,
+    paddingHorizontal: 16,
     paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   cancel: {
     borderColor: colors.border,
     borderWidth: 1,
+    backgroundColor: colors.panel,
   },
   confirm: {
-    backgroundColor: colors.accent,
+    backgroundColor: colors.ctaBg,
+    borderColor: colors.ctaBorder,
+    borderWidth: 1,
   },
   cancelText: {
     color: colors.text,
     fontWeight: '600',
   },
   confirmText: {
-    color: '#090909',
-    fontWeight: '700',
+    color: colors.ctaText,
+    fontWeight: '800',
   },
 })
