@@ -18,7 +18,15 @@ const labels = {
   cyan: 'Cyan',
 }
 
-export function SettingsScreen({ onLogout, weightUnit = 'kg', onWeightUnitChange, history = [], loadingHistory = false }) {
+export function SettingsScreen({
+  onLogout,
+  weightUnit = 'kg',
+  onWeightUnitChange,
+  countdownVibrationEnabled = true,
+  onCountdownVibrationChange,
+  history = [],
+  loadingHistory = false,
+}) {
   const { colors, mode, accent, resolvedScheme, setMode, setAccent } = useTheme()
   const styles = useMemo(() => createStyles(colors), [colors])
 
@@ -86,6 +94,19 @@ export function SettingsScreen({ onLogout, weightUnit = 'kg', onWeightUnitChange
       </View>
 
       <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Vibrations</Text>
+        <Text style={styles.hint}>Vibration 3-2-1 avant la reprise après un repos.</Text>
+        <Pressable
+          style={[styles.settingToggle, countdownVibrationEnabled && styles.settingToggleActive]}
+          onPress={() => onCountdownVibrationChange(!countdownVibrationEnabled)}
+        >
+          <Text style={[styles.settingToggleText, countdownVibrationEnabled && styles.settingToggleTextActive]}>
+            {countdownVibrationEnabled ? 'Activées' : 'Désactivées'}
+          </Text>
+        </Pressable>
+      </View>
+
+      <View style={styles.section}>
         <Text style={styles.sectionTitle}>Unités</Text>
         <Text style={styles.hint}>Choisis l'unité utilisée pour les poids.</Text>
         <View style={styles.unitRow}>
@@ -147,6 +168,10 @@ const createStyles = (colors) => StyleSheet.create({
   fill: { width: '62%', height: '100%', backgroundColor: colors.primary, borderRadius: 999 },
   primaryBtn: { marginTop: 6, height: 48, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary },
   primaryTxt: { color: colors.onPrimary, fontWeight: '800', fontSize: 15 },
+  settingToggle:{height:44,borderRadius:14,borderWidth:1,borderColor:colors.border,alignItems:'center',justifyContent:'center'},
+  settingToggleActive:{backgroundColor:colors.primarySoft,borderColor:colors.primaryBorder},
+  settingToggleText:{color:colors.muted,fontWeight:'800'},
+  settingToggleTextActive:{color:colors.primary},
   unitRow:{flexDirection:'row',gap:8},
   unitBtn:{flex:1,height:44,borderRadius:14,borderWidth:1,borderColor:colors.border,alignItems:'center',justifyContent:'center'},
   unitBtnActive:{backgroundColor:colors.primarySoft,borderColor:colors.primaryBorder},
