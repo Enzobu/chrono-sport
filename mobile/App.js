@@ -33,7 +33,7 @@ import { WorkoutSummaryScreen } from './src/screens/WorkoutSummaryScreen'
 import { SettingsScreen } from './src/screens/SettingsScreen'
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext'
 
-const { TimerNotification } = NativeModules
+const { TimerNotification, ScreenAwake } = NativeModules
 
 function AppContent() {
   const { colors, resolvedScheme } = useTheme()
@@ -141,6 +141,15 @@ function AppContent() {
     soundRef.current = sound
     return sound
   }
+
+  useEffect(() => {
+    if (Platform.OS !== 'android' || !ScreenAwake) return undefined
+    const shouldKeepAwake = screen === 'timer' && isRunning && !isFinished
+    ScreenAwake.setKeepAwake(shouldKeepAwake)
+    return () => {
+      ScreenAwake.setKeepAwake(false)
+    }
+  }, [screen, isRunning, isFinished])
 
   useEffect(() => {
     AsyncStorage.getItem('workout_sound_enabled').then((value) => {

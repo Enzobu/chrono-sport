@@ -83,6 +83,43 @@ function App() {
   const resolvedTheme = themeMode === 'system' ? systemTheme : themeMode
 
   useEffect(() => {
+    let wakeLock = null
+    let cancelled = false
+
+    const updateWakeLock = async () => {
+      const shouldKeepAwake = Boolean(selectedSessionName && isRunning && !isFinished)
+      if (!shouldKeepAwake || !('wakeLock' in navigator) || document.visibilityState !== 'visible') {
+        if (wakeLock) {
+          await wakeLock.release().catch(() => {})
+          wakeLock = null
+        }
+        return
+      }
+
+      if (!wakeLock) {
+        try {
+          const nextLock = await navigator.wakeLock.request('screen')
+          if (cancelled) {
+            await nextLock.release().catch(() => {})
+            return
+          }
+          wakeLock = nextLock
+        } catch {
+          // Wake Lock API unavailable or denied.
+        }
+      }
+    }
+
+    updateWakeLock()
+    document.addEventListener('visibilitychange', updateWakeLock)
+    return () => {
+      cancelled = true
+      document.removeEventListener('visibilitychange', updateWakeLock)
+      if (wakeLock) wakeLock.release().catch(() => {})
+    }
+  }, [selectedSessionName, isRunning, isFinished])
+
+  useEffect(() => {
     const media = window.matchMedia('(prefers-color-scheme: dark)')
     const onChange = (event) => setSystemTheme(event.matches ? 'dark' : 'light')
     media.addEventListener('change', onChange)
