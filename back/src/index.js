@@ -326,6 +326,7 @@ app.put('/sessions/:id', authRequired, async (req, res) => {
         exercises: {
           create: exercises.map((exercise, exerciseIndex) => ({
             name: exercise.name,
+            note: exercise.note,
             orderIndex: exerciseIndex,
             sets: {
               create: exercise.sets.map((set, setIndex) => ({
