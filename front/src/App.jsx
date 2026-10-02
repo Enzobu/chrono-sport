@@ -23,6 +23,7 @@ import { CreateSessionPage } from './pages/CreateSessionPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { HomePage } from './pages/HomePage'
 import { TimerPage } from './pages/TimerPage'
+import { WorkoutSummaryPage } from './pages/WorkoutSummaryPage'
 import { SettingsPage } from './pages/SettingsPage'
 
 function App() {
@@ -62,6 +63,7 @@ function App() {
   const [hasStarted, setHasStarted] = useState(false)
   const [startedAt, setStartedAt] = useState(null)
   const [nowTimestamp, setNowTimestamp] = useState(Date.now())
+  const [finishedAt, setFinishedAt] = useState(null)
 
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
   const [pendingAction, setPendingAction] = useState(null)
@@ -750,6 +752,7 @@ function App() {
     setHasStarted(false)
     setStartedAt(null)
     setNowTimestamp(Date.now())
+    setFinishedAt(null)
     closeConfirmModal()
   }
 
@@ -964,6 +967,14 @@ function App() {
     }).then(() => refreshHistory(authToken)).catch(() => { historyRecordedRef.current = false })
   }, [isFinished, hasStarted, selectedSessionName, authToken, elapsedSinceStart, exerciseNames.length, timeline, sessionItems])
 
+  const completedSetsCount = timeline.filter((step) => step.kind === 'work').length
+  const finishSummaryAt = finishedAt ?? Date.now()
+  const closeWorkoutSummary = () => {
+    resetAllState()
+    setMainTab('home')
+    setFinishedAt(null)
+  }
+
   const toggleRun = () => {
     if (!timeline.length) {
       return
@@ -1091,6 +1102,19 @@ function App() {
         />
         <ToastBanner toast={toast} />
       </>
+    )
+  }
+
+  if (isFinished && hasStarted) {
+    return (
+      <WorkoutSummaryPage
+        sessionName={selectedSessionName}
+        durationSeconds={elapsedSinceStart}
+        exercises={exerciseNames.length}
+        sets={completedSetsCount}
+        finishedAt={finishSummaryAt}
+        onDone={closeWorkoutSummary}
+      />
     )
   }
 

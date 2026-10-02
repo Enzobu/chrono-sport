@@ -27,6 +27,7 @@ import { DashboardScreen } from './src/screens/DashboardScreen'
 import { HomeScreen } from './src/screens/HomeScreen'
 import { SessionFormScreen } from './src/screens/SessionFormScreen'
 import { TimerScreen } from './src/screens/TimerScreen'
+import { WorkoutSummaryScreen } from './src/screens/WorkoutSummaryScreen'
 import { SettingsScreen } from './src/screens/SettingsScreen'
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext'
 
@@ -65,6 +66,7 @@ function AppContent() {
   const [startedAt, setStartedAt] = useState(null)
   const [phaseEndAt, setPhaseEndAt] = useState(null)
   const [nowTimestamp, setNowTimestamp] = useState(Date.now())
+  const [finishedAt, setFinishedAt] = useState(null)
 
   const [confirmVisible, setConfirmVisible] = useState(false)
   const [pendingAction, setPendingAction] = useState(null)
@@ -757,6 +759,15 @@ function AppContent() {
     }).then(() => refreshHistory(authToken)).catch(() => { historyRecordedRef.current = false })
   }, [isFinished, hasStarted, selectedSessionName, authToken, elapsedSinceStart, exerciseNames.length, timeline, sessionItems])
 
+  const completedSetsCount = timeline.filter((step) => step.kind === 'work').length
+  const finishSummaryAt = finishedAt ?? Date.now()
+  const closeWorkoutSummary = () => {
+    setScreen('dashboard')
+    setSelectedSessionName(null)
+    setFinishedAt(null)
+    timerClockRef.current = { currentIndex: 0, phaseEndAt: null }
+  }
+
   const toggleRun = () => {
     if (!timeline.length) {
       return
@@ -832,6 +843,7 @@ function AppContent() {
       if (resolved.finished) {
         timerClockRef.current = { currentIndex: resolved.currentIndex, phaseEndAt: null }
         setIsFinished(true)
+        setFinishedAt(Date.now())
         setIsRunning(false)
         setRemaining(0)
         setPhaseEndAt(null)
@@ -848,6 +860,7 @@ function AppContent() {
     if (!nextStep) {
       timerClockRef.current = { currentIndex: baseIndex, phaseEndAt: null }
       setIsFinished(true)
+      setFinishedAt(Date.now())
       setIsRunning(false)
       setRemaining(0)
       setPhaseEndAt(null)
@@ -1232,7 +1245,18 @@ function AppContent() {
         />
       ) : null}
 
-      {screen === 'timer' ? (
+      {screen === 'timer' && isFinished && hasStarted ? (
+        <WorkoutSummaryScreen
+          sessionName={selectedSessionName}
+          durationSeconds={elapsedSinceStart}
+          exercises={exerciseNames.length}
+          sets={completedSetsCount}
+          finishedAt={finishSummaryAt}
+          onDone={closeWorkoutSummary}
+        />
+      ) : null}
+
+      {screen === 'timer' && !(isFinished && hasStarted) ? (
         <TimerScreen
           sessionName={selectedSessionName}
           phaseLabel={isFinished ? 'Termine' : currentPhase?.label || 'Seance'}
