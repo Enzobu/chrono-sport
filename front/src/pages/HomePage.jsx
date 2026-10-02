@@ -1,4 +1,5 @@
-import { Plus } from 'lucide-react'
+import { Search, Plus } from 'lucide-react'
+import { useMemo, useState } from 'react'
 import { Button } from '../components/ui/button'
 import { SessionCard } from '../components/SessionCard'
 
@@ -13,6 +14,18 @@ export function HomePage({
   sessionItems = [],
   onToggleFavorite,
 }) {
+  const [query, setQuery] = useState('')
+  const visibleSessions = useMemo(() => {
+    const normalized = query.trim().toLowerCase()
+    return Object.keys(sessions)
+      .filter((name) => !normalized || name.toLowerCase().includes(normalized))
+      .sort((a, b) => {
+        const aFavorite = Boolean(sessionItems.find((session) => session.name === a)?.favorite)
+        const bFavorite = Boolean(sessionItems.find((session) => session.name === b)?.favorite)
+        return Number(bFavorite) - Number(aFavorite)
+      })
+  }, [query, sessions, sessionItems])
+
   return (
     <main className="mx-auto w-full max-w-6xl px-4 pb-28 pt-8 sm:px-6 lg:pt-12">
       <div className="mb-10">
@@ -32,10 +45,20 @@ export function HomePage({
         </Button>
       </div>
 
+      <div className="theme-surface mb-5 flex items-center gap-3 rounded-2xl border px-4">
+        <Search className="theme-muted h-4 w-4" />
+        <input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Rechercher une séance..."
+          className="theme-text h-12 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--app-muted)]"
+        />
+      </div>
+
       <div className="mb-4 flex items-center justify-between">
         <h2 className="theme-text text-xl font-black">Programme</h2>
         <span className="theme-accent-soft theme-accent theme-accent-border rounded-full border px-3 py-1 text-xs font-black">
-          {Object.keys(sessions).length}
+          {visibleSessions.length}
         </span>
       </div>
 
@@ -48,7 +71,7 @@ export function HomePage({
       ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {Object.keys(sessions).map((sessionName) => {
+        {visibleSessions.map((sessionName) => {
           const item = sessionItems.find((session) => session.name === sessionName)
           return (
           <SessionCard
@@ -65,10 +88,10 @@ export function HomePage({
         })}
       </div>
 
-      {!isLoadingSessions && !Object.keys(sessions).length ? (
+      {!isLoadingSessions && !visibleSessions.length ? (
         <div className="theme-surface mt-4 rounded-3xl border p-6">
-          <h3 className="theme-text font-black">Aucune séance</h3>
-          <p className="theme-muted mt-1 text-sm">Crée ta première séance pour commencer.</p>
+          <h3 className="theme-text font-black">{query ? 'Aucun résultat' : 'Aucune séance'}</h3>
+          <p className="theme-muted mt-1 text-sm">{query ? 'Essaie avec un autre nom.' : 'Crée ta première séance pour commencer.'}</p>
         </div>
       ) : null}
     </main>
