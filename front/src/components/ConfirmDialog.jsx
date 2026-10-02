@@ -13,18 +13,18 @@ export function ConfirmDialog({ open, title, message, confirmLabel, onCancel, on
     <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onCancel()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle className="text-white">{title}</DialogTitle>
-          <DialogDescription className="text-zinc-400">{message}</DialogDescription>
+          <DialogTitle className="theme-text">{title}</DialogTitle>
+          <DialogDescription className="theme-muted">{message}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button
             variant="outline"
-            className="border-zinc-700 bg-black text-zinc-200 hover:bg-zinc-900"
+            className="theme-outline rounded-xl"
             onClick={onCancel}
           >
             Annuler
           </Button>
-          <Button className="bg-white text-black hover:bg-zinc-100" onClick={onConfirm}>
+          <Button className="theme-primary rounded-xl text-white hover:opacity-90" onClick={onConfirm}>
             {confirmLabel}
           </Button>
         </DialogFooter>
