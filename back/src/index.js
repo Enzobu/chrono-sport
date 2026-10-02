@@ -239,6 +239,14 @@ app.post('/sessions', authRequired, async (req, res) => {
 
   const { name, exercises } = parsed.data
 
+  const duplicate = await prisma.workoutSession.findFirst({
+    where: { userId: req.userId, name },
+    select: { id: true },
+  })
+  if (duplicate) {
+    return res.status(409).json({ message: 'Une séance avec ce nom existe déjà.' })
+  }
+
   const session = await prisma.workoutSession.create({
     data: {
       name,
@@ -293,6 +301,14 @@ app.put('/sessions/:id', authRequired, async (req, res) => {
   }
 
   const { name, exercises } = parsed.data
+
+  const duplicate = await prisma.workoutSession.findFirst({
+    where: { userId: req.userId, name, NOT: { id } },
+    select: { id: true },
+  })
+  if (duplicate) {
+    return res.status(409).json({ message: 'Une séance avec ce nom existe déjà.' })
+  }
 
   const updated = await prisma.$transaction(async (tx) => {
     await tx.exerciseSet.deleteMany({
