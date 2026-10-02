@@ -1065,7 +1065,7 @@ function App() {
     return (
       <>
         {mainTab === 'home' ? (
-          <DashboardPage sessions={sessions} history={history} onOpenSessions={() => setMainTab('sessions')} />
+          <DashboardPage sessions={sessions} history={history} onOpenSessions={() => setMainTab('sessions')} onOpenSession={openSession} />
         ) : null}
         {mainTab === 'sessions' ? (
           <HomePage
