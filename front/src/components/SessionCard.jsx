@@ -1,9 +1,9 @@
-import { ArrowUpRight, Pencil, Star, Trash2 } from 'lucide-react'
+import { ArrowUpRight, Copy, Pencil, Star, Trash2 } from 'lucide-react'
 import { Button } from './ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { createTimeline, formatHoursMinutes } from '../lib/timer'
 
-export function SessionCard({ sessionName, sessionData, favorite = false, onToggleFavorite, onOpen, onEdit, onDelete }) {
+export function SessionCard({ sessionName, sessionData, favorite = false, onToggleFavorite, onOpen, onEdit, onDuplicate, onDelete }) {
   const exercisesCount = Object.keys(sessionData).length
   const sessionDuration = createTimeline(sessionData).reduce((sum, step) => sum + step.duration, 0)
 
@@ -33,13 +33,16 @@ export function SessionCard({ sessionName, sessionData, favorite = false, onTogg
         >
           Lancer la séance
         </Button>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           <Button
             variant="outline"
             className="theme-outline rounded-2xl"
             onClick={() => onEdit(sessionName)}
           >
             <Pencil className="h-4 w-4" /> Modifier
+          </Button>
+          <Button variant="outline" className="theme-outline rounded-2xl" onClick={() => onDuplicate(sessionName)}>
+            <Copy className="h-4 w-4" /> Dupliquer
           </Button>
           <Button
             variant="outline"

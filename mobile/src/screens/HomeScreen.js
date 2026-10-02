@@ -3,7 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import { createTimeline, formatHoursMinutesSeconds } from '../lib/timer'
 import { useTheme } from '../theme/ThemeContext'
 
-function SessionCard({ name, data, favorite, onToggleFavorite, onOpen, onEdit, onDelete, colors, styles }) {
+function SessionCard({ name, data, favorite, onToggleFavorite, onOpen, onEdit, onDuplicate, onDelete, colors, styles }) {
   const duration = createTimeline(data).reduce((sum, step) => sum + step.duration, 0)
   const exercisesCount = Object.keys(data).length
 
@@ -32,6 +32,9 @@ function SessionCard({ name, data, favorite, onToggleFavorite, onOpen, onEdit, o
         <Pressable style={[styles.secondaryBtn, styles.cardActionBtn]} onPress={() => onEdit(name)}>
           <Text style={styles.secondaryText}>Modifier</Text>
         </Pressable>
+        <Pressable style={[styles.secondaryBtn, styles.cardActionBtn]} onPress={() => onDuplicate(name)}>
+          <Text style={styles.secondaryText}>Dupliquer</Text>
+        </Pressable>
         <Pressable style={[styles.deleteBtn, styles.cardActionBtn]} onPress={() => onDelete(name)}>
           <Text style={styles.deleteText}>Supprimer</Text>
         </Pressable>
@@ -47,6 +50,7 @@ export function HomeScreen({
   onOpenCreate,
   onOpenSession,
   onEditSession,
+  onDuplicateSession,
   onDeleteSession,
   sessionItems = [],
   onToggleFavorite,
@@ -110,6 +114,7 @@ export function HomeScreen({
           data={sessions[name]}
           onOpen={onOpenSession}
           onEdit={onEditSession}
+          onDuplicate={onDuplicateSession}
           favorite={Boolean(item?.favorite)}
           onToggleFavorite={onToggleFavorite}
           onDelete={onDeleteSession}
