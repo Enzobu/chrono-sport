@@ -22,6 +22,7 @@ export function CreateSessionPage({
   onSessionNameChange,
   onExerciseNameChange,
   onExerciseNoteChange,
+  onToggleExerciseWeight,
   onRemoveExercise,
   onDuplicateExercise,
   onMoveExercise,
@@ -261,6 +262,17 @@ export function CreateSessionPage({
                           placeholder="Nom de l'exercice"
                           tabIndex={exerciseExpanded ? 0 : -1}
                         />
+                        <button
+                          type="button"
+                          className={`w-full rounded-2xl border px-3 py-2 text-left text-sm font-bold transition ${
+                            exercise.trackWeight !== false
+                              ? 'theme-accent-border theme-accent-soft theme-accent'
+                              : 'theme-outline theme-muted'
+                          }`}
+                          onClick={() => onToggleExerciseWeight(exerciseIndex)}
+                        >
+                          {exercise.trackWeight !== false ? 'Poids suivi' : 'Poids masqué'}
+                        </button>
                         <textarea
                           value={exercise.note ?? ''}
                           onChange={(event) => onExerciseNoteChange(exerciseIndex, event.target.value)}
@@ -301,7 +313,8 @@ export function CreateSessionPage({
                                   {set.type === 'echauffement' ? ' · Échauffement' : ''}
                                 </div>
                                 <div className="mt-0.5 text-xs theme-muted">
-                                  {set.time}s · repos {set.wait}s · {Number(set.weight) || 0}kg
+                                  {set.time}s · repos {set.wait}s
+                                  {exercise.trackWeight !== false ? ` · ${Number(set.weight) || 0}kg` : ''}
                                 </div>
                               </div>
                               <ChevronDown
@@ -396,24 +409,21 @@ export function CreateSessionPage({
                                   />
                                 </label>
 
-                                <label className="space-y-1 text-xs theme-muted md:space-y-0 md:text-[0px]">
-                                  <span className="md:hidden">Poids (kg)</span>
-                                  <input
-                                    type="number"
-                                    min={0}
-                                    step="0.5"
-                                    value={set.weight}
-                                    onChange={(event) =>
-                                      onSetFieldChange(
-                                        exerciseIndex,
-                                        setIndex,
-                                        'weight',
-                                        event.target.value,
-                                      )
-                                    }
-                                    className="h-9 w-full rounded-2xl border theme-panel px-2 text-sm theme-text"
-                                  />
-                                </label>
+                                {exercise.trackWeight !== false ? (
+                                  <label className="space-y-1 text-xs theme-muted md:space-y-0 md:text-[0px]">
+                                    <span className="md:hidden">Poids (kg)</span>
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      step="0.5"
+                                      value={set.weight}
+                                      onChange={(event) =>
+                                        onSetFieldChange(exerciseIndex, setIndex, 'weight', event.target.value)
+                                      }
+                                      className="h-9 w-full rounded-2xl border theme-panel px-2 text-sm theme-text"
+                                    />
+                                  </label>
+                                ) : null}
 
                                 <div className="flex justify-end md:block">
                                   <Button

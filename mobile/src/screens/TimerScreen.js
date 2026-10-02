@@ -166,7 +166,7 @@ export function TimerScreen({
             {exercise.sets.map((set) => (
               <Accordion
                 key={set.key}
-                title={`Série ${set.order}/${set.total} • ${formatWeight(set.weight)} • ${formatRest(set.wait)}`}
+                title={`Série ${set.order}/${set.total}${exercise.trackWeight ? ` • ${formatWeight(set.weight)}` : ''} • ${formatRest(set.wait)}`}
                 status={set.done ? 'fait' : set.current ? 'en cours' : 'a faire'}
                 open={set.current}
                 styles={styles}

@@ -398,6 +398,7 @@ function AppContent() {
   }, [currentPhase, nextPhase, isFinished])
 
   const displayedWeightLabel = useMemo(() => {
+    if (!displayedTracksWeight) return null
     const weight = Number(displayedPhase?.weight)
     if (!Number.isFinite(weight)) {
       return null
@@ -449,6 +450,9 @@ function AppContent() {
     }
 
     return Object.entries(selectedSession).map(([exerciseName, sets]) => {
+      const sourceSession = sessionItems.find((session) => session.name === selectedSessionName)
+      const sourceExercise = sourceSession?.exercises?.find((exercise) => exercise.name === exerciseName)
+      const trackWeight = sourceExercise?.trackWeight !== false
       const mappedSets = sets.map((set, index) => {
         const key = `${exerciseName}::${index + 1}`
         const done = completedWorkKeys.has(key)
@@ -468,12 +472,13 @@ function AppContent() {
 
       return {
         exerciseName,
+        trackWeight,
         sets: mappedSets,
         done: mappedSets.every((set) => set.done),
         hasCurrent: mappedSets.some((set) => set.current),
       }
     })
-  }, [selectedSession, completedWorkKeys, currentWorkKey, isFinished])
+  }, [selectedSession, selectedSessionName, sessionItems, completedWorkKeys, currentWorkKey, isFinished])
 
   useEffect(() => {
     if (isFinished || !displayedWeightLabel) {

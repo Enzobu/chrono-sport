@@ -43,7 +43,7 @@ export function SessionDetailsAccordion({ sessionOutline }) {
                 >
                   <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 marker:content-none">
                     <span className="theme-text text-xs font-bold">
-                      Série {set.order}/{set.total} • {formatWeight(set.weight)} • {formatRest(set.wait)}
+                      Série {set.order}/{set.total}{exercise.trackWeight ? ` • ${formatWeight(set.weight)}` : ''} • {formatRest(set.wait)}
                     </span>
                     <span
                       className={`rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-wide ${
