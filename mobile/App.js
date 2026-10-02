@@ -373,6 +373,13 @@ function AppContent() {
     return `${currentPhase.exerciseName} - ${currentPhase.setNumber}/${currentPhase.setTotal}`
   }, [currentPhase, nextPhase, isFinished])
 
+  const displayedTracksWeight = useMemo(() => {
+    const exerciseName = currentPhase?.kind === 'rest' ? nextPhase?.exerciseName : currentPhase?.exerciseName
+    if (!exerciseName || !selectedSessionName) return true
+    const sourceSession = sessionItems.find((session) => session.name === selectedSessionName)
+    return sourceSession?.exercises?.find((exercise) => exercise.name === exerciseName)?.trackWeight !== false
+  }, [currentPhase, nextPhase, selectedSessionName, sessionItems])
+
   const displayedExerciseNote = useMemo(() => {
     const exerciseName = currentPhase?.kind === 'rest' ? nextPhase?.exerciseName : currentPhase?.exerciseName
     if (!exerciseName || !selectedSessionName) return ''
@@ -391,12 +398,13 @@ function AppContent() {
   }, [currentPhase, nextPhase, isFinished])
 
   const displayedWeightLabel = useMemo(() => {
+    if (!displayedTracksWeight) return null
     const weight = Number(displayedPhase?.weight)
     if (!Number.isFinite(weight)) {
       return null
     }
     return `${weight % 1 === 0 ? weight : weight.toFixed(1)}kg`
-  }, [displayedPhase])
+  }, [displayedPhase, displayedTracksWeight])
 
   const showCurrentOrNextWeight = () => {
     if (isFinished || !displayedWeightLabel || !displayedPhase?.kind) {
@@ -442,6 +450,9 @@ function AppContent() {
     }
 
     return Object.entries(selectedSession).map(([exerciseName, sets]) => {
+      const sourceSession = sessionItems.find((session) => session.name === selectedSessionName)
+      const sourceExercise = sourceSession?.exercises?.find((exercise) => exercise.name === exerciseName)
+      const trackWeight = sourceExercise?.trackWeight !== false
       const mappedSets = sets.map((set, index) => {
         const key = `${exerciseName}::${index + 1}`
         const done = completedWorkKeys.has(key)
@@ -461,12 +472,13 @@ function AppContent() {
 
       return {
         exerciseName,
+        trackWeight,
         sets: mappedSets,
         done: mappedSets.every((set) => set.done),
         hasCurrent: mappedSets.some((set) => set.current),
       }
     })
-  }, [selectedSession, completedWorkKeys, currentWorkKey, isFinished])
+  }, [selectedSession, selectedSessionName, sessionItems, completedWorkKeys, currentWorkKey, isFinished])
 
   useEffect(() => {
     if (isFinished || !displayedWeightLabel) {
@@ -939,6 +951,7 @@ function AppContent() {
       exercises: draftExercises.map((exercise) => ({
         name: exercise.name.trim(),
         note: exercise.note?.trim() ?? '',
+        trackWeight: exercise.trackWeight !== false,
         sets: exercise.sets.map((set) => ({
           type: set.type,
           time: Number(set.time),
@@ -1063,6 +1076,7 @@ function AppContent() {
     const exercises = (target.exercises ?? []).map((exercise) => ({
       name: exercise.name,
       note: exercise.note ?? '',
+      trackWeight: exercise.trackWeight !== false,
       sets: (exercise.sets ?? []).map((set) => ({
         type: set.type,
         time: Number(set.time) || 60,
@@ -1101,6 +1115,14 @@ function AppContent() {
     setDraftExercises((prev) =>
       prev.map((exercise, index) =>
         index === exerciseIndex ? { ...exercise, note: value } : exercise,
+      ),
+    )
+  }
+
+  const toggleExerciseWeight = (exerciseIndex) => {
+    setDraftExercises((prev) =>
+      prev.map((exercise, index) =>
+        index === exerciseIndex ? { ...exercise, trackWeight: exercise.trackWeight === false } : exercise,
       ),
     )
   }
@@ -1304,6 +1326,7 @@ function AppContent() {
           onSessionNameChange={setDraftSessionName}
           onExerciseNameChange={updateExerciseName}
           onExerciseNoteChange={updateExerciseNote}
+          onToggleExerciseWeight={toggleExerciseWeight}
           onRemoveExercise={removeExercise}
           onDuplicateExercise={duplicateExercise}
           onMoveExercise={moveExercise}

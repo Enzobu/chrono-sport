@@ -56,6 +56,7 @@ const setSchema = z.object({
 const exerciseSchema = z.object({
   name: z.string().min(1),
   note: z.string().max(1000).default(''),
+  trackWeight: z.boolean().default(true),
   sets: z.array(setSchema).min(1),
 })
 
@@ -246,6 +247,7 @@ app.post('/sessions', authRequired, async (req, res) => {
         create: exercises.map((exercise, exerciseIndex) => ({
           name: exercise.name,
           note: exercise.note,
+          trackWeight: exercise.trackWeight,
           orderIndex: exerciseIndex,
           sets: {
             create: exercise.sets.map((set, setIndex) => ({

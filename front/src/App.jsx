@@ -262,6 +262,7 @@ function App() {
     const exercises = (target.exercises ?? []).map((exercise) => ({
       name: exercise.name,
       note: exercise.note ?? '',
+      trackWeight: exercise.trackWeight !== false,
       sets: (exercise.sets ?? []).map((set) => ({
         type: set.type,
         time: Number(set.time) || 60,
@@ -302,6 +303,14 @@ function App() {
     setDraftExercises((prev) =>
       prev.map((exercise, index) =>
         index === exerciseIndex ? { ...exercise, note: value } : exercise,
+      ),
+    )
+  }
+
+  const toggleExerciseWeight = (exerciseIndex) => {
+    setDraftExercises((prev) =>
+      prev.map((exercise, index) =>
+        index === exerciseIndex ? { ...exercise, trackWeight: exercise.trackWeight === false } : exercise,
       ),
     )
   }
@@ -460,6 +469,7 @@ function App() {
         exercises: draftExercises.map((exercise) => ({
           name: exercise.name.trim(),
           note: exercise.note?.trim() ?? '',
+          trackWeight: exercise.trackWeight !== false,
           sets: exercise.sets.map((set) => ({
             type: set.type,
             time: Number(set.time),
@@ -641,6 +651,13 @@ function App() {
     return `${currentPhase.exerciseName} - ${currentPhase.setNumber}/${currentPhase.setTotal}`
   }, [currentPhase, nextPhase, isFinished])
 
+  const displayedTracksWeight = useMemo(() => {
+    const exerciseName = currentPhase?.kind === 'rest' ? nextPhase?.exerciseName : currentPhase?.exerciseName
+    if (!exerciseName || !selectedSessionName) return true
+    const sourceSession = sessionItems.find((session) => session.name === selectedSessionName)
+    return sourceSession?.exercises?.find((exercise) => exercise.name === exerciseName)?.trackWeight !== false
+  }, [currentPhase, nextPhase, selectedSessionName, sessionItems])
+
   const displayedExerciseNote = useMemo(() => {
     const exerciseName = currentPhase?.kind === 'rest' ? nextPhase?.exerciseName : currentPhase?.exerciseName
     if (!exerciseName || !selectedSessionName) return ''
@@ -659,14 +676,14 @@ function App() {
   }, [currentPhase, nextPhase, isFinished])
 
   const displayedWeightLabel = useMemo(() => {
-    if (!displayedPhase?.kind) {
+    if (!displayedPhase?.kind || !displayedTracksWeight) {
       return null
     }
 
     const rawWeight = displayedPhase?.weight
     const weight = Number.isFinite(Number(rawWeight)) ? Number(rawWeight) : 0
     return `${weight % 1 === 0 ? weight : weight.toFixed(1)}kg`
-  }, [displayedPhase])
+  }, [displayedPhase, displayedTracksWeight])
 
   const handleTimerLabelClick = () => {
     if (isFinished || !displayedPhase?.kind) {
@@ -726,6 +743,9 @@ function App() {
     }
 
     return Object.entries(selectedSession).map(([exerciseName, sets]) => {
+      const sourceSession = sessionItems.find((session) => session.name === selectedSessionName)
+      const sourceExercise = sourceSession?.exercises?.find((exercise) => exercise.name === exerciseName)
+      const trackWeight = sourceExercise?.trackWeight !== false
       const mappedSets = sets.map((set, index) => {
         const key = `${exerciseName}::${index + 1}`
         const done = completedWorkKeys.has(key)
@@ -745,12 +765,13 @@ function App() {
 
       return {
         exerciseName,
+        trackWeight,
         sets: mappedSets,
         done: mappedSets.every((set) => set.done),
         hasCurrent: mappedSets.some((set) => set.current),
       }
     })
-  }, [selectedSession, completedWorkKeys, currentWorkKey, isFinished])
+  }, [selectedSession, selectedSessionName, sessionItems, completedWorkKeys, currentWorkKey, isFinished])
 
   const isSessionOngoing = hasStarted && !isFinished
   const totalRemainingDurationLabel = isSessionOngoing
@@ -1107,6 +1128,7 @@ function App() {
           onSessionNameChange={setDraftSessionName}
           onExerciseNameChange={updateExerciseName}
           onExerciseNoteChange={updateExerciseNote}
+          onToggleExerciseWeight={toggleExerciseWeight}
           onRemoveExercise={removeExercise}
           onDuplicateExercise={duplicateExercise}
           onMoveExercise={moveExercise}

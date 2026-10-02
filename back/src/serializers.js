@@ -11,6 +11,7 @@ export function toSessionPayload(session) {
         id: exercise.id,
         name: exercise.name,
         note: exercise.note ?? '',
+        trackWeight: exercise.trackWeight !== false,
         sets: exercise.sets
           .sort((a, b) => a.orderIndex - b.orderIndex)
           .map((set) => ({

@@ -43,6 +43,7 @@ export function SessionFormScreen({
   onSessionNameChange,
   onExerciseNameChange,
   onExerciseNoteChange,
+  onToggleExerciseWeight,
   onRemoveExercise,
   onDuplicateExercise,
   onMoveExercise,
@@ -313,6 +314,14 @@ export function SessionFormScreen({
                     placeholder="Nom de l'exercice"
                     placeholderTextColor={colors.muted}
                   />
+                  <Pressable
+                    style={[styles.weightTrackingBtn, exercise.trackWeight !== false && styles.weightTrackingBtnActive]}
+                    onPress={() => onToggleExerciseWeight(exerciseIndex)}
+                  >
+                    <Text style={[styles.weightTrackingText, exercise.trackWeight !== false && styles.weightTrackingTextActive]}>
+                      {exercise.trackWeight !== false ? 'Poids suivi' : 'Poids masqué'}
+                    </Text>
+                  </Pressable>
                   <TextInput
                     value={exercise.note ?? ''}
                     onChangeText={(value) => onExerciseNoteChange(exerciseIndex, value)}
@@ -336,7 +345,7 @@ export function SessionFormScreen({
                               {set.type === 'echauffement' ? ' • Échauffement' : ''}
                             </Text>
                             <Text style={styles.summaryMeta}>
-                              {set.time}s • repos {set.wait}s • {Number(set.weight) || 0}kg
+                              {set.time}s • repos {set.wait}s{exercise.trackWeight !== false ? ` • ${Number(set.weight) || 0}kg` : ''}
                             </Text>
                           </View>
                           <Text style={styles.chevron}>{setExpanded ? '⌃' : '⌄'}</Text>
@@ -366,6 +375,8 @@ export function SessionFormScreen({
                               style={styles.input}
                             />
 
+                            {exercise.trackWeight !== false ? (
+                            <>
                             <Text style={styles.smallLabel}>Poids (kg)</Text>
                             <View style={styles.weightRow}>
                               <Pressable
@@ -394,6 +405,8 @@ export function SessionFormScreen({
                                 <Text style={styles.weightStepTxt}>+0.5</Text>
                               </Pressable>
                             </View>
+                            </>
+                            ) : null}
 
                             <Pressable
                               style={styles.deleteBtn}
@@ -495,6 +508,10 @@ const createStyles = (colors) => StyleSheet.create({
     color: colors.text,
     backgroundColor: colors.panel,
   },
+  weightTrackingBtn:{height:40,borderRadius:14,borderWidth:1,borderColor:colors.border,alignItems:'center',justifyContent:'center',backgroundColor:colors.panel},
+  weightTrackingBtnActive:{borderColor:colors.primaryBorder,backgroundColor:colors.primarySoft},
+  weightTrackingText:{color:colors.muted,fontWeight:'700'},
+  weightTrackingTextActive:{color:colors.primary},
   noteInput:{borderColor:colors.border,borderWidth:1,borderRadius:14,minHeight:76,paddingHorizontal:12,paddingVertical:10,color:colors.text,backgroundColor:colors.panel},
   weightRow: {
     flexDirection: 'row',

@@ -28,6 +28,7 @@ export function createDefaultExercise() {
   return {
     name: '',
     note: '',
+    trackWeight: true,
     sets: [createDefaultSet()],
   }
 }
