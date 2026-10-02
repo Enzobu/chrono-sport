@@ -37,8 +37,56 @@ export function SessionFormScreen({
   onAddExercise,
 }) {
   const [weightInputs, setWeightInputs] = useState({})
+  const [expandedExercises, setExpandedExercises] = useState(() => new Set(editing ? [] : [0]))
+  const [expandedSets, setExpandedSets] = useState(() => new Set())
 
   const fieldKey = (exerciseIndex, setIndex) => `${exerciseIndex}-${setIndex}`
+  const setAccordionKey = (exerciseIndex, setIndex) => `${exerciseIndex}-${setIndex}`
+
+  const toggleExercise = (exerciseIndex) => {
+    setExpandedExercises((prev) => {
+      const next = new Set(prev)
+      if (next.has(exerciseIndex)) {
+        next.delete(exerciseIndex)
+      } else {
+        next.add(exerciseIndex)
+      }
+      return next
+    })
+  }
+
+  const toggleSet = (exerciseIndex, setIndex) => {
+    const key = setAccordionKey(exerciseIndex, setIndex)
+    setExpandedSets((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) {
+        next.delete(key)
+      } else {
+        next.add(key)
+      }
+      return next
+    })
+  }
+
+  const handleAddSet = (exerciseIndex) => {
+    const newSetIndex = exercises[exerciseIndex]?.sets.length ?? 0
+    onAddSet(exerciseIndex)
+    setExpandedExercises((prev) => new Set(prev).add(exerciseIndex))
+    setExpandedSets((prev) => new Set(prev).add(setAccordionKey(exerciseIndex, newSetIndex)))
+  }
+
+  const handleAddExercise = () => {
+    const newExerciseIndex = exercises.length
+    onAddExercise()
+    setExpandedExercises(new Set([newExerciseIndex]))
+    setExpandedSets(new Set())
+  }
+
+  const handleInsertExercise = (exerciseIndex) => {
+    onInsertExercise(exerciseIndex)
+    setExpandedExercises(new Set([exerciseIndex]))
+    setExpandedSets(new Set())
+  }
 
   const onWeightChange = (exerciseIndex, setIndex, value) => {
     const key = fieldKey(exerciseIndex, setIndex)
@@ -94,118 +142,165 @@ export function SessionFormScreen({
         />
       </View>
 
-      {exercises.map((exercise, exerciseIndex) => (
-        <View key={`exercise-${exerciseIndex}`} style={styles.exerciseBlock}>
-          <View style={styles.card}>
-            <View style={styles.exerciseHeader}>
-              <Text style={styles.subtitle}>Exercice {exerciseIndex + 1}</Text>
-              <View style={styles.exerciseActions}>
-                <Pressable
-                  style={[styles.orderBtn, exerciseIndex === 0 && styles.orderBtnDisabled]}
-                  onPress={() => onMoveExercise(exerciseIndex, -1)}
-                  disabled={exerciseIndex === 0}
-                >
-                  <Text style={styles.orderBtnText}>↑</Text>
+      {exercises.map((exercise, exerciseIndex) => {
+        const exerciseExpanded = expandedExercises.has(exerciseIndex)
+
+        return (
+          <View key={`exercise-${exerciseIndex}`} style={styles.exerciseBlock}>
+            <View style={styles.card}>
+              <View style={styles.exerciseHeader}>
+                <Pressable style={styles.exerciseSummary} onPress={() => toggleExercise(exerciseIndex)}>
+                  <Text style={styles.chevron}>{exerciseExpanded ? '⌃' : '⌄'}</Text>
+                  <View style={styles.exerciseSummaryText}>
+                    <Text style={styles.subtitle} numberOfLines={1}>
+                      {exercise.name.trim() || `Exercice ${exerciseIndex + 1}`}
+                    </Text>
+                    <Text style={styles.summaryMeta}>
+                      Exercice {exerciseIndex + 1} • {exercise.sets.length} série{exercise.sets.length > 1 ? 's' : ''}
+                    </Text>
+                  </View>
                 </Pressable>
-                <Pressable
-                  style={[
-                    styles.orderBtn,
-                    exerciseIndex === exercises.length - 1 && styles.orderBtnDisabled,
-                  ]}
-                  onPress={() => onMoveExercise(exerciseIndex, 1)}
-                  disabled={exerciseIndex === exercises.length - 1}
-                >
-                  <Text style={styles.orderBtnText}>↓</Text>
-                </Pressable>
-                <Pressable
-                  style={styles.secondaryBtn}
-                  onPress={() => onRemoveExercise(exerciseIndex)}
-                >
-                  <Text style={styles.secondaryText}>Supprimer</Text>
-                </Pressable>
+
+                <View style={styles.exerciseActions}>
+                  <Pressable
+                    style={[styles.orderBtn, exerciseIndex === 0 && styles.orderBtnDisabled]}
+                    onPress={() => onMoveExercise(exerciseIndex, -1)}
+                    disabled={exerciseIndex === 0}
+                  >
+                    <Text style={styles.orderBtnText}>↑</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[
+                      styles.orderBtn,
+                      exerciseIndex === exercises.length - 1 && styles.orderBtnDisabled,
+                    ]}
+                    onPress={() => onMoveExercise(exerciseIndex, 1)}
+                    disabled={exerciseIndex === exercises.length - 1}
+                  >
+                    <Text style={styles.orderBtnText}>↓</Text>
+                  </Pressable>
+                </View>
               </View>
+
+              {exerciseExpanded ? (
+                <>
+                  <TextInput
+                    value={exercise.name}
+                    onChangeText={(value) => onExerciseNameChange(exerciseIndex, value)}
+                    style={styles.input}
+                    placeholder="Nom de l'exercice"
+                    placeholderTextColor={colors.muted}
+                  />
+
+                  {exercise.sets.map((set, setIndex) => {
+                    const setKey = setAccordionKey(exerciseIndex, setIndex)
+                    const setExpanded = expandedSets.has(setKey)
+
+                    return (
+                      <View key={`set-${setIndex}`} style={styles.setCard}>
+                        <Pressable style={styles.setSummary} onPress={() => toggleSet(exerciseIndex, setIndex)}>
+                          <View style={styles.setSummaryText}>
+                            <Text style={styles.setTitle}>
+                              Série {setIndex + 1}
+                              {set.type === 'echauffement' ? ' • Échauffement' : ''}
+                            </Text>
+                            <Text style={styles.summaryMeta}>
+                              {set.time}s • repos {set.wait}s • {Number(set.weight) || 0}kg
+                            </Text>
+                          </View>
+                          <Text style={styles.chevron}>{setExpanded ? '⌃' : '⌄'}</Text>
+                        </Pressable>
+
+                        {setExpanded ? (
+                          <View style={styles.setContent}>
+                            <Text style={styles.smallLabel}>Type</Text>
+                            <TypeToggle
+                              value={set.type}
+                              onChange={(value) => onSetFieldChange(exerciseIndex, setIndex, 'type', value)}
+                            />
+
+                            <Text style={styles.smallLabel}>Duree (s)</Text>
+                            <TextInput
+                              value={String(set.time)}
+                              keyboardType="numeric"
+                              onChangeText={(value) => onSetFieldChange(exerciseIndex, setIndex, 'time', value)}
+                              style={styles.input}
+                            />
+
+                            <Text style={styles.smallLabel}>Repos (s)</Text>
+                            <TextInput
+                              value={String(set.wait)}
+                              keyboardType="numeric"
+                              onChangeText={(value) => onSetFieldChange(exerciseIndex, setIndex, 'wait', value)}
+                              style={styles.input}
+                            />
+
+                            <Text style={styles.smallLabel}>Poids (kg)</Text>
+                            <View style={styles.weightRow}>
+                              <Pressable
+                                style={styles.weightStepBtn}
+                                onPress={() =>
+                                  onSetFieldChange(exerciseIndex, setIndex, 'weight', String(set.weight - 0.5))
+                                }
+                              >
+                                <Text style={styles.weightStepTxt}>-0.5</Text>
+                              </Pressable>
+
+                              <TextInput
+                                value={weightInputs[fieldKey(exerciseIndex, setIndex)] ?? String(set.weight)}
+                                keyboardType="decimal-pad"
+                                onChangeText={(value) => onWeightChange(exerciseIndex, setIndex, value)}
+                                onBlur={() => onWeightBlur(exerciseIndex, setIndex, set.weight)}
+                                style={[styles.input, styles.weightInput]}
+                              />
+
+                              <Pressable
+                                style={styles.weightStepBtn}
+                                onPress={() =>
+                                  onSetFieldChange(exerciseIndex, setIndex, 'weight', String(set.weight + 0.5))
+                                }
+                              >
+                                <Text style={styles.weightStepTxt}>+0.5</Text>
+                              </Pressable>
+                            </View>
+
+                            <Pressable
+                              style={styles.deleteBtn}
+                              onPress={() => onRemoveSet(exerciseIndex, setIndex)}
+                            >
+                              <Text style={styles.deleteTxt}>Supprimer la serie</Text>
+                            </Pressable>
+                          </View>
+                        ) : null}
+                      </View>
+                    )
+                  })}
+
+                  <View style={styles.exerciseFooter}>
+                    <Pressable style={styles.secondaryBtn} onPress={() => handleAddSet(exerciseIndex)}>
+                      <Text style={styles.secondaryText}>Ajouter une serie</Text>
+                    </Pressable>
+                    <Pressable style={styles.deleteBtnCompact} onPress={() => onRemoveExercise(exerciseIndex)}>
+                      <Text style={styles.deleteTxt}>Supprimer l'exercice</Text>
+                    </Pressable>
+                  </View>
+                </>
+              ) : null}
             </View>
 
-          <TextInput
-            value={exercise.name}
-            onChangeText={(value) => onExerciseNameChange(exerciseIndex, value)}
-            style={styles.input}
-            placeholder="Nom de l'exercice"
-            placeholderTextColor={colors.muted}
-          />
-
-          {exercise.sets.map((set, setIndex) => (
-            <View key={`set-${setIndex}`} style={styles.setCard}>
-              <Text style={styles.smallLabel}>Type</Text>
-              <TypeToggle
-                value={set.type}
-                onChange={(value) => onSetFieldChange(exerciseIndex, setIndex, 'type', value)}
-              />
-
-              <Text style={styles.smallLabel}>Duree (s)</Text>
-              <TextInput
-                value={String(set.time)}
-                keyboardType="numeric"
-                onChangeText={(value) => onSetFieldChange(exerciseIndex, setIndex, 'time', value)}
-                style={styles.input}
-              />
-
-              <Text style={styles.smallLabel}>Repos (s)</Text>
-              <TextInput
-                value={String(set.wait)}
-                keyboardType="numeric"
-                onChangeText={(value) => onSetFieldChange(exerciseIndex, setIndex, 'wait', value)}
-                style={styles.input}
-              />
-
-              <Text style={styles.smallLabel}>Poids (kg)</Text>
-              <View style={styles.weightRow}>
-                <Pressable
-                  style={styles.weightStepBtn}
-                  onPress={() => onSetFieldChange(exerciseIndex, setIndex, 'weight', String(set.weight - 0.5))}
-                >
-                  <Text style={styles.weightStepTxt}>-0.5</Text>
-                </Pressable>
-
-                <TextInput
-                  value={weightInputs[fieldKey(exerciseIndex, setIndex)] ?? String(set.weight)}
-                  keyboardType="decimal-pad"
-                  onChangeText={(value) => onWeightChange(exerciseIndex, setIndex, value)}
-                  onBlur={() => onWeightBlur(exerciseIndex, setIndex, set.weight)}
-                  style={[styles.input, styles.weightInput]}
-                />
-
-                <Pressable
-                  style={styles.weightStepBtn}
-                  onPress={() => onSetFieldChange(exerciseIndex, setIndex, 'weight', String(set.weight + 0.5))}
-                >
-                  <Text style={styles.weightStepTxt}>+0.5</Text>
-                </Pressable>
-              </View>
-
-              <Pressable style={styles.deleteBtn} onPress={() => onRemoveSet(exerciseIndex, setIndex)}>
-                <Text style={styles.deleteTxt}>Supprimer la serie</Text>
+            {exerciseIndex < exercises.length - 1 ? (
+              <Pressable
+                style={styles.insertExerciseBtn}
+                onPress={() => handleInsertExercise(exerciseIndex + 1)}
+              >
+                <Text style={styles.insertExerciseText}>+ Ajouter ici</Text>
               </Pressable>
-            </View>
-          ))}
-
-            <Pressable style={styles.secondaryBtn} onPress={() => onAddSet(exerciseIndex)}>
-              <Text style={styles.secondaryText}>Ajouter une serie</Text>
-            </Pressable>
+            ) : null}
           </View>
+        )
+      })}
 
-          {exerciseIndex < exercises.length - 1 ? (
-            <Pressable
-              style={styles.insertExerciseBtn}
-              onPress={() => onInsertExercise(exerciseIndex + 1)}
-            >
-              <Text style={styles.insertExerciseText}>+ Ajouter ici</Text>
-            </Pressable>
-          ) : null}
-        </View>
-      ))}
-
-      <Pressable style={styles.secondaryBtn} onPress={onAddExercise}>
+      <Pressable style={styles.secondaryBtn} onPress={handleAddExercise}>
         <Text style={styles.secondaryText}>Ajouter un exercice</Text>
       </Pressable>
 
@@ -243,7 +338,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     color: colors.text,
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
   },
   label: {
@@ -288,9 +383,19 @@ const styles = StyleSheet.create({
   },
   exerciseHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     gap: 8,
+  },
+  exerciseSummary: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    minHeight: 42,
+  },
+  exerciseSummaryText: {
+    flex: 1,
+    gap: 2,
   },
   exerciseActions: {
     flexDirection: 'row',
@@ -314,6 +419,15 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
   },
+  chevron: {
+    color: colors.text,
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  summaryMeta: {
+    color: colors.muted,
+    fontSize: 12,
+  },
   insertExerciseBtn: {
     height: 36,
     borderColor: colors.border,
@@ -332,9 +446,35 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderWidth: 1,
     borderRadius: 12,
+    backgroundColor: colors.bg,
+    overflow: 'hidden',
+  },
+  setSummary: {
+    minHeight: 54,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  setSummaryText: {
+    flex: 1,
+    gap: 2,
+  },
+  setTitle: {
+    color: colors.text,
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  setContent: {
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
     padding: 10,
     gap: 6,
-    backgroundColor: colors.bg,
+  },
+  exerciseFooter: {
+    gap: 8,
   },
   typeWrap: {
     flexDirection: 'row',
@@ -393,6 +533,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 10,
     height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteBtnCompact: {
+    borderColor: '#7f1d1d',
+    borderWidth: 1,
+    borderRadius: 10,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },
