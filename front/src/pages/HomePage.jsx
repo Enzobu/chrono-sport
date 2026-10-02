@@ -1,4 +1,4 @@
-import { Search, Plus } from 'lucide-react'
+import { Search, Plus, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Button } from '../components/ui/button'
 import { SessionCard } from '../components/SessionCard'
@@ -54,6 +54,11 @@ export function HomePage({
           placeholder="Rechercher une séance..."
           className="theme-text h-12 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--app-muted)]"
         />
+        {query ? (
+          <button type="button" aria-label="Effacer la recherche" className="theme-muted rounded-xl p-2 hover:theme-text" onClick={() => setQuery('')}>
+            <X className="h-4 w-4" />
+          </button>
+        ) : null}
       </div>
 
       <div className="mb-4 flex items-center justify-between">
