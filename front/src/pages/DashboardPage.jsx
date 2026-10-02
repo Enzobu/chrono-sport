@@ -1,7 +1,7 @@
 import { Dumbbell } from 'lucide-react'
 import { Button } from '../components/ui/button'
 
-export function DashboardPage({ sessions, onOpenSessions }) {
+export function DashboardPage({ sessions, history = [], onOpenSessions }) {
   const count = Object.keys(sessions).length
   return (
     <main className="mx-auto w-full max-w-6xl px-4 pb-28 pt-8 sm:px-6 lg:pt-12">
@@ -22,11 +22,18 @@ export function DashboardPage({ sessions, onOpenSessions }) {
         </Button>
       </section>
 
-      <section className="theme-surface mt-4 rounded-[1.7rem] border p-6">
-        <p className="theme-muted text-xs font-bold uppercase tracking-[0.14em]">Programme</p>
-        <div className="theme-text mt-2 text-3xl font-black">{count}</div>
-        <p className="theme-muted mt-1 text-sm">séance{count > 1 ? 's' : ''} disponible{count > 1 ? 's' : ''}</p>
-      </section>
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <section className="theme-surface rounded-[1.7rem] border p-6">
+          <p className="theme-muted text-xs font-bold uppercase tracking-[0.14em]">Programme</p>
+          <div className="theme-text mt-2 text-3xl font-black">{count}</div>
+          <p className="theme-muted mt-1 text-sm">séance{count > 1 ? 's' : ''} disponible{count > 1 ? 's' : ''}</p>
+        </section>
+        <section className="theme-surface rounded-[1.7rem] border p-6">
+          <p className="theme-muted text-xs font-bold uppercase tracking-[0.14em]">Progression</p>
+          <div className="theme-text mt-2 text-3xl font-black">{history.length}</div>
+          <p className="theme-muted mt-1 text-sm">séance{history.length > 1 ? 's' : ''} terminée{history.length > 1 ? 's' : ''}</p>
+        </section>
+      </div>
     </main>
   )
 }
