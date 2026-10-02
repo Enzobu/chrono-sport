@@ -16,6 +16,7 @@ import { ConfirmModal } from './src/components/ConfirmModal'
 import { BottomNav } from './src/components/BottomNav'
 import { ToastBanner } from './src/components/ToastBanner'
 import { createDefaultExercise, createDefaultSet, mapApiSessionsToClient } from './src/lib/sessions'
+import { formatWeight } from './src/lib/weight'
 import {
   createTimeline,
   formatEndTime,
@@ -37,6 +38,7 @@ const { TimerNotification } = NativeModules
 function AppContent() {
   const { colors, resolvedScheme } = useTheme()
   const [authToken, setAuthToken] = useState('')
+  const [weightUnit, setWeightUnit] = useState('kg')
   const [authMode, setAuthMode] = useState('login')
   const [authEmail, setAuthEmail] = useState('')
   const [authPassword, setAuthPassword] = useState('')
@@ -137,6 +139,16 @@ function AppContent() {
     soundRef.current = sound
     return sound
   }
+
+  useEffect(() => {
+    AsyncStorage.getItem('weight_unit').then((unit) => {
+      if (unit === 'kg' || unit === 'lb') setWeightUnit(unit)
+    })
+  }, [])
+
+  useEffect(() => {
+    AsyncStorage.setItem('weight_unit', weightUnit).catch(() => {})
+  }, [weightUnit])
 
   useEffect(() => {
     AsyncStorage.getItem('auth_token').then((token) => {
@@ -403,8 +415,8 @@ function AppContent() {
     if (!Number.isFinite(weight)) {
       return null
     }
-    return `${weight % 1 === 0 ? weight : weight.toFixed(1)}kg`
-  }, [displayedPhase, displayedTracksWeight])
+    return formatWeight(weight, weightUnit)
+  }, [displayedPhase, displayedTracksWeight, weightUnit])
 
   const showCurrentOrNextWeight = () => {
     if (isFinished || !displayedWeightLabel || !displayedPhase?.kind) {
@@ -1304,7 +1316,7 @@ function AppContent() {
       ) : null}
 
       {screen === 'account' ? (
-        <SettingsScreen onLogout={logout} history={history} loadingHistory={historyLoading} />
+        <SettingsScreen onLogout={logout} weightUnit={weightUnit} onWeightUnitChange={setWeightUnit} history={history} loadingHistory={historyLoading} />
       ) : null}
 
       {screen === 'create' ? (
@@ -1325,6 +1337,7 @@ function AppContent() {
           onSave={saveSessionDraft}
           onSessionNameChange={setDraftSessionName}
           onExerciseNameChange={updateExerciseName}
+          weightUnit={weightUnit}
           onExerciseNoteChange={updateExerciseNote}
           onToggleExerciseWeight={toggleExerciseWeight}
           onRemoveExercise={removeExercise}
@@ -1366,6 +1379,7 @@ function AppContent() {
           isRunning={isRunning}
           isFinished={isFinished}
           sessionOutline={sessionOutline}
+          weightUnit={weightUnit}
           onBack={() => openConfirm('leave-session')}
           onToggleRun={toggleRun}
           onSkip={skipCurrent}

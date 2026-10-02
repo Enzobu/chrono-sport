@@ -9,6 +9,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { Button } from '../components/ui/button'
+import { formatWeight, fromDisplayWeight, toDisplayWeight } from '../lib/weight'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 
 export function CreateSessionPage({
@@ -17,6 +18,7 @@ export function CreateSessionPage({
   draftExercises,
   draftError,
   isSavingDraft,
+  weightUnit = 'kg',
   onBack,
   onSave,
   onSessionNameChange,
@@ -314,7 +316,7 @@ export function CreateSessionPage({
                                 </div>
                                 <div className="mt-0.5 text-xs theme-muted">
                                   {set.time}s · repos {set.wait}s
-                                  {exercise.trackWeight !== false ? ` · ${Number(set.weight) || 0}kg` : ''}
+                                  {exercise.trackWeight !== false ? ` · ${formatWeight(set.weight, weightUnit)}` : ''}
                                 </div>
                               </div>
                               <ChevronDown
@@ -411,14 +413,19 @@ export function CreateSessionPage({
 
                                 {exercise.trackWeight !== false ? (
                                   <label className="space-y-1 text-xs theme-muted md:space-y-0 md:text-[0px]">
-                                    <span className="md:hidden">Poids (kg)</span>
+                                    <span className="md:hidden">Poids ({weightUnit})</span>
                                     <input
                                       type="number"
                                       min={0}
                                       step="0.5"
-                                      value={set.weight}
+                                      value={toDisplayWeight(set.weight, weightUnit)}
                                       onChange={(event) =>
-                                        onSetFieldChange(exerciseIndex, setIndex, 'weight', event.target.value)
+                                        onSetFieldChange(
+                                          exerciseIndex,
+                                          setIndex,
+                                          'weight',
+                                          String(fromDisplayWeight(event.target.value, weightUnit)),
+                                        )
                                       }
                                       className="h-9 w-full rounded-2xl border theme-panel px-2 text-sm theme-text"
                                     />

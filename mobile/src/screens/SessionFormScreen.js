@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native'
 import { useTheme } from '../theme/ThemeContext'
+import { formatWeight, fromDisplayWeight, toDisplayWeight } from '../lib/weight'
 
 function TypeToggle({ value, onChange }) {
   const { colors } = useTheme()
@@ -38,6 +39,7 @@ export function SessionFormScreen({
   exercises,
   error,
   saving,
+  weightUnit = 'kg',
   onBack,
   onSave,
   onSessionNameChange,
@@ -201,7 +203,12 @@ export function SessionFormScreen({
 
     const normalized = value.replace(',', '.')
     if (/^\d+(\.\d+)?$/.test(normalized)) {
-      onSetFieldChange(exerciseIndex, setIndex, 'weight', normalized)
+      onSetFieldChange(
+        exerciseIndex,
+        setIndex,
+        'weight',
+        String(fromDisplayWeight(normalized, weightUnit)),
+      )
     }
   }
 
@@ -214,8 +221,16 @@ export function SessionFormScreen({
 
     const normalized = raw.replace(',', '.')
     const parsed = Number(normalized)
-    const sanitized = Number.isFinite(parsed) ? Math.max(0, Math.round(parsed * 2) / 2) : fallback
-    onSetFieldChange(exerciseIndex, setIndex, 'weight', String(sanitized))
+    const fallbackDisplay = toDisplayWeight(fallback, weightUnit)
+    const sanitizedDisplay = Number.isFinite(parsed)
+      ? Math.max(0, Math.round(parsed * 2) / 2)
+      : fallbackDisplay
+    onSetFieldChange(
+      exerciseIndex,
+      setIndex,
+      'weight',
+      String(fromDisplayWeight(sanitizedDisplay, weightUnit)),
+    )
 
     setWeightInputs((prev) => {
       const next = { ...prev }
@@ -345,7 +360,7 @@ export function SessionFormScreen({
                               {set.type === 'echauffement' ? ' • Échauffement' : ''}
                             </Text>
                             <Text style={styles.summaryMeta}>
-                              {set.time}s • repos {set.wait}s{exercise.trackWeight !== false ? ` • ${Number(set.weight) || 0}kg` : ''}
+                              {set.time}s • repos {set.wait}s{exercise.trackWeight !== false ? ` • ${formatWeight(set.weight, weightUnit)}` : ''}
                             </Text>
                           </View>
                           <Text style={styles.chevron}>{setExpanded ? '⌃' : '⌄'}</Text>
@@ -377,19 +392,19 @@ export function SessionFormScreen({
 
                             {exercise.trackWeight !== false ? (
                             <>
-                            <Text style={styles.smallLabel}>Poids (kg)</Text>
+                            <Text style={styles.smallLabel}>Poids ({weightUnit})</Text>
                             <View style={styles.weightRow}>
                               <Pressable
                                 style={styles.weightStepBtn}
                                 onPress={() =>
-                                  onSetFieldChange(exerciseIndex, setIndex, 'weight', String(set.weight - 0.5))
+                                  onSetFieldChange(exerciseIndex, setIndex, 'weight', String(Math.max(0, set.weight - fromDisplayWeight(weightUnit === 'lb' ? 1 : 0.5, weightUnit))))
                                 }
                               >
-                                <Text style={styles.weightStepTxt}>-0.5</Text>
+                                <Text style={styles.weightStepTxt}>-{weightUnit === 'lb' ? '1' : '0.5'}</Text>
                               </Pressable>
 
                               <TextInput
-                                value={weightInputs[fieldKey(exerciseIndex, setIndex)] ?? String(set.weight)}
+                                value={weightInputs[fieldKey(exerciseIndex, setIndex)] ?? String(toDisplayWeight(set.weight, weightUnit))}
                                 keyboardType="decimal-pad"
                                 onChangeText={(value) => onWeightChange(exerciseIndex, setIndex, value)}
                                 onBlur={() => onWeightBlur(exerciseIndex, setIndex, set.weight)}
@@ -399,10 +414,10 @@ export function SessionFormScreen({
                               <Pressable
                                 style={styles.weightStepBtn}
                                 onPress={() =>
-                                  onSetFieldChange(exerciseIndex, setIndex, 'weight', String(set.weight + 0.5))
+                                  onSetFieldChange(exerciseIndex, setIndex, 'weight', String(set.weight + fromDisplayWeight(weightUnit === 'lb' ? 1 : 0.5, weightUnit)))
                                 }
                               >
-                                <Text style={styles.weightStepTxt}>+0.5</Text>
+                                <Text style={styles.weightStepTxt}>+{weightUnit === 'lb' ? '1' : '0.5'}</Text>
                               </Pressable>
                             </View>
                             </>

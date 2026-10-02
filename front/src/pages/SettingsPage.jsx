@@ -16,7 +16,7 @@ const modes = [
   { key: 'dark', label: 'Sombre', description: 'Interface sombre en permanence', icon: Moon },
 ]
 
-export function SettingsPage({ themeMode, accent, resolvedTheme, onThemeModeChange, onAccentChange, onLogout, history = [], isLoadingHistory = false }) {
+export function SettingsPage({ themeMode, accent, resolvedTheme, onThemeModeChange, onAccentChange, onLogout, weightUnit = 'kg', onWeightUnitChange, history = [], isLoadingHistory = false }) {
   return (
     <main className="mx-auto w-full max-w-4xl px-4 pb-28 pt-8 sm:px-6 lg:pt-12">
       <div className="mb-8">
@@ -104,6 +104,19 @@ export function SettingsPage({ themeMode, accent, resolvedTheme, onThemeModeChan
               </div>
               <div className="theme-accent text-sm font-black">{Math.floor(entry.durationSeconds / 60)} min</div>
             </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="theme-surface mt-4 rounded-[1.6rem] border p-5 sm:p-6">
+        <h2 className="theme-text text-xl font-black">Unités</h2>
+        <p className="theme-muted mt-1 text-sm">Choisis l'unité utilisée pour les poids.</p>
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          {['kg', 'lb'].map((unit) => (
+            <button key={unit} type="button" onClick={() => onWeightUnitChange(unit)}
+              className={`rounded-2xl border px-4 py-3 text-sm font-black uppercase ${weightUnit === unit ? 'theme-accent-soft theme-accent theme-accent-border' : 'theme-outline theme-text'}`}>
+              {unit}
+            </button>
           ))}
         </div>
       </section>
