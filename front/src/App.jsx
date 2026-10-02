@@ -31,6 +31,7 @@ import { SettingsPage } from './pages/SettingsPage'
 function App() {
   const [themeMode, setThemeMode] = useState(() => localStorage.getItem('theme_mode') ?? 'system')
   const [accent, setAccent] = useState(() => localStorage.getItem('theme_accent') ?? 'blue')
+  const [workoutSoundEnabled, setWorkoutSoundEnabled] = useState(() => localStorage.getItem('workout_sound_enabled') !== 'false')
   const [weightUnit, setWeightUnit] = useState(() => localStorage.getItem('weight_unit') ?? 'kg')
   const [systemTheme, setSystemTheme] = useState(() =>
     window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
@@ -92,9 +93,10 @@ function App() {
     localStorage.setItem('theme_mode', themeMode)
     localStorage.setItem('theme_accent', accent)
     localStorage.setItem('weight_unit', weightUnit)
+    localStorage.setItem('workout_sound_enabled', String(workoutSoundEnabled))
     document.documentElement.dataset.theme = resolvedTheme
     document.documentElement.dataset.accent = accent
-  }, [themeMode, accent, resolvedTheme, weightUnit])
+  }, [themeMode, accent, resolvedTheme, weightUnit, workoutSoundEnabled])
 
   useEffect(() => {
     if (!toast) {
@@ -910,6 +912,7 @@ function App() {
   }
 
   const playDing = () => {
+    if (!workoutSoundEnabled) return
     try {
       const AudioContextClass = window.AudioContext || window.webkitAudioContext
       if (!AudioContextClass) {
@@ -1185,6 +1188,8 @@ function App() {
             onLogout={logout}
             weightUnit={weightUnit}
             onWeightUnitChange={setWeightUnit}
+            workoutSoundEnabled={workoutSoundEnabled}
+            onWorkoutSoundChange={setWorkoutSoundEnabled}
             history={history}
             isLoadingHistory={isLoadingHistory}
           />

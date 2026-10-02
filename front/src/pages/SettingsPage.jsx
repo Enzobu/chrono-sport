@@ -16,7 +16,7 @@ const modes = [
   { key: 'dark', label: 'Sombre', description: 'Interface sombre en permanence', icon: Moon },
 ]
 
-export function SettingsPage({ themeMode, accent, resolvedTheme, onThemeModeChange, onAccentChange, onLogout, weightUnit = 'kg', onWeightUnitChange, history = [], isLoadingHistory = false }) {
+export function SettingsPage({ themeMode, accent, resolvedTheme, onThemeModeChange, onAccentChange, onLogout, weightUnit = 'kg', onWeightUnitChange, workoutSoundEnabled = true, onWorkoutSoundChange, history = [], isLoadingHistory = false }) {
   return (
     <main className="mx-auto w-full max-w-4xl px-4 pb-28 pt-8 sm:px-6 lg:pt-12">
       <div className="mb-8">
@@ -106,6 +106,15 @@ export function SettingsPage({ themeMode, accent, resolvedTheme, onThemeModeChan
             </div>
           ))}
         </div>
+      </section>
+
+      <section className="theme-surface mt-4 rounded-[1.6rem] border p-5 sm:p-6">
+        <h2 className="theme-text text-xl font-black">Son de séance</h2>
+        <p className="theme-muted mt-1 text-sm">Ding joué à la transition repos → travail.</p>
+        <button type="button" onClick={() => onWorkoutSoundChange(!workoutSoundEnabled)}
+          className={`mt-4 w-full rounded-2xl border px-4 py-3 text-sm font-black ${workoutSoundEnabled ? 'theme-accent-soft theme-accent theme-accent-border' : 'theme-outline theme-muted'}`}>
+          {workoutSoundEnabled ? 'Activé' : 'Désactivé'}
+        </button>
       </section>
 
       <section className="theme-surface mt-4 rounded-[1.6rem] border p-5 sm:p-6">
