@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Check, LogOut, Monitor, Moon, RotateCcw, Sun } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, LogOut, Monitor, Moon, RotateCcw, Sun } from 'lucide-react'
 import { Button } from '../components/ui/button'
 
 const accents = {
@@ -56,8 +56,9 @@ export function SettingsPage({ themeMode, accent, resolvedTheme, onThemeModeChan
           ))}
         </div>
         {history.length > 5 ? (
-          <button type="button" className="theme-outline mt-4 w-full rounded-2xl border px-4 py-3 text-sm font-black" onClick={() => setHistoryExpanded((value) => !value)}>
+          <button type="button" className="theme-outline mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-black" onClick={() => setHistoryExpanded((value) => !value)}>
             {historyExpanded ? 'Réduire l’historique' : `Afficher tout l’historique (${history.length})`}
+            {historyExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </button>
         ) : null}
       </section>
