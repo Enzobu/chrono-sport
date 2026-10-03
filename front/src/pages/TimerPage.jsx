@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ArrowLeft, Lock, Pause, Play, RotateCcw, SkipForward, Unlock } from 'lucide-react'
 import { Button } from '../components/ui/button'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 import { SessionDetailsAccordion } from '../components/SessionDetailsAccordion'
 import { formatWeight } from '../lib/weight'
 
@@ -31,6 +32,7 @@ export function TimerPage({
   onTimerClick,
 }) {
   const [locked, setLocked] = useState(false)
+  const [unlockConfirmOpen, setUnlockConfirmOpen] = useState(false)
   const phaseLabel = isFinished ? 'Terminé' : currentPhase?.label || 'Séance'
   const isWork = !isFinished && currentPhase?.kind === 'work'
 
@@ -48,7 +50,13 @@ export function TimerPage({
           variant="outline"
           size="icon"
           className={`ml-auto h-12 w-12 rounded-2xl ${locked ? 'theme-accent-soft theme-accent theme-accent-border' : 'theme-outline'}`}
-          onClick={() => setLocked((value) => !value)}
+          onClick={() => {
+            if (locked) {
+              setUnlockConfirmOpen(true)
+            } else {
+              setLocked(true)
+            }
+          }}
           aria-label={locked ? 'Déverrouiller les contrôles' : 'Verrouiller les contrôles'}
         >
           {locked ? <Unlock className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
@@ -184,6 +192,18 @@ export function TimerPage({
       </div>
 
       <SessionDetailsAccordion sessionOutline={sessionOutline} weightUnit={weightUnit} />
+
+      <ConfirmDialog
+        open={unlockConfirmOpen}
+        title="Déverrouiller les contrôles ?"
+        message="Confirme pour réactiver les commandes de la séance."
+        confirmLabel="Déverrouiller"
+        onCancel={() => setUnlockConfirmOpen(false)}
+        onConfirm={() => {
+          setLocked(false)
+          setUnlockConfirmOpen(false)
+        }}
+      />
     </main>
   )
 }

@@ -3,6 +3,7 @@ import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-n
 import { formatMinutesSeconds } from '../lib/timer'
 import { useTheme } from '../theme/ThemeContext'
 import { formatWeight } from '../lib/weight'
+import { ConfirmModal } from '../components/ConfirmModal'
 
 const formatRest = (seconds) => formatMinutesSeconds(seconds).replace(/^0(?=\d:)/, '')
 
@@ -50,6 +51,7 @@ export function TimerScreen({
 }) {
   const { colors } = useTheme()
   const [locked, setLocked] = useState(false)
+  const [unlockConfirmOpen, setUnlockConfirmOpen] = useState(false)
   const styles = useMemo(() => createStyles(colors), [colors])
   const overlayOpacity = useRef(new Animated.Value(showWeightOverlay ? 1 : 0)).current
 
@@ -80,7 +82,13 @@ export function TimerScreen({
         </View>
         <Pressable
           style={[styles.lockBtn, locked && styles.lockBtnActive]}
-          onPress={() => setLocked((value) => !value)}
+          onPress={() => {
+            if (locked) {
+              setUnlockConfirmOpen(true)
+            } else {
+              setLocked(true)
+            }
+          }}
         >
           <Text style={[styles.lockBtnText, locked && styles.lockBtnTextActive]}>{locked ? 'Déverrouiller' : 'Verrouiller'}</Text>
         </Pressable>
@@ -184,6 +192,18 @@ export function TimerScreen({
           <Text style={styles.statsValueSmall}>{exercisesStat}</Text>
         </View>
       </View>
+
+      <ConfirmModal
+        visible={unlockConfirmOpen}
+        title="Déverrouiller les contrôles ?"
+        message="Confirme pour réactiver les commandes de la séance."
+        confirmLabel="Déverrouiller"
+        onCancel={() => setUnlockConfirmOpen(false)}
+        onConfirm={() => {
+          setLocked(false)
+          setUnlockConfirmOpen(false)
+        }}
+      />
 
       <View style={styles.detailCard}>
         <View style={styles.detailHeader}>
