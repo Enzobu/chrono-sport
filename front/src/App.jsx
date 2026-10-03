@@ -72,6 +72,7 @@ function App() {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
   const [pendingAction, setPendingAction] = useState(null)
   const [sessionPendingDelete, setSessionPendingDelete] = useState(null)
+  const [nameConflictOpen, setNameConflictOpen] = useState(false)
 
   const [toast, setToast] = useState(null)
   const [showWeightOverlay, setShowWeightOverlay] = useState(false)
@@ -503,6 +504,15 @@ function App() {
       return
     }
 
+    const normalizedName = draftSessionName.trim().toLocaleLowerCase('fr')
+    const duplicateName = sessionItems.some(
+      (session) => session.id !== editingSessionId && session.name.trim().toLocaleLowerCase('fr') === normalizedName,
+    )
+    if (duplicateName) {
+      setNameConflictOpen(true)
+      return
+    }
+
     setIsSavingDraft(true)
     setDraftError('')
 
@@ -534,7 +544,7 @@ function App() {
       resetDraft()
       showToast('success', editingSessionId ? 'Seance mise a jour.' : 'Seance creee.')
     } catch (error) {
-      if (error.message === 'Une séance avec ce nom existe déjà.') window.alert(error.message)
+      if (error.message === 'Une séance avec ce nom existe déjà.') setNameConflictOpen(true)
       setDraftError(
         error.message ||
           (editingSessionId
@@ -1209,6 +1219,16 @@ function App() {
           onAddSet={addSet}
           onAddExercise={addExercise}
         />
+        <ConfirmDialog
+          open={nameConflictOpen}
+          title="Nom déjà utilisé"
+          message="Une séance avec ce nom existe déjà. Modifie le nom pour pouvoir enregistrer."
+          confirmLabel="OK"
+          hideCancel
+          onCancel={() => setNameConflictOpen(false)}
+          onConfirm={() => setNameConflictOpen(false)}
+        />
+
         <ConfirmDialog
           open={isConfirmOpen}
           title={modalContent.title}
