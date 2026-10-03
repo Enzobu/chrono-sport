@@ -272,6 +272,7 @@ function App() {
     const initialExercises = (target.exercises ?? []).map((exercise) => ({
         name: exercise.name,
         note: exercise.note ?? '',
+        trackWeight: exercise.trackWeight !== false,
         sets: (exercise.sets ?? []).map((set) => ({
           type: set.type,
           time: Number(set.time) || 60,
@@ -754,7 +755,7 @@ function App() {
   }, [displayedPhase, displayedTracksWeight, weightUnit])
 
   const handleTimerLabelClick = () => {
-    if (isFinished || !displayedPhase?.kind) {
+    if (isFinished || !displayedPhase?.kind || !displayedWeightLabel) {
       return
     }
 
