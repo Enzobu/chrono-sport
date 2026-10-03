@@ -8,7 +8,7 @@ import {
   DialogTitle,
 } from './ui/dialog'
 
-export function ConfirmDialog({ open, title, message, confirmLabel, onCancel, onConfirm }) {
+export function ConfirmDialog({ open, title, message, confirmLabel, onCancel, onConfirm, hideCancel = false }) {
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onCancel()}>
       <DialogContent>
@@ -17,13 +17,15 @@ export function ConfirmDialog({ open, title, message, confirmLabel, onCancel, on
           <DialogDescription className="theme-muted">{message}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button
-            variant="outline"
-            className="theme-outline rounded-xl"
-            onClick={onCancel}
-          >
-            Annuler
-          </Button>
+          {!hideCancel ? (
+            <Button
+              variant="outline"
+              className="theme-outline rounded-xl"
+              onClick={onCancel}
+            >
+              Annuler
+            </Button>
+          ) : null}
           <Button className="theme-primary rounded-xl font-bold" onClick={onConfirm}>
             {confirmLabel}
           </Button>

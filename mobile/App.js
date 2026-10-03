@@ -76,6 +76,7 @@ function AppContent() {
   const [confirmVisible, setConfirmVisible] = useState(false)
   const [pendingAction, setPendingAction] = useState(null)
   const [sessionPendingDelete, setSessionPendingDelete] = useState(null)
+  const [nameConflictOpen, setNameConflictOpen] = useState(false)
   const [toast, setToast] = useState(null)
   const [showWeightOverlay, setShowWeightOverlay] = useState(false)
 
@@ -1020,6 +1021,15 @@ function AppContent() {
       return
     }
 
+    const normalizedName = draftSessionName.trim().toLocaleLowerCase('fr')
+    const duplicateName = sessionItems.some(
+      (session) => session.id !== editingSessionId && session.name.trim().toLocaleLowerCase('fr') === normalizedName,
+    )
+    if (duplicateName) {
+      setNameConflictOpen(true)
+      return
+    }
+
     setDraftSaving(true)
     setDraftError('')
 
@@ -1053,7 +1063,7 @@ function AppContent() {
       setDraftInitialSnapshot('')
       showToast('success', editingSessionId ? 'Seance mise a jour.' : 'Seance creee.')
     } catch (error) {
-      if (error.message === 'Une séance avec ce nom existe déjà.') Alert.alert('Nom déjà utilisé', error.message)
+      if (error.message === 'Une séance avec ce nom existe déjà.') setNameConflictOpen(true)
       setDraftError(error.message || 'Erreur de sauvegarde')
     } finally {
       setDraftSaving(false)
@@ -1470,6 +1480,16 @@ function AppContent() {
       {['dashboard', 'sessions', 'account'].includes(screen) ? (
         <BottomNav active={screen} onChange={setScreen} />
       ) : null}
+
+      <ConfirmModal
+        visible={nameConflictOpen}
+        title="Nom déjà utilisé"
+        message="Une séance avec ce nom existe déjà. Modifie le nom pour pouvoir enregistrer."
+        confirmLabel="OK"
+        hideCancel
+        onCancel={() => setNameConflictOpen(false)}
+        onConfirm={() => setNameConflictOpen(false)}
+      />
 
       <ConfirmModal
         visible={confirmVisible}
