@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { createTimeline, formatHoursMinutesSeconds } from '../lib/timer'
 import { useTheme } from '../theme/ThemeContext'
 
@@ -54,6 +54,8 @@ export function HomeScreen({
   onDeleteSession,
   sessionItems = [],
   onToggleFavorite,
+  refreshing = false,
+  onRefresh,
 }) {
   const { colors } = useTheme()
   const styles = useMemo(() => createStyles(colors), [colors])
@@ -66,7 +68,10 @@ export function HomeScreen({
   }, [query, sessions, sessionItems])
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView
+      contentContainerStyle={styles.container}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
+    >
       <View style={styles.header}>
         <Text style={styles.eyebrow}>CHRONO-SPORT</Text>
         <Text style={styles.title}>Séances</Text>
