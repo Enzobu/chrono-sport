@@ -1132,6 +1132,7 @@ function AppContent() {
     const initialExercises = target.exercises.map((exercise) => ({
         name: exercise.name,
         note: exercise.note ?? '',
+        trackWeight: exercise.trackWeight !== false,
         sets: exercise.sets.map((set) => ({
           type: set.type,
           time: Number(set.time),
