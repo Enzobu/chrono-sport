@@ -50,9 +50,9 @@ export function SettingsScreen({
         </View>
       </View>
 
-      <View style={{ marginTop: 4, gap: 2 }}>
-        <Text style={{ color: colors.primary, fontSize: 11, fontWeight: '900', letterSpacing: 1.3 }}>COMPTE</Text>
-        <Text style={{ color: colors.muted, fontSize: 12 }}>Ton activité et les actions liées à ton compte.</Text>
+      <View style={styles.sectionHeading}>
+        <Text style={styles.sectionEyebrow}>COMPTE</Text>
+        <Text style={styles.sectionLead}>Ton activité et les actions liées à ton compte.</Text>
       </View>
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Historique</Text>
@@ -75,9 +75,9 @@ export function SettingsScreen({
         ) : null}
       </View>
 
-      <View style={{ marginTop: 4, gap: 2 }}>
-        <Text style={{ color: colors.primary, fontSize: 11, fontWeight: '900', letterSpacing: 1.3 }}>PARAMÈTRES</Text>
-        <Text style={{ color: colors.muted, fontSize: 12 }}>Préférences et personnalisation de l’app.</Text>
+      <View style={styles.sectionHeading}>
+        <Text style={styles.sectionEyebrow}>PARAMÈTRES</Text>
+        <Text style={styles.sectionLead}>Préférences et personnalisation de l’app.</Text>
       </View>
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Apparence</Text>
@@ -202,6 +202,9 @@ const createStyles = (colors) => StyleSheet.create({
   eyebrow: { color: colors.primary, fontSize: 11, fontWeight: '800', letterSpacing: 1.4 },
   title: { color: colors.text, fontSize: 32, fontWeight: '800', letterSpacing: -0.6 },
   subtitle: { color: colors.muted, fontSize: 14, lineHeight: 20 },
+  sectionHeading:{marginTop:4,gap:2},
+  sectionEyebrow:{color:colors.primary,fontSize:11,fontWeight:'900',letterSpacing:1.3},
+  sectionLead:{color:colors.muted,fontSize:12},
   section: { backgroundColor: colors.surface, borderRadius: 22, padding: 16, gap: 10, borderWidth: 1, borderColor: colors.border },
   sectionTitle: { color: colors.text, fontSize: 18, fontWeight: '800' },
   hint: { color: colors.muted, fontSize: 12, marginBottom: 2 },
