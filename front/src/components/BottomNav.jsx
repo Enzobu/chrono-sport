@@ -8,8 +8,8 @@ const items = [
 
 export function BottomNav({ active, onChange }) {
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--app-border)] bg-[color:var(--app-surface)]/95 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur">
-      <div className="mx-auto grid max-w-xl grid-cols-3 gap-2">
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--app-border)] bg-[color:var(--app-surface)]/95 px-2 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-1 backdrop-blur">
+      <div className="mx-auto grid max-w-md grid-cols-3">
         {items.map(({ key, label, icon: Icon }) => {
           const selected = active === key
           return (
@@ -17,11 +17,11 @@ export function BottomNav({ active, onChange }) {
               key={key}
               type="button"
               onClick={() => onChange(key)}
-              className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl text-xs font-bold transition ${
-                selected ? 'theme-accent-soft theme-accent' : 'theme-muted'
+              className={`flex min-h-11 flex-col items-center justify-center gap-0.5 text-[10px] font-semibold transition-colors ${
+                selected ? 'theme-accent' : 'theme-muted'
               }`}
             >
-              <Icon className="h-5 w-5" />
+              <Icon className={`h-[21px] w-[21px] ${selected ? 'stroke-[2.4]' : 'stroke-2'}`} />
               {label}
             </button>
           )
