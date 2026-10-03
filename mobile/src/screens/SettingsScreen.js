@@ -185,7 +185,7 @@ export function SettingsScreen({
         <Pressable style={styles.primaryBtn}><Text style={styles.primaryTxt}>Action principale</Text></Pressable>
       </View>
 
-      <View style={styles.section}>
+      <View style={[styles.section, styles.logoutSection]}>
         <Text style={styles.sectionTitle}>Compte</Text>
         <Text style={styles.hint}>Déconnexion de ton compte Chrono-Sport.</Text>
         <Pressable style={styles.logoutBtn} onPress={onLogout}><Text style={styles.logoutTxt}>Se déconnecter</Text></Pressable>
@@ -246,6 +246,7 @@ const createStyles = (colors) => StyleSheet.create({
   unitBtnActive:{backgroundColor:colors.primarySoft,borderColor:colors.primaryBorder},
   unitText:{color:colors.muted,fontWeight:'800'},
   unitTextActive:{color:colors.primary},
+  logoutSection:{marginTop:10},
   logoutBtn:{height:46,borderRadius:14,borderWidth:1,borderColor:colors.danger,alignItems:'center',justifyContent:'center',marginTop:4},
   logoutTxt:{color:colors.danger,fontWeight:'800'},
   historyRow:{flexDirection:'row',alignItems:'center',gap:10,borderWidth:1,borderColor:colors.border,backgroundColor:colors.panel,borderRadius:14,padding:12},
