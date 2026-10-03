@@ -65,6 +65,22 @@ const sessionSchema = z.object({
   exercises: z.array(exerciseSchema).min(1),
 })
 
+const toExerciseCreateData = (exercise, exerciseIndex) => ({
+  name: exercise.name,
+  note: exercise.note ?? '',
+  trackWeight: exercise.trackWeight !== false,
+  orderIndex: exerciseIndex,
+  sets: {
+    create: exercise.sets.map((set, setIndex) => ({
+      type: set.type,
+      time: set.time,
+      wait: set.wait,
+      weight: set.weight,
+      orderIndex: setIndex,
+    })),
+  },
+})
+
 const historySchema = z.object({
   sessionId: z.number().int().positive().nullable().optional(),
   sessionName: z.string().min(1),
@@ -252,19 +268,7 @@ app.post('/sessions', authRequired, async (req, res) => {
       name,
       userId: req.userId,
       exercises: {
-        create: exercises.map((exercise, exerciseIndex) => ({
-          name: exercise.name,
-          note: exercise.note,
-          trackWeight: exercise.trackWeight,
-          orderIndex: exerciseIndex,
-          sets: {
-            create: exercise.sets.map((set, setIndex) => ({
-              type: set.type,
-              time: set.time,
-              wait: set.wait,
-              weight: set.weight,
-              orderIndex: setIndex,
-            })),
+        create: exercises.map(toExerciseCreateData),
           },
         })),
       },
@@ -324,18 +328,7 @@ app.put('/sessions/:id', authRequired, async (req, res) => {
       data: {
         name,
         exercises: {
-          create: exercises.map((exercise, exerciseIndex) => ({
-            name: exercise.name,
-            note: exercise.note,
-            orderIndex: exerciseIndex,
-            sets: {
-              create: exercise.sets.map((set, setIndex) => ({
-                type: set.type,
-                time: set.time,
-                wait: set.wait,
-                weight: set.weight,
-                orderIndex: setIndex,
-              })),
+          create: exercises.map(toExerciseCreateData),
             },
           })),
         },
