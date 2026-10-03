@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native'
 import { useTheme } from '../theme/ThemeContext'
+import { formatWeight, fromDisplayWeight, toDisplayWeight } from '../lib/weight'
 
 function TypeToggle({ value, onChange }) {
   const { colors } = useTheme()
@@ -38,11 +39,15 @@ export function SessionFormScreen({
   exercises,
   error,
   saving,
+  weightUnit = 'kg',
   onBack,
   onSave,
   onSessionNameChange,
   onExerciseNameChange,
+  onExerciseNoteChange,
+  onToggleExerciseWeight,
   onRemoveExercise,
+  onDuplicateExercise,
   onMoveExercise,
   onInsertExercise,
   onSetFieldChange,
@@ -133,6 +138,13 @@ export function SessionFormScreen({
     setExpandedSets(new Set())
   }
 
+  const handleDuplicateExercise = (exerciseIndex) => {
+    animateLayout()
+    onDuplicateExercise(exerciseIndex)
+    setExpandedExercises(new Set([exerciseIndex + 1]))
+    setExpandedSets(new Set())
+  }
+
   const handleInsertExercise = (exerciseIndex) => {
     animateLayout()
     onInsertExercise(exerciseIndex)
@@ -191,7 +203,12 @@ export function SessionFormScreen({
 
     const normalized = value.replace(',', '.')
     if (/^\d+(\.\d+)?$/.test(normalized)) {
-      onSetFieldChange(exerciseIndex, setIndex, 'weight', normalized)
+      onSetFieldChange(
+        exerciseIndex,
+        setIndex,
+        'weight',
+        String(fromDisplayWeight(normalized, weightUnit)),
+      )
     }
   }
 
@@ -204,8 +221,16 @@ export function SessionFormScreen({
 
     const normalized = raw.replace(',', '.')
     const parsed = Number(normalized)
-    const sanitized = Number.isFinite(parsed) ? Math.max(0, Math.round(parsed * 2) / 2) : fallback
-    onSetFieldChange(exerciseIndex, setIndex, 'weight', String(sanitized))
+    const fallbackDisplay = toDisplayWeight(fallback, weightUnit)
+    const sanitizedDisplay = Number.isFinite(parsed)
+      ? Math.max(0, Math.round(parsed * 2) / 2)
+      : fallbackDisplay
+    onSetFieldChange(
+      exerciseIndex,
+      setIndex,
+      'weight',
+      String(fromDisplayWeight(sanitizedDisplay, weightUnit)),
+    )
 
     setWeightInputs((prev) => {
       const next = { ...prev }
@@ -304,6 +329,23 @@ export function SessionFormScreen({
                     placeholder="Nom de l'exercice"
                     placeholderTextColor={colors.muted}
                   />
+                  <Pressable
+                    style={[styles.weightTrackingBtn, exercise.trackWeight !== false && styles.weightTrackingBtnActive]}
+                    onPress={() => onToggleExerciseWeight(exerciseIndex)}
+                  >
+                    <Text style={[styles.weightTrackingText, exercise.trackWeight !== false && styles.weightTrackingTextActive]}>
+                      {exercise.trackWeight !== false ? 'Poids suivi' : 'Poids masqué'}
+                    </Text>
+                  </Pressable>
+                  <TextInput
+                    value={exercise.note ?? ''}
+                    onChangeText={(value) => onExerciseNoteChange(exerciseIndex, value)}
+                    style={styles.noteInput}
+                    placeholder="Note facultative : placement, prise, tempo..."
+                    placeholderTextColor={colors.muted}
+                    multiline
+                    textAlignVertical="top"
+                  />
 
                   {exercise.sets.map((set, setIndex) => {
                     const setKey = setAccordionKey(exerciseIndex, setIndex)
@@ -318,7 +360,7 @@ export function SessionFormScreen({
                               {set.type === 'echauffement' ? ' • Échauffement' : ''}
                             </Text>
                             <Text style={styles.summaryMeta}>
-                              {set.time}s • repos {set.wait}s • {Number(set.weight) || 0}kg
+                              {set.time}s • repos {set.wait}s{exercise.trackWeight !== false ? ` • ${formatWeight(set.weight, weightUnit)}` : ''}
                             </Text>
                           </View>
                           <Text style={styles.chevron}>{setExpanded ? '⌃' : '⌄'}</Text>
@@ -348,19 +390,21 @@ export function SessionFormScreen({
                               style={styles.input}
                             />
 
-                            <Text style={styles.smallLabel}>Poids (kg)</Text>
+                            {exercise.trackWeight !== false ? (
+                            <>
+                            <Text style={styles.smallLabel}>Poids ({weightUnit})</Text>
                             <View style={styles.weightRow}>
                               <Pressable
                                 style={styles.weightStepBtn}
                                 onPress={() =>
-                                  onSetFieldChange(exerciseIndex, setIndex, 'weight', String(set.weight - 0.5))
+                                  onSetFieldChange(exerciseIndex, setIndex, 'weight', String(Math.max(0, set.weight - fromDisplayWeight(weightUnit === 'lb' ? 1 : 0.5, weightUnit))))
                                 }
                               >
-                                <Text style={styles.weightStepTxt}>-0.5</Text>
+                                <Text style={styles.weightStepTxt}>-{weightUnit === 'lb' ? '1' : '0.5'}</Text>
                               </Pressable>
 
                               <TextInput
-                                value={weightInputs[fieldKey(exerciseIndex, setIndex)] ?? String(set.weight)}
+                                value={weightInputs[fieldKey(exerciseIndex, setIndex)] ?? String(toDisplayWeight(set.weight, weightUnit))}
                                 keyboardType="decimal-pad"
                                 onChangeText={(value) => onWeightChange(exerciseIndex, setIndex, value)}
                                 onBlur={() => onWeightBlur(exerciseIndex, setIndex, set.weight)}
@@ -370,12 +414,14 @@ export function SessionFormScreen({
                               <Pressable
                                 style={styles.weightStepBtn}
                                 onPress={() =>
-                                  onSetFieldChange(exerciseIndex, setIndex, 'weight', String(set.weight + 0.5))
+                                  onSetFieldChange(exerciseIndex, setIndex, 'weight', String(set.weight + fromDisplayWeight(weightUnit === 'lb' ? 1 : 0.5, weightUnit)))
                                 }
                               >
-                                <Text style={styles.weightStepTxt}>+0.5</Text>
+                                <Text style={styles.weightStepTxt}>+{weightUnit === 'lb' ? '1' : '0.5'}</Text>
                               </Pressable>
                             </View>
+                            </>
+                            ) : null}
 
                             <Pressable
                               style={styles.deleteBtn}
@@ -392,6 +438,9 @@ export function SessionFormScreen({
                   <View style={styles.exerciseFooter}>
                     <Pressable style={styles.secondaryBtn} onPress={() => handleAddSet(exerciseIndex)}>
                       <Text style={styles.secondaryText}>Ajouter une serie</Text>
+                    </Pressable>
+                    <Pressable style={styles.secondaryBtn} onPress={() => handleDuplicateExercise(exerciseIndex)}>
+                      <Text style={styles.secondaryText}>Dupliquer l'exercice</Text>
                     </Pressable>
                     <Pressable style={styles.deleteBtnCompact} onPress={() => handleRemoveExercise(exerciseIndex)}>
                       <Text style={styles.deleteTxt}>Supprimer l'exercice</Text>
@@ -474,6 +523,11 @@ const createStyles = (colors) => StyleSheet.create({
     color: colors.text,
     backgroundColor: colors.panel,
   },
+  weightTrackingBtn:{height:40,borderRadius:14,borderWidth:1,borderColor:colors.border,alignItems:'center',justifyContent:'center',backgroundColor:colors.panel},
+  weightTrackingBtnActive:{borderColor:colors.primaryBorder,backgroundColor:colors.primarySoft},
+  weightTrackingText:{color:colors.muted,fontWeight:'700'},
+  weightTrackingTextActive:{color:colors.primary},
+  noteInput:{borderColor:colors.border,borderWidth:1,borderRadius:14,minHeight:76,paddingHorizontal:12,paddingVertical:10,color:colors.text,backgroundColor:colors.panel},
   weightRow: {
     flexDirection: 'row',
     alignItems: 'center',

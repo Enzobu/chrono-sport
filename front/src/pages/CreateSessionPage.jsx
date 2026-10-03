@@ -9,6 +9,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { Button } from '../components/ui/button'
+import { formatWeight, fromDisplayWeight, toDisplayWeight } from '../lib/weight'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 
 export function CreateSessionPage({
@@ -17,11 +18,15 @@ export function CreateSessionPage({
   draftExercises,
   draftError,
   isSavingDraft,
+  weightUnit = 'kg',
   onBack,
   onSave,
   onSessionNameChange,
   onExerciseNameChange,
+  onExerciseNoteChange,
+  onToggleExerciseWeight,
   onRemoveExercise,
+  onDuplicateExercise,
   onMoveExercise,
   onInsertExercise,
   onSetFieldChange,
@@ -73,6 +78,12 @@ export function CreateSessionPage({
     const newExerciseIndex = draftExercises.length
     onAddExercise()
     setExpandedExercises(new Set([newExerciseIndex]))
+    setExpandedSets(new Set())
+  }
+
+  const handleDuplicateExercise = (exerciseIndex) => {
+    onDuplicateExercise(exerciseIndex)
+    setExpandedExercises(new Set([exerciseIndex + 1]))
     setExpandedSets(new Set())
   }
 
@@ -245,13 +256,33 @@ export function CreateSessionPage({
                     }`}
                   >
                     <div className="overflow-hidden">
-                      <input
-                        value={exercise.name}
-                        onChange={(event) => onExerciseNameChange(exerciseIndex, event.target.value)}
-                        className="h-10 w-full rounded-2xl border theme-panel px-3 text-sm theme-text outline-none focus:border-[var(--brand)]"
-                        placeholder="Nom de l'exercice"
-                        tabIndex={exerciseExpanded ? 0 : -1}
-                      />
+                      <div className="space-y-2">
+                        <input
+                          value={exercise.name}
+                          onChange={(event) => onExerciseNameChange(exerciseIndex, event.target.value)}
+                          className="h-10 w-full rounded-2xl border theme-panel px-3 text-sm theme-text outline-none focus:border-[var(--brand)]"
+                          placeholder="Nom de l'exercice"
+                          tabIndex={exerciseExpanded ? 0 : -1}
+                        />
+                        <button
+                          type="button"
+                          className={`w-full rounded-2xl border px-3 py-2 text-left text-sm font-bold transition ${
+                            exercise.trackWeight !== false
+                              ? 'theme-accent-border theme-accent-soft theme-accent'
+                              : 'theme-outline theme-muted'
+                          }`}
+                          onClick={() => onToggleExerciseWeight(exerciseIndex)}
+                        >
+                          {exercise.trackWeight !== false ? 'Poids suivi' : 'Poids masqué'}
+                        </button>
+                        <textarea
+                          value={exercise.note ?? ''}
+                          onChange={(event) => onExerciseNoteChange(exerciseIndex, event.target.value)}
+                          className="min-h-20 w-full resize-y rounded-2xl border theme-panel px-3 py-2 text-sm theme-text outline-none focus:border-[var(--brand)]"
+                          placeholder="Note facultative : placement, prise, tempo..."
+                          tabIndex={exerciseExpanded ? 0 : -1}
+                        />
+                      </div>
                     </div>
                   </div>
                 </CardHeader>
@@ -284,7 +315,8 @@ export function CreateSessionPage({
                                   {set.type === 'echauffement' ? ' · Échauffement' : ''}
                                 </div>
                                 <div className="mt-0.5 text-xs theme-muted">
-                                  {set.time}s · repos {set.wait}s · {Number(set.weight) || 0}kg
+                                  {set.time}s · repos {set.wait}s
+                                  {exercise.trackWeight !== false ? ` · ${formatWeight(set.weight, weightUnit)}` : ''}
                                 </div>
                               </div>
                               <ChevronDown
@@ -379,24 +411,26 @@ export function CreateSessionPage({
                                   />
                                 </label>
 
-                                <label className="space-y-1 text-xs theme-muted md:space-y-0 md:text-[0px]">
-                                  <span className="md:hidden">Poids (kg)</span>
-                                  <input
-                                    type="number"
-                                    min={0}
-                                    step="0.5"
-                                    value={set.weight}
-                                    onChange={(event) =>
-                                      onSetFieldChange(
-                                        exerciseIndex,
-                                        setIndex,
-                                        'weight',
-                                        event.target.value,
-                                      )
-                                    }
-                                    className="h-9 w-full rounded-2xl border theme-panel px-2 text-sm theme-text"
-                                  />
-                                </label>
+                                {exercise.trackWeight !== false ? (
+                                  <label className="space-y-1 text-xs theme-muted md:space-y-0 md:text-[0px]">
+                                    <span className="md:hidden">Poids ({weightUnit})</span>
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      step="0.5"
+                                      value={toDisplayWeight(set.weight, weightUnit)}
+                                      onChange={(event) =>
+                                        onSetFieldChange(
+                                          exerciseIndex,
+                                          setIndex,
+                                          'weight',
+                                          String(fromDisplayWeight(event.target.value, weightUnit)),
+                                        )
+                                      }
+                                      className="h-9 w-full rounded-2xl border theme-panel px-2 text-sm theme-text"
+                                    />
+                                  </label>
+                                ) : null}
 
                                 <div className="flex justify-end md:block">
                                   <Button
@@ -424,6 +458,14 @@ export function CreateSessionPage({
                         onClick={() => handleAddSet(exerciseIndex)}
                       >
                         <Plus className="h-4 w-4" /> Ajouter une serie
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="theme-outline"
+                        onClick={() => handleDuplicateExercise(exerciseIndex)}
+                      >
+                        <Plus className="h-4 w-4" /> Dupliquer l'exercice
                       </Button>
                       <Button
                         variant="outline"

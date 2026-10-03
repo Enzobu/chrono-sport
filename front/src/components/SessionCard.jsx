@@ -1,19 +1,27 @@
-import { ArrowUpRight, Pencil, Trash2 } from 'lucide-react'
+import { ArrowUpRight, Copy, Pencil, Star, Trash2 } from 'lucide-react'
 import { Button } from './ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { createTimeline, formatHoursMinutes } from '../lib/timer'
 
-export function SessionCard({ sessionName, sessionData, onOpen, onEdit, onDelete }) {
+export function SessionCard({ sessionName, sessionData, favorite = false, onToggleFavorite, onOpen, onEdit, onDuplicate, onDelete }) {
   const exercisesCount = Object.keys(sessionData).length
   const sessionDuration = createTimeline(sessionData).reduce((sum, step) => sum + step.duration, 0)
 
   return (
     <Card className="theme-surface rounded-[1.5rem] border shadow-none">
-      <CardHeader className="pb-4">
+      <CardHeader className="relative pb-4">
+        <button
+          type="button"
+          aria-label={favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+          className={`absolute right-5 top-5 rounded-xl p-2 transition ${favorite ? 'theme-accent-soft theme-accent' : 'theme-muted'}`}
+          onClick={() => onToggleFavorite(sessionName)}
+        >
+          <Star className="h-5 w-5" fill={favorite ? 'currentColor' : 'none'} />
+        </button>
         <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-2xl theme-accent-soft theme-accent">
           <ArrowUpRight className="h-5 w-5" />
         </div>
-        <CardTitle className="theme-text text-xl font-black capitalize">{sessionName}</CardTitle>
+        <CardTitle className="theme-text max-w-[calc(100%-3.5rem)] break-words pr-2 text-xl font-black capitalize">{sessionName}</CardTitle>
         <CardDescription className="theme-muted">
           {exercisesCount} exercices • {formatHoursMinutes(sessionDuration)}
         </CardDescription>
@@ -25,13 +33,16 @@ export function SessionCard({ sessionName, sessionData, onOpen, onEdit, onDelete
         >
           Lancer la séance
         </Button>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           <Button
             variant="outline"
             className="theme-outline rounded-2xl"
             onClick={() => onEdit(sessionName)}
           >
             <Pencil className="h-4 w-4" /> Modifier
+          </Button>
+          <Button variant="outline" className="theme-outline rounded-2xl" onClick={() => onDuplicate(sessionName)}>
+            <Copy className="h-4 w-4" /> Dupliquer
           </Button>
           <Button
             variant="outline"

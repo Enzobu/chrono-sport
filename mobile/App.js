@@ -2,17 +2,21 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Audio } from 'expo-av'
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AppState, NativeModules, PermissionsAndroid, Platform, SafeAreaView, StyleSheet, Vibration } from 'react-native'
+import { Alert, AppState, NativeModules, PermissionsAndroid, Platform, SafeAreaView, StyleSheet, Vibration } from 'react-native'
 import { authRequest } from './src/api/auth'
+import { clearHistory, createHistoryEntry, fetchHistory } from './src/api/history'
 import {
   createSession,
   deleteSession,
   fetchSessions,
   updateSession,
+  setSessionFavorite,
 } from './src/api/sessions'
 import { ConfirmModal } from './src/components/ConfirmModal'
+import { BottomNav } from './src/components/BottomNav'
 import { ToastBanner } from './src/components/ToastBanner'
 import { createDefaultExercise, createDefaultSet, mapApiSessionsToClient } from './src/lib/sessions'
+import { formatWeight } from './src/lib/weight'
 import {
   createTimeline,
   formatEndTime,
@@ -21,17 +25,22 @@ import {
   resolveTimerPosition,
 } from './src/lib/timer'
 import { AuthScreen } from './src/screens/AuthScreen'
+import { DashboardScreen } from './src/screens/DashboardScreen'
 import { HomeScreen } from './src/screens/HomeScreen'
 import { SessionFormScreen } from './src/screens/SessionFormScreen'
 import { TimerScreen } from './src/screens/TimerScreen'
+import { WorkoutSummaryScreen } from './src/screens/WorkoutSummaryScreen'
 import { SettingsScreen } from './src/screens/SettingsScreen'
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext'
 
-const { TimerNotification } = NativeModules
+const { TimerNotification, ScreenAwake } = NativeModules
 
 function AppContent() {
   const { colors, resolvedScheme } = useTheme()
   const [authToken, setAuthToken] = useState('')
+  const [weightUnit, setWeightUnit] = useState('kg')
+  const [countdownVibrationEnabled, setCountdownVibrationEnabled] = useState(true)
+  const [workoutSoundEnabled, setWorkoutSoundEnabled] = useState(true)
   const [authMode, setAuthMode] = useState('login')
   const [authEmail, setAuthEmail] = useState('')
   const [authPassword, setAuthPassword] = useState('')
@@ -42,8 +51,12 @@ function AppContent() {
   const [sessions, setSessions] = useState({})
   const [sessionsLoading, setSessionsLoading] = useState(true)
   const [sessionsError, setSessionsError] = useState('')
+  const [history, setHistory] = useState([])
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [mainRefreshing, setMainRefreshing] = useState(false)
 
   const [screen, setScreen] = useState('auth')
+  const [flowOriginScreen, setFlowOriginScreen] = useState('dashboard')
   const [editingSessionId, setEditingSessionId] = useState(null)
   const [draftSessionName, setDraftSessionName] = useState('')
   const [draftExercises, setDraftExercises] = useState([createDefaultExercise()])
@@ -60,10 +73,13 @@ function AppContent() {
   const [startedAt, setStartedAt] = useState(null)
   const [phaseEndAt, setPhaseEndAt] = useState(null)
   const [nowTimestamp, setNowTimestamp] = useState(Date.now())
+  const [finishedAt, setFinishedAt] = useState(null)
 
   const [confirmVisible, setConfirmVisible] = useState(false)
   const [pendingAction, setPendingAction] = useState(null)
   const [sessionPendingDelete, setSessionPendingDelete] = useState(null)
+  const [nameConflictOpen, setNameConflictOpen] = useState(false)
+  const [historyClearConfirmOpen, setHistoryClearConfirmOpen] = useState(false)
   const [toast, setToast] = useState(null)
   const [showWeightOverlay, setShowWeightOverlay] = useState(false)
 
@@ -71,6 +87,7 @@ function AppContent() {
   const timerClockRef = useRef({ currentIndex: 0, phaseEndAt: null })
   const weightOverlayTimeoutRef = useRef(null)
   const appStateRef = useRef(AppState.currentState)
+  const historyRecordedRef = useRef(false)
 
   const ensureNotificationPermission = async () => {
     if (Platform.OS !== 'android' || Platform.Version < 33) {
@@ -130,10 +147,49 @@ function AppContent() {
   }
 
   useEffect(() => {
+    if (Platform.OS !== 'android' || !ScreenAwake) return undefined
+    const shouldKeepAwake = screen === 'timer' && isRunning && !isFinished
+    ScreenAwake.setKeepAwake(shouldKeepAwake)
+    return () => {
+      ScreenAwake.setKeepAwake(false)
+    }
+  }, [screen, isRunning, isFinished])
+
+  useEffect(() => {
+    AsyncStorage.getItem('workout_sound_enabled').then((value) => {
+      if (value != null) setWorkoutSoundEnabled(value !== 'false')
+    })
+  }, [])
+
+  useEffect(() => {
+    AsyncStorage.setItem('workout_sound_enabled', String(workoutSoundEnabled)).catch(() => {})
+  }, [workoutSoundEnabled])
+
+  useEffect(() => {
+    AsyncStorage.getItem('countdown_vibration_enabled').then((value) => {
+      if (value != null) setCountdownVibrationEnabled(value !== 'false')
+    })
+  }, [])
+
+  useEffect(() => {
+    AsyncStorage.setItem('countdown_vibration_enabled', String(countdownVibrationEnabled)).catch(() => {})
+  }, [countdownVibrationEnabled])
+
+  useEffect(() => {
+    AsyncStorage.getItem('weight_unit').then((unit) => {
+      if (unit === 'kg' || unit === 'lb') setWeightUnit(unit)
+    })
+  }, [])
+
+  useEffect(() => {
+    AsyncStorage.setItem('weight_unit', weightUnit).catch(() => {})
+  }, [weightUnit])
+
+  useEffect(() => {
     AsyncStorage.getItem('auth_token').then((token) => {
       if (token) {
         setAuthToken(token)
-        setScreen('home')
+        setScreen('dashboard')
       }
     })
   }, [])
@@ -164,6 +220,9 @@ function AppContent() {
     }
 
     prepareDing()
+    if (workoutSoundEnabled) {
+      loadDingSound().catch((error) => console.error('Ding preload failed', error))
+    }
 
     return () => {
       cancelled = true
@@ -183,6 +242,42 @@ function AppContent() {
     const timeoutId = setTimeout(() => setToast(null), 2600)
     return () => clearTimeout(timeoutId)
   }, [toast])
+
+  const refreshHistory = async (token) => {
+    if (!token) { setHistory([]); return }
+    setHistoryLoading(true)
+    try { setHistory(await fetchHistory(token)) } finally { setHistoryLoading(false) }
+  }
+
+  const refreshMainData = async (scope = 'all') => {
+    if (!authToken || mainRefreshing) return
+    setMainRefreshing(true)
+    try {
+      if (scope === 'sessions') {
+        await refreshSessions(authToken)
+      } else if (scope === 'history') {
+        await refreshHistory(authToken)
+      } else {
+        await Promise.all([refreshSessions(authToken), refreshHistory(authToken)])
+      }
+    } catch (error) {
+      showToast('error', error.message || 'Impossible de rafraîchir les données')
+    } finally {
+      setMainRefreshing(false)
+    }
+  }
+
+  const clearWorkoutHistory = async () => {
+    if (!authToken) return
+    try {
+      await clearHistory(authToken)
+      setHistory([])
+      setHistoryClearConfirmOpen(false)
+      showToast('success', 'Historique effacé.')
+    } catch (error) {
+      showToast('error', error.message || 'Impossible d’effacer l’historique')
+    }
+  }
 
   const refreshSessions = async (token) => {
     if (!token) {
@@ -207,7 +302,7 @@ function AppContent() {
       setSessionsLoading(true)
       setSessionsError('')
       try {
-        await refreshSessions(authToken)
+        await Promise.all([refreshSessions(authToken), refreshHistory(authToken)])
       } catch (error) {
         if (!cancelled) {
           setSessionsError(
@@ -358,6 +453,34 @@ function AppContent() {
     return `${currentPhase.exerciseName} - ${currentPhase.setNumber}/${currentPhase.setTotal}`
   }, [currentPhase, nextPhase, isFinished])
 
+  const nextSetPreview = useMemo(() => {
+    if (currentPhase?.kind !== 'rest' || nextPhase?.kind !== 'work' || !selectedSessionName) return null
+    const sourceSession = sessionItems.find((session) => session.name === selectedSessionName)
+    const sourceExercise = sourceSession?.exercises?.find((exercise) => exercise.name === nextPhase.exerciseName)
+    return {
+      exerciseName: nextPhase.exerciseName,
+      setNumber: nextPhase.setNumber,
+      setTotal: nextPhase.setTotal,
+      setType: nextPhase.setType,
+      weight: nextPhase.weight,
+      trackWeight: sourceExercise?.trackWeight !== false,
+    }
+  }, [currentPhase, nextPhase, selectedSessionName, sessionItems])
+
+  const displayedTracksWeight = useMemo(() => {
+    const exerciseName = currentPhase?.kind === 'rest' ? nextPhase?.exerciseName : currentPhase?.exerciseName
+    if (!exerciseName || !selectedSessionName) return true
+    const sourceSession = sessionItems.find((session) => session.name === selectedSessionName)
+    return sourceSession?.exercises?.find((exercise) => exercise.name === exerciseName)?.trackWeight !== false
+  }, [currentPhase, nextPhase, selectedSessionName, sessionItems])
+
+  const displayedExerciseNote = useMemo(() => {
+    const exerciseName = currentPhase?.kind === 'rest' ? nextPhase?.exerciseName : currentPhase?.exerciseName
+    if (!exerciseName || !selectedSessionName) return ''
+    const sourceSession = sessionItems.find((session) => session.name === selectedSessionName)
+    return sourceSession?.exercises?.find((exercise) => exercise.name === exerciseName)?.note ?? ''
+  }, [currentPhase, nextPhase, selectedSessionName, sessionItems])
+
   const displayedPhase = useMemo(() => {
     if (isFinished) {
       return null
@@ -369,12 +492,13 @@ function AppContent() {
   }, [currentPhase, nextPhase, isFinished])
 
   const displayedWeightLabel = useMemo(() => {
+    if (!displayedTracksWeight) return null
     const weight = Number(displayedPhase?.weight)
     if (!Number.isFinite(weight)) {
       return null
     }
-    return `${weight % 1 === 0 ? weight : weight.toFixed(1)}kg`
-  }, [displayedPhase])
+    return formatWeight(weight, weightUnit)
+  }, [displayedPhase, displayedTracksWeight, weightUnit])
 
   const showCurrentOrNextWeight = () => {
     if (isFinished || !displayedWeightLabel || !displayedPhase?.kind) {
@@ -420,6 +544,9 @@ function AppContent() {
     }
 
     return Object.entries(selectedSession).map(([exerciseName, sets]) => {
+      const sourceSession = sessionItems.find((session) => session.name === selectedSessionName)
+      const sourceExercise = sourceSession?.exercises?.find((exercise) => exercise.name === exerciseName)
+      const trackWeight = sourceExercise?.trackWeight !== false
       const mappedSets = sets.map((set, index) => {
         const key = `${exerciseName}::${index + 1}`
         const done = completedWorkKeys.has(key)
@@ -439,12 +566,13 @@ function AppContent() {
 
       return {
         exerciseName,
+        trackWeight,
         sets: mappedSets,
         done: mappedSets.every((set) => set.done),
         hasCurrent: mappedSets.some((set) => set.current),
       }
     })
-  }, [selectedSession, completedWorkKeys, currentWorkKey, isFinished])
+  }, [selectedSession, selectedSessionName, sessionItems, completedWorkKeys, currentWorkKey, isFinished])
 
   useEffect(() => {
     if (isFinished || !displayedWeightLabel) {
@@ -518,13 +646,14 @@ function AppContent() {
         Number(phaseEndAt),
         phaseLabel,
         seriesLabel,
+        workoutSoundEnabled,
       )
     }
 
     syncNativeTimer().catch((error) => {
       console.error('Native timer notification sync failed', error)
     })
-  }, [isRunning, isFinished, currentIndex, phaseEndAt, timeline])
+  }, [isRunning, isFinished, currentIndex, phaseEndAt, timeline, workoutSoundEnabled])
 
   useEffect(() => {
     return () => {
@@ -628,11 +757,13 @@ function AppContent() {
           phaseBeforeTick?.kind === 'rest' &&
           resolved.currentIndex === clock.currentIndex
         ) {
-          ;[3, 2, 1].forEach((marker) => {
-            if (previousRemaining > marker && resolved.remaining <= marker) {
-              Vibration.vibrate(500)
-            }
-          })
+          if (countdownVibrationEnabled) {
+            ;[3, 2, 1].forEach((marker) => {
+              if (previousRemaining > marker && resolved.remaining <= marker) {
+                Vibration.vibrate(500)
+              }
+            })
+          }
         }
 
         return resolved.remaining
@@ -665,42 +796,24 @@ function AppContent() {
     tick()
     const id = setInterval(tick, 250)
     return () => clearInterval(id)
-  }, [isRunning, isFinished, timeline])
+  }, [isRunning, isFinished, timeline, countdownVibrationEnabled])
 
   const playDing = async () => {
+    if (!workoutSoundEnabled) return
     let sound = null
 
     try {
       await setCueAudioMode()
       sound = await loadDingSound()
-      await sound.setPositionAsync(0)
-      await sound.playAsync()
+      await sound.replayAsync()
     } catch (error) {
       console.error('Ding playback failed', error)
-      Vibration.vibrate(180)
     } finally {
       setTimeout(() => {
         setIdleAudioMode().catch(() => {
           // no-op
         })
       }, 350)
-
-      if (!sound) {
-        return
-      }
-
-      setTimeout(() => {
-        sound
-          .unloadAsync()
-          .catch(() => {
-            // no-op
-          })
-          .finally(() => {
-            if (soundRef.current === sound) {
-              soundRef.current = null
-            }
-          })
-      }, 900)
     }
   }
 
@@ -715,8 +828,10 @@ function AppContent() {
   }
 
   const openSession = (sessionName) => {
+    setFlowOriginScreen(screen)
     const nextSession = sessions[sessionName]
     const nextTimeline = createTimeline(nextSession)
+    historyRecordedRef.current = false
     setSelectedSessionName(sessionName)
     timerClockRef.current = { currentIndex: 0, phaseEndAt: null }
     setCurrentIndex(0)
@@ -728,6 +843,29 @@ function AppContent() {
     setStartedAt(null)
     setNowTimestamp(Date.now())
     setScreen('timer')
+  }
+
+  useEffect(() => {
+    if (!isFinished || !hasStarted || !selectedSessionName || historyRecordedRef.current || !authToken) return
+    historyRecordedRef.current = true
+    const target = sessionItems.find((session) => session.name === selectedSessionName)
+    const setsCompleted = timeline.filter((step) => step.kind === 'work').length
+    createHistoryEntry(authToken, {
+      sessionId: target?.id ?? null,
+      sessionName: selectedSessionName,
+      durationSeconds: Math.max(0, elapsedSinceStart),
+      exercisesCompleted: exerciseNames.length,
+      setsCompleted,
+    }).then(() => refreshHistory(authToken)).catch(() => { historyRecordedRef.current = false })
+  }, [isFinished, hasStarted, selectedSessionName, authToken, elapsedSinceStart, exerciseNames.length, timeline, sessionItems])
+
+  const completedSetsCount = timeline.filter((step) => step.kind === 'work').length
+  const finishSummaryAt = finishedAt ?? Date.now()
+  const closeWorkoutSummary = () => {
+    setScreen(flowOriginScreen)
+    setSelectedSessionName(null)
+    setFinishedAt(null)
+    timerClockRef.current = { currentIndex: 0, phaseEndAt: null }
   }
 
   const toggleRun = () => {
@@ -781,6 +919,23 @@ function AppContent() {
     setIsRunning(true)
   }
 
+  const adjustRestTime = (deltaSeconds) => {
+    if (currentPhase?.kind !== 'rest' || isFinished) return
+
+    const nextRemaining = Math.max(0, remaining + deltaSeconds)
+    if (nextRemaining === 0) {
+      skipCurrent()
+      return
+    }
+
+    setRemaining(nextRemaining)
+    if (isRunning) {
+      const nextPhaseEndAt = Date.now() + nextRemaining * 1000
+      timerClockRef.current = { currentIndex, phaseEndAt: nextPhaseEndAt }
+      setPhaseEndAt(nextPhaseEndAt)
+    }
+  }
+
   const skipCurrent = () => {
     if (!timeline.length || isFinished) {
       return
@@ -805,6 +960,7 @@ function AppContent() {
       if (resolved.finished) {
         timerClockRef.current = { currentIndex: resolved.currentIndex, phaseEndAt: null }
         setIsFinished(true)
+        setFinishedAt(Date.now())
         setIsRunning(false)
         setRemaining(0)
         setPhaseEndAt(null)
@@ -821,6 +977,7 @@ function AppContent() {
     if (!nextStep) {
       timerClockRef.current = { currentIndex: baseIndex, phaseEndAt: null }
       setIsFinished(true)
+      setFinishedAt(Date.now())
       setIsRunning(false)
       setRemaining(0)
       setPhaseEndAt(null)
@@ -883,6 +1040,15 @@ function AppContent() {
       return
     }
 
+    const normalizedName = draftSessionName.trim().toLocaleLowerCase('fr')
+    const duplicateName = sessionItems.some(
+      (session) => session.id !== editingSessionId && session.name.trim().toLocaleLowerCase('fr') === normalizedName,
+    )
+    if (duplicateName) {
+      setNameConflictOpen(true)
+      return
+    }
+
     setDraftSaving(true)
     setDraftError('')
 
@@ -890,6 +1056,8 @@ function AppContent() {
       name: draftSessionName.trim(),
       exercises: draftExercises.map((exercise) => ({
         name: exercise.name.trim(),
+        note: exercise.note?.trim() ?? '',
+        trackWeight: exercise.trackWeight !== false,
         sets: exercise.sets.map((set) => ({
           type: set.type,
           time: Number(set.time),
@@ -907,13 +1075,14 @@ function AppContent() {
       }
 
       await refreshSessions(authToken)
-      setScreen('home')
+      setScreen(flowOriginScreen)
       setEditingSessionId(null)
       setDraftSessionName('')
       setDraftExercises([createDefaultExercise()])
       setDraftInitialSnapshot('')
       showToast('success', editingSessionId ? 'Seance mise a jour.' : 'Seance creee.')
     } catch (error) {
+      if (error.message === 'Une séance avec ce nom existe déjà.') setNameConflictOpen(true)
       setDraftError(error.message || 'Erreur de sauvegarde')
     } finally {
       setDraftSaving(false)
@@ -934,7 +1103,7 @@ function AppContent() {
     }
 
     if (pendingAction === 'leave-session') {
-      setScreen('home')
+      setScreen(flowOriginScreen)
       setSelectedSessionName(null)
       timerClockRef.current = { currentIndex: 0, phaseEndAt: null }
       setIsRunning(false)
@@ -944,7 +1113,7 @@ function AppContent() {
     }
 
     if (pendingAction === 'leave-editor') {
-      setScreen('home')
+      setScreen(flowOriginScreen)
       setEditingSessionId(null)
       setDraftSessionName('')
       setDraftExercises([createDefaultExercise()])
@@ -964,6 +1133,7 @@ function AppContent() {
   }
 
   const openCreate = () => {
+    setFlowOriginScreen(screen)
     const initialExercises = [createDefaultExercise()]
     setEditingSessionId(null)
     setDraftSessionName('')
@@ -974,6 +1144,7 @@ function AppContent() {
   }
 
   const openEdit = (sessionName) => {
+    setFlowOriginScreen(screen)
     const target = sessionItems.find((session) => session.name === sessionName)
     if (!target) {
       return
@@ -981,6 +1152,8 @@ function AppContent() {
 
     const initialExercises = target.exercises.map((exercise) => ({
         name: exercise.name,
+        note: exercise.note ?? '',
+        trackWeight: exercise.trackWeight !== false,
         sets: exercise.sets.map((set) => ({
           type: set.type,
           time: Number(set.time),
@@ -993,6 +1166,41 @@ function AppContent() {
     setDraftSessionName(target.name)
     setDraftExercises(initialExercises)
     setDraftInitialSnapshot(JSON.stringify({ name: target.name, exercises: initialExercises }))
+    setDraftError('')
+    setScreen('create')
+  }
+
+  const toggleFavorite = async (sessionName) => {
+    const target = sessionItems.find((session) => session.name === sessionName)
+    if (!target || !authToken) return
+    try {
+      await setSessionFavorite(authToken, target.id, !target.favorite)
+      await refreshSessions(authToken)
+    } catch (error) {
+      showToast('error', error.message || 'Impossible de modifier le favori')
+    }
+  }
+
+  const duplicateSession = (sessionName) => {
+    setFlowOriginScreen(screen)
+    const target = sessionItems.find((session) => session.name === sessionName)
+    if (!target) return
+    const exercises = (target.exercises ?? []).map((exercise) => ({
+      name: exercise.name,
+      note: exercise.note ?? '',
+      trackWeight: exercise.trackWeight !== false,
+      sets: (exercise.sets ?? []).map((set) => ({
+        type: set.type,
+        time: Number(set.time) || 60,
+        wait: Number(set.wait) || 0,
+        weight: Number(set.weight) || 0,
+      })),
+    }))
+    const name = `${target.name} copie`
+    setEditingSessionId(null)
+    setDraftSessionName(name)
+    setDraftExercises(exercises)
+    setDraftInitialSnapshot(JSON.stringify({ name: target.name, exercises }))
     setDraftError('')
     setScreen('create')
   }
@@ -1011,6 +1219,22 @@ function AppContent() {
     setDraftExercises((prev) =>
       prev.map((exercise, index) =>
         index === exerciseIndex ? { ...exercise, name: value } : exercise,
+      ),
+    )
+  }
+
+  const updateExerciseNote = (exerciseIndex, value) => {
+    setDraftExercises((prev) =>
+      prev.map((exercise, index) =>
+        index === exerciseIndex ? { ...exercise, note: value } : exercise,
+      ),
+    )
+  }
+
+  const toggleExerciseWeight = (exerciseIndex) => {
+    setDraftExercises((prev) =>
+      prev.map((exercise, index) =>
+        index === exerciseIndex ? { ...exercise, trackWeight: exercise.trackWeight === false } : exercise,
       ),
     )
   }
@@ -1035,6 +1259,21 @@ function AppContent() {
       const next = [...prev]
       const [exercise] = next.splice(exerciseIndex, 1)
       next.splice(targetIndex, 0, exercise)
+      return next
+    })
+  }
+
+  const duplicateExercise = (exerciseIndex) => {
+    setDraftExercises((prev) => {
+      const source = prev[exerciseIndex]
+      if (!source) return prev
+      const copy = {
+        ...source,
+        name: source.name ? `${source.name} copie` : '',
+        sets: source.sets.map((set) => ({ ...set })),
+      }
+      const next = [...prev]
+      next.splice(exerciseIndex + 1, 0, copy)
       return next
     })
   }
@@ -1119,7 +1358,7 @@ function AppContent() {
       await AsyncStorage.setItem('auth_token', payload.token)
       setAuthToken(payload.token)
       setAuthPassword('')
-      setScreen('home')
+      setScreen('dashboard')
     } catch (error) {
       setAuthError(error.message || 'Erreur de connexion')
     } finally {
@@ -1132,6 +1371,7 @@ function AppContent() {
     setAuthToken('')
     setSessionItems([])
     setSessions({})
+    setHistory([])
     setScreen('auth')
   }
 
@@ -1156,22 +1396,50 @@ function AppContent() {
         />
       ) : null}
 
-      {screen === 'home' ? (
+      {screen === 'dashboard' ? (
+        <DashboardScreen
+          sessions={sessions}
+          sessionItems={sessionItems}
+          history={history}
+          refreshing={mainRefreshing}
+          onRefresh={() => refreshMainData('all')}
+          onOpenSessions={() => setScreen('sessions')}
+          onOpenSession={openSession}
+        />
+      ) : null}
+
+      {screen === 'sessions' ? (
         <HomeScreen
           sessions={sessions}
           isLoading={sessionsLoading}
           error={sessionsError}
           onOpenCreate={openCreate}
-          onOpenSettings={() => setScreen('settings')}
-          onLogout={logout}
           onOpenSession={openSession}
           onEditSession={openEdit}
+          onDuplicateSession={duplicateSession}
           onDeleteSession={askDelete}
+          sessionItems={sessionItems}
+          onToggleFavorite={toggleFavorite}
+          refreshing={mainRefreshing}
+          onRefresh={() => refreshMainData('sessions')}
         />
       ) : null}
 
-      {screen === 'settings' ? (
-        <SettingsScreen onBack={() => setScreen('home')} />
+      {screen === 'account' ? (
+        <SettingsScreen
+          onLogout={logout}
+          weightUnit={weightUnit}
+          onWeightUnitChange={setWeightUnit}
+          countdownVibrationEnabled={countdownVibrationEnabled}
+          onCountdownVibrationChange={setCountdownVibrationEnabled}
+          workoutSoundEnabled={workoutSoundEnabled}
+          onWorkoutSoundChange={setWorkoutSoundEnabled}
+          history={history}
+          loadingHistory={historyLoading}
+          refreshing={mainRefreshing}
+          onRefresh={() => refreshMainData('history')}
+          onRequestClearHistory={() => setHistoryClearConfirmOpen(true)}
+        />
       ) : null}
 
       {screen === 'create' ? (
@@ -1185,14 +1453,18 @@ function AppContent() {
             if (hasUnsavedDraftChanges) {
               openConfirm('leave-editor')
             } else {
-              setScreen('home')
+              setScreen(flowOriginScreen)
               setDraftInitialSnapshot('')
             }
           }}
           onSave={saveSessionDraft}
           onSessionNameChange={setDraftSessionName}
           onExerciseNameChange={updateExerciseName}
+          weightUnit={weightUnit}
+          onExerciseNoteChange={updateExerciseNote}
+          onToggleExerciseWeight={toggleExerciseWeight}
           onRemoveExercise={removeExercise}
+          onDuplicateExercise={duplicateExercise}
           onMoveExercise={moveExercise}
           onInsertExercise={insertExercise}
           onSetFieldChange={updateSetField}
@@ -1202,7 +1474,18 @@ function AppContent() {
         />
       ) : null}
 
-      {screen === 'timer' ? (
+      {screen === 'timer' && isFinished && hasStarted ? (
+        <WorkoutSummaryScreen
+          sessionName={selectedSessionName}
+          durationSeconds={elapsedSinceStart}
+          exercises={exerciseNames.length}
+          sets={completedSetsCount}
+          finishedAt={finishSummaryAt}
+          onDone={closeWorkoutSummary}
+        />
+      ) : null}
+
+      {screen === 'timer' && !(isFinished && hasStarted) ? (
         <TimerScreen
           sessionName={selectedSessionName}
           phaseLabel={isFinished ? 'Termine' : currentPhase?.label || 'Seance'}
@@ -1210,6 +1493,8 @@ function AppContent() {
           weightOverlayLabel={displayedWeightLabel}
           showWeightOverlay={showWeightOverlay && Boolean(displayedWeightLabel) && !isFinished}
           exerciseLabel={displayedExercise}
+          exerciseNote={displayedExerciseNote}
+          nextSetPreview={nextSetPreview}
           progressPct={progressPct}
           totalRemainingLabel={`${formatHoursMinutesSeconds(totalRemaining)}・${formatEndTime(totalRemaining)}`}
           elapsedLabel={formatHoursMinutesSeconds(elapsedSinceStart)}
@@ -1218,13 +1503,38 @@ function AppContent() {
           isRunning={isRunning}
           isFinished={isFinished}
           sessionOutline={sessionOutline}
+          weightUnit={weightUnit}
           onBack={() => openConfirm('leave-session')}
           onToggleRun={toggleRun}
           onSkip={skipCurrent}
+          onAdjustRest={adjustRestTime}
           onReset={() => openConfirm('reset-session')}
           onTimerPress={showCurrentOrNextWeight}
         />
       ) : null}
+
+      {['dashboard', 'sessions', 'account'].includes(screen) ? (
+        <BottomNav active={screen} onChange={setScreen} />
+      ) : null}
+
+      <ConfirmModal
+        visible={historyClearConfirmOpen}
+        title="Effacer l’historique ?"
+        message="Toutes tes séances terminées seront supprimées définitivement."
+        confirmLabel="Effacer"
+        onCancel={() => setHistoryClearConfirmOpen(false)}
+        onConfirm={clearWorkoutHistory}
+      />
+
+      <ConfirmModal
+        visible={nameConflictOpen}
+        title="Nom déjà utilisé"
+        message="Une séance avec ce nom existe déjà. Modifie le nom pour pouvoir enregistrer."
+        confirmLabel="OK"
+        hideCancel
+        onCancel={() => setNameConflictOpen(false)}
+        onConfirm={() => setNameConflictOpen(false)}
+      />
 
       <ConfirmModal
         visible={confirmVisible}

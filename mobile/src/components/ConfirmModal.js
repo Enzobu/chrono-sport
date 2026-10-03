@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useTheme } from '../theme/ThemeContext'
 
-export function ConfirmModal({ visible, title, message, confirmLabel, onCancel, onConfirm }) {
+export function ConfirmModal({ visible, title, message, confirmLabel, onCancel, onConfirm, hideCancel = false }) {
   const { colors } = useTheme()
   const styles = useMemo(() => createStyles(colors), [colors])
 
@@ -13,9 +13,11 @@ export function ConfirmModal({ visible, title, message, confirmLabel, onCancel, 
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.message}>{message}</Text>
           <View style={styles.actions}>
-            <Pressable style={[styles.button, styles.cancel]} onPress={onCancel}>
-              <Text style={styles.cancelText}>Annuler</Text>
-            </Pressable>
+            {!hideCancel ? (
+              <Pressable style={[styles.button, styles.cancel]} onPress={onCancel}>
+                <Text style={styles.cancelText}>Annuler</Text>
+              </Pressable>
+            ) : null}
             <Pressable style={[styles.button, styles.confirm]} onPress={onConfirm}>
               <Text style={styles.confirmText}>{confirmLabel}</Text>
             </Pressable>

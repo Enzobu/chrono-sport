@@ -68,3 +68,14 @@ export async function deleteSession(token, id) {
     throw new Error(payload.message || 'Impossible de supprimer la seance')
   }
 }
+
+export async function setSessionFavorite(token, id, favorite) {
+  const response = await fetch(`${API_URL}/sessions/${id}/favorite`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ favorite }),
+  })
+  const payload = await safeJson(response)
+  if (!response.ok) throw new Error(payload.message || 'Impossible de modifier le favori')
+  return payload.session
+}

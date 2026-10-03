@@ -1,12 +1,9 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { formatMinutesSeconds } from '../lib/timer'
 import { useTheme } from '../theme/ThemeContext'
-
-const formatWeight = (weight) => {
-  const parsed = Number(weight) || 0
-  return `${parsed % 1 === 0 ? parsed : parsed.toFixed(1)}kg`
-}
+import { formatWeight } from '../lib/weight'
+import { ConfirmModal } from '../components/ConfirmModal'
 
 const formatRest = (seconds) => formatMinutesSeconds(seconds).replace(/^0(?=\d:)/, '')
 
@@ -34,6 +31,8 @@ export function TimerScreen({
   weightOverlayLabel,
   showWeightOverlay,
   exerciseLabel,
+  exerciseNote,
+  nextSetPreview,
   progressPct,
   totalRemainingLabel,
   elapsedLabel,
@@ -42,13 +41,17 @@ export function TimerScreen({
   isRunning,
   isFinished,
   sessionOutline,
+  weightUnit = 'kg',
   onBack,
   onToggleRun,
   onSkip,
+  onAdjustRest,
   onReset,
   onTimerPress,
 }) {
   const { colors } = useTheme()
+  const [locked, setLocked] = useState(false)
+  const [unlockConfirmOpen, setUnlockConfirmOpen] = useState(false)
   const styles = useMemo(() => createStyles(colors), [colors])
   const overlayOpacity = useRef(new Animated.Value(showWeightOverlay ? 1 : 0)).current
 
@@ -70,13 +73,25 @@ export function TimerScreen({
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.topBar}>
-        <Pressable style={styles.iconBtn} onPress={onBack}>
+        <Pressable style={[styles.iconBtn, locked && styles.disabledControl]} onPress={locked ? undefined : onBack} disabled={locked}>
           <Text style={styles.iconBtnText}>‹</Text>
         </Pressable>
         <View style={styles.sessionHeader}>
           <Text style={styles.eyebrow}>{phaseLabel.toUpperCase()}</Text>
           <Text style={styles.sessionTitle} numberOfLines={1}>{sessionName}</Text>
         </View>
+        <Pressable
+          style={[styles.lockBtn, locked && styles.lockBtnActive]}
+          onPress={() => {
+            if (locked) {
+              setUnlockConfirmOpen(true)
+            } else {
+              setLocked(true)
+            }
+          }}
+        >
+          <Text style={[styles.lockBtnText, locked && styles.lockBtnTextActive]}>{locked ? 'Déverrouiller' : 'Verrouiller'}</Text>
+        </Pressable>
       </View>
 
       <View style={[styles.heroCard, phaseIsWork && styles.heroCardActive]}>
@@ -90,7 +105,8 @@ export function TimerScreen({
         </View>
 
         <Pressable
-          onPress={onTimerPress}
+          onPress={locked ? undefined : onTimerPress}
+          disabled={locked}
           style={({ pressed }) => [styles.timerPressable, pressed && styles.timerPressablePressed]}
         >
           <View style={styles.timerWrap}>
@@ -104,6 +120,23 @@ export function TimerScreen({
         </Pressable>
 
         <Text style={styles.exerciseText}>{exerciseLabel}</Text>
+        {nextSetPreview ? (
+          <View style={styles.nextSetCard}>
+            <Text style={styles.nextSetEyebrow}>PROCHAINE SÉRIE</Text>
+            <Text style={styles.nextSetTitle}>{nextSetPreview.exerciseName}</Text>
+            <Text style={styles.nextSetMeta}>
+              Série {nextSetPreview.setNumber}/{nextSetPreview.setTotal}
+              {nextSetPreview.trackWeight ? ` · ${formatWeight(nextSetPreview.weight, weightUnit)}` : ''}
+              {nextSetPreview.setType === 'echauffement' ? ' · Échauffement' : ''}
+            </Text>
+          </View>
+        ) : null}
+
+        {exerciseNote ? (
+          <View style={styles.noteCard}>
+            <Text style={styles.noteText}><Text style={styles.noteLabel}>Note · </Text>{exerciseNote}</Text>
+          </View>
+        ) : null}
 
         <View style={styles.progressHeader}>
           <Text style={styles.progressLabel}>Progression</Text>
@@ -113,16 +146,33 @@ export function TimerScreen({
           <View style={[styles.progressFill, { width: `${progressPct}%` }]} />
         </View>
 
-        <View style={styles.timerActions}>
-          <Pressable style={[styles.primaryBtn, styles.flexAction]} onPress={onToggleRun}>
+        {phaseLabel === 'Repos' && !isFinished && !locked ? (
+          <View style={styles.restAdjustRow}>
+            <Pressable style={styles.restAdjustBtn} onPress={() => onAdjustRest(-15)}>
+              <Text style={styles.restAdjustText}>-15s</Text>
+            </Pressable>
+            <Pressable style={styles.restAdjustBtn} onPress={() => onAdjustRest(15)}>
+              <Text style={styles.restAdjustText}>+15s</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
+        {locked ? (
+          <View style={styles.lockedNotice}>
+            <Text style={styles.lockedNoticeText}>Contrôles verrouillés · utilise le bouton en haut pour déverrouiller.</Text>
+          </View>
+        ) : null}
+
+        <View style={[styles.timerActions, locked && styles.disabledControl]}>
+          <Pressable style={[styles.primaryBtn, styles.flexAction]} onPress={locked ? undefined : onToggleRun} disabled={locked}>
             <Text style={styles.primaryText}>
               {isFinished ? 'Relancer' : isRunning ? 'Pause' : 'Lancer'}
             </Text>
           </Pressable>
-          <Pressable style={styles.compactBtn} onPress={onSkip}>
+          <Pressable style={styles.compactBtn} onPress={locked ? undefined : onSkip} disabled={locked}>
             <Text style={styles.compactBtnText}>Skip</Text>
           </Pressable>
-          <Pressable style={styles.compactBtn} onPress={onReset}>
+          <Pressable style={styles.compactBtn} onPress={locked ? undefined : onReset} disabled={locked}>
             <Text style={styles.compactBtnText}>Reset</Text>
           </Pressable>
         </View>
@@ -143,6 +193,18 @@ export function TimerScreen({
         </View>
       </View>
 
+      <ConfirmModal
+        visible={unlockConfirmOpen}
+        title="Déverrouiller les contrôles ?"
+        message="Confirme pour réactiver les commandes de la séance."
+        confirmLabel="Déverrouiller"
+        onCancel={() => setUnlockConfirmOpen(false)}
+        onConfirm={() => {
+          setLocked(false)
+          setUnlockConfirmOpen(false)
+        }}
+      />
+
       <View style={styles.detailCard}>
         <View style={styles.detailHeader}>
           <Text style={styles.detailEyebrow}>PROGRAMME</Text>
@@ -160,7 +222,7 @@ export function TimerScreen({
             {exercise.sets.map((set) => (
               <Accordion
                 key={set.key}
-                title={`Série ${set.order}/${set.total} • ${formatWeight(set.weight)} • ${formatRest(set.wait)}`}
+                title={`Série ${set.order}/${set.total}${exercise.trackWeight ? ` • ${formatWeight(set.weight, weightUnit)}` : ''} • ${formatRest(set.wait)}`}
                 status={set.done ? 'fait' : set.current ? 'en cours' : 'a faire'}
                 open={set.current}
                 styles={styles}
@@ -208,6 +270,13 @@ const createStyles = (colors) =>
       lineHeight: 36,
       marginTop: -2,
     },
+    lockBtn:{height:42,borderRadius:14,borderWidth:1,borderColor:colors.border,paddingHorizontal:12,alignItems:'center',justifyContent:'center',backgroundColor:colors.panelAlt},
+    lockBtnActive:{borderColor:colors.primaryBorder,backgroundColor:colors.primarySoft},
+    lockBtnText:{color:colors.muted,fontSize:11,fontWeight:'900'},
+    lockBtnTextActive:{color:colors.primary},
+    disabledControl:{opacity:0.35},
+    lockedNotice:{borderWidth:1,borderColor:colors.primaryBorder,backgroundColor:colors.primarySoft,borderRadius:14,padding:11},
+    lockedNoticeText:{color:colors.primary,fontSize:11,fontWeight:'800',textAlign:'center'},
     sessionHeader: {
       flex: 1,
       gap: 2,
@@ -309,6 +378,13 @@ const createStyles = (colors) =>
       fontWeight: '700',
       lineHeight: 22,
     },
+    nextSetCard:{backgroundColor:colors.panel,borderWidth:1,borderColor:colors.primaryBorder,borderRadius:16,padding:13,gap:3},
+    nextSetEyebrow:{color:colors.primary,fontSize:10,fontWeight:'900',letterSpacing:1.1},
+    nextSetTitle:{color:colors.text,fontSize:16,fontWeight:'900'},
+    nextSetMeta:{color:colors.muted,fontSize:12,fontWeight:'700'},
+    noteCard:{backgroundColor:colors.panel,borderWidth:1,borderColor:colors.border,borderRadius:14,padding:11},
+    noteText:{color:colors.muted,fontSize:12,lineHeight:18},
+    noteLabel:{color:colors.primary,fontWeight:'900'},
     progressHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -336,6 +412,9 @@ const createStyles = (colors) =>
       backgroundColor: colors.primary,
       borderRadius: 999,
     },
+    restAdjustRow:{flexDirection:'row',justifyContent:'center',gap:8},
+    restAdjustBtn:{height:42,minWidth:82,borderRadius:14,borderWidth:1,borderColor:colors.border,backgroundColor:colors.panelAlt,alignItems:'center',justifyContent:'center'},
+    restAdjustText:{color:colors.text,fontWeight:'900',fontSize:13},
     timerActions: {
       flexDirection: 'row',
       gap: 8,

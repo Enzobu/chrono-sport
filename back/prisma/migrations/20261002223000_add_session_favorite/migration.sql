@@ -1,0 +1,1 @@
+ALTER TABLE `WorkoutSession` ADD COLUMN `favorite` BOOLEAN NOT NULL DEFAULT false;

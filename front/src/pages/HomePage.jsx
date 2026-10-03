@@ -1,4 +1,5 @@
-import { LogOut, Plus, Settings } from 'lucide-react'
+import { Search, Plus, X } from 'lucide-react'
+import { useMemo, useState } from 'react'
 import { Button } from '../components/ui/button'
 import { SessionCard } from '../components/SessionCard'
 
@@ -7,30 +8,30 @@ export function HomePage({
   sessionsError,
   isLoadingSessions,
   onOpenCreate,
-  onOpenSettings,
-  onLogout,
   onOpenSession,
   onEditSession,
+  onDuplicateSession,
   onDeleteSession,
+  sessionItems = [],
+  onToggleFavorite,
 }) {
-  return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:py-12">
-      <div className="mb-10">
-        <div className="mb-8 flex items-center justify-between">
-          <Button variant="outline" size="icon" className="theme-outline h-12 w-12 rounded-2xl" onClick={onOpenSettings}>
-            <Settings className="h-5 w-5" />
-          </Button>
-          <Button variant="outline" size="icon" className="theme-outline h-12 w-12 rounded-2xl" onClick={onLogout}>
-            <LogOut className="h-5 w-5" />
-          </Button>
-        </div>
+  const [query, setQuery] = useState('')
+  const visibleSessions = useMemo(() => {
+    const normalized = query.trim().toLowerCase()
+    return Object.keys(sessions)
+      .filter((name) => !normalized || name.toLowerCase().includes(normalized))
+      
+  }, [query, sessions, sessionItems])
 
+  return (
+    <main className="mx-auto w-full max-w-6xl px-4 pb-28 pt-8 sm:px-6 lg:pt-12">
+      <div className="mb-10">
         <p className="theme-accent text-xs font-black uppercase tracking-[0.22em]">Chrono-Sport</p>
         <h1 className="theme-text mt-2 text-4xl font-black tracking-[-0.04em] sm:text-6xl">
-          Tes séances
+          Séances
         </h1>
         <p className="theme-muted mt-3 max-w-2xl text-sm leading-6 sm:text-base">
-          Choisis ta session, lance le chrono et concentre-toi sur le prochain effort.
+          Retrouve, crée et organise toutes tes séances.
         </p>
 
         <Button
@@ -41,10 +42,25 @@ export function HomePage({
         </Button>
       </div>
 
+      <div className="theme-surface mb-5 flex items-center gap-3 rounded-2xl border px-4">
+        <Search className="theme-muted h-4 w-4" />
+        <input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Rechercher une séance..."
+          className="theme-text h-12 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--app-muted)]"
+        />
+        {query ? (
+          <button type="button" aria-label="Effacer la recherche" className="theme-muted rounded-xl p-2 hover:theme-text" onClick={() => setQuery('')}>
+            <X className="h-4 w-4" />
+          </button>
+        ) : null}
+      </div>
+
       <div className="mb-4 flex items-center justify-between">
         <h2 className="theme-text text-xl font-black">Programme</h2>
         <span className="theme-accent-soft theme-accent theme-accent-border rounded-full border px-3 py-1 text-xs font-black">
-          {Object.keys(sessions).length}
+          {visibleSessions.length}
         </span>
       </div>
 
@@ -57,22 +73,28 @@ export function HomePage({
       ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {Object.keys(sessions).map((sessionName) => (
+        {visibleSessions.map((sessionName) => {
+          const item = sessionItems.find((session) => session.name === sessionName)
+          return (
           <SessionCard
             key={sessionName}
             sessionName={sessionName}
             sessionData={sessions[sessionName]}
             onOpen={onOpenSession}
             onEdit={onEditSession}
+            onDuplicate={onDuplicateSession}
+            favorite={Boolean(item?.favorite)}
+            onToggleFavorite={onToggleFavorite}
             onDelete={onDeleteSession}
           />
-        ))}
+          )
+        })}
       </div>
 
-      {!isLoadingSessions && !Object.keys(sessions).length ? (
+      {!isLoadingSessions && !visibleSessions.length ? (
         <div className="theme-surface mt-4 rounded-3xl border p-6">
-          <h3 className="theme-text font-black">Aucune séance</h3>
-          <p className="theme-muted mt-1 text-sm">Crée ta première séance pour commencer.</p>
+          <h3 className="theme-text font-black">{query ? 'Aucun résultat' : 'Aucune séance'}</h3>
+          <p className="theme-muted mt-1 text-sm">{query ? 'Essaie avec un autre nom.' : 'Crée ta première séance pour commencer.'}</p>
         </div>
       ) : null}
     </main>

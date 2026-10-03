@@ -14,16 +14,19 @@ model User {
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
   sessions     WorkoutSession[]
+  history      WorkoutHistory[]
 }
 
 model WorkoutSession {
   id         Int        @id @default(autoincrement())
   name       String
+  favorite   Boolean    @default(false)
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
   userId     Int
   user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   exercises  Exercise[]
+  history     WorkoutHistory[]
 
   @@index([userId])
 }
@@ -31,6 +34,8 @@ model WorkoutSession {
 model Exercise {
   id         Int           @id @default(autoincrement())
   name       String
+  note       String    @default("")
+  trackWeight Boolean  @default(true)
   orderIndex Int
   sessionId  Int
   session    WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
@@ -52,4 +57,20 @@ model ExerciseSet {
 
   @@index([exerciseId])
   @@index([exerciseId, orderIndex])
+}
+
+model WorkoutHistory {
+  id                 Int             @id @default(autoincrement())
+  userId             Int
+  user               User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId          Int?
+  session            WorkoutSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  sessionName        String
+  durationSeconds    Int
+  exercisesCompleted Int             @default(0)
+  setsCompleted      Int             @default(0)
+  finishedAt         DateTime        @default(now())
+
+  @@index([userId, finishedAt])
+  @@index([sessionId])
 }

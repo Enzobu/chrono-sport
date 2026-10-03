@@ -55,12 +55,38 @@ const setSchema = z.object({
 
 const exerciseSchema = z.object({
   name: z.string().min(1),
+  note: z.string().max(1000).default(''),
+  trackWeight: z.boolean().default(true),
   sets: z.array(setSchema).min(1),
 })
 
 const sessionSchema = z.object({
   name: z.string().min(1),
   exercises: z.array(exerciseSchema).min(1),
+})
+
+const toExerciseCreateData = (exercise, exerciseIndex) => ({
+  name: exercise.name,
+  note: exercise.note ?? '',
+  trackWeight: exercise.trackWeight !== false,
+  orderIndex: exerciseIndex,
+  sets: {
+    create: exercise.sets.map((set, setIndex) => ({
+      type: set.type,
+      time: set.time,
+      wait: set.wait,
+      weight: set.weight,
+      orderIndex: setIndex,
+    })),
+  },
+})
+
+const historySchema = z.object({
+  sessionId: z.number().int().positive().nullable().optional(),
+  sessionName: z.string().min(1),
+  durationSeconds: z.number().int().min(0),
+  exercisesCompleted: z.number().int().min(0).default(0),
+  setsCompleted: z.number().int().min(0).default(0),
 })
 
 app.get('/health', async (_req, res) => {
@@ -124,6 +150,48 @@ app.get('/auth/me', authRequired, async (req, res) => {
   return res.json({ user })
 })
 
+app.get('/history', authRequired, async (req, res) => {
+  const history = await prisma.workoutHistory.findMany({
+    where: { userId: req.userId },
+    orderBy: { finishedAt: 'desc' },
+  })
+  return res.json({ history })
+})
+
+app.post('/history', authRequired, async (req, res) => {
+  const parsed = historySchema.safeParse(req.body)
+  if (!parsed.success) {
+    return res.status(400).json({ message: 'Invalid payload' })
+  }
+
+  const data = parsed.data
+  let sessionId = data.sessionId ?? null
+  if (sessionId != null) {
+    const owned = await prisma.workoutSession.findFirst({
+      where: { id: sessionId, userId: req.userId },
+      select: { id: true },
+    })
+    if (!owned) sessionId = null
+  }
+
+  const entry = await prisma.workoutHistory.create({
+    data: {
+      userId: req.userId,
+      sessionId,
+      sessionName: data.sessionName,
+      durationSeconds: data.durationSeconds,
+      exercisesCompleted: data.exercisesCompleted,
+      setsCompleted: data.setsCompleted,
+    },
+  })
+  return res.status(201).json({ entry })
+})
+
+app.delete('/history', authRequired, async (req, res) => {
+  await prisma.workoutHistory.deleteMany({ where: { userId: req.userId } })
+  return res.status(204).send()
+})
+
 app.get('/sessions', authRequired, async (req, res) => {
   const sessions = await prisma.workoutSession.findMany({
     where: { userId: req.userId },
@@ -138,6 +206,26 @@ app.get('/sessions', authRequired, async (req, res) => {
   })
 
   return res.json({ sessions: sessions.map(toSessionPayload) })
+})
+
+app.patch('/sessions/:id/favorite', authRequired, async (req, res) => {
+  const id = Number(req.params.id)
+  if (!Number.isInteger(id)) return res.status(400).json({ message: 'Invalid session id' })
+  const parsed = z.object({ favorite: z.boolean() }).safeParse(req.body)
+  if (!parsed.success) return res.status(400).json({ message: 'Invalid payload' })
+
+  const existing = await prisma.workoutSession.findFirst({
+    where: { id, userId: req.userId },
+    select: { id: true },
+  })
+  if (!existing) return res.status(404).json({ message: 'Session not found' })
+
+  const session = await prisma.workoutSession.update({
+    where: { id },
+    data: { favorite: parsed.data.favorite },
+    include: { exercises: { include: { sets: true } } },
+  })
+  return res.json({ session: toSessionPayload(session) })
 })
 
 app.get('/sessions/:id', authRequired, async (req, res) => {
@@ -172,24 +260,20 @@ app.post('/sessions', authRequired, async (req, res) => {
 
   const { name, exercises } = parsed.data
 
+  const duplicate = await prisma.workoutSession.findFirst({
+    where: { userId: req.userId, name },
+    select: { id: true },
+  })
+  if (duplicate) {
+    return res.status(409).json({ message: 'Une séance avec ce nom existe déjà.' })
+  }
+
   const session = await prisma.workoutSession.create({
     data: {
       name,
       userId: req.userId,
       exercises: {
-        create: exercises.map((exercise, exerciseIndex) => ({
-          name: exercise.name,
-          orderIndex: exerciseIndex,
-          sets: {
-            create: exercise.sets.map((set, setIndex) => ({
-              type: set.type,
-              time: set.time,
-              wait: set.wait,
-              weight: set.weight,
-              orderIndex: setIndex,
-            })),
-          },
-        })),
+        create: exercises.map(toExerciseCreateData),
       },
     },
     include: {
@@ -225,6 +309,14 @@ app.put('/sessions/:id', authRequired, async (req, res) => {
 
   const { name, exercises } = parsed.data
 
+  const duplicate = await prisma.workoutSession.findFirst({
+    where: { userId: req.userId, name, NOT: { id } },
+    select: { id: true },
+  })
+  if (duplicate) {
+    return res.status(409).json({ message: 'Une séance avec ce nom existe déjà.' })
+  }
+
   const updated = await prisma.$transaction(async (tx) => {
     await tx.exerciseSet.deleteMany({
       where: { exercise: { sessionId: id } },
@@ -239,19 +331,7 @@ app.put('/sessions/:id', authRequired, async (req, res) => {
       data: {
         name,
         exercises: {
-          create: exercises.map((exercise, exerciseIndex) => ({
-            name: exercise.name,
-            orderIndex: exerciseIndex,
-            sets: {
-              create: exercise.sets.map((set, setIndex) => ({
-                type: set.type,
-                time: set.time,
-                wait: set.wait,
-                weight: set.weight,
-                orderIndex: setIndex,
-              })),
-            },
-          })),
+          create: exercises.map(toExerciseCreateData),
         },
       },
       include: {
