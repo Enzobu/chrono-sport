@@ -190,13 +190,13 @@ export function SettingsPage({ themeMode, accent, resolvedTheme, onThemeModeChan
         </button>
       </section>
 
-      <section className="theme-surface mt-4 rounded-[1.6rem] border p-5 sm:p-6">
+      <footer className="theme-surface mt-10 rounded-[1.6rem] border p-5 sm:p-6">
         <h2 className="theme-text text-xl font-black">Compte</h2>
         <p className="theme-muted mt-1 text-sm">Déconnexion de ton compte Chrono-Sport.</p>
         <Button variant="outline" className="mt-4 rounded-2xl border-red-950 text-red-300 hover:bg-red-950/30" onClick={onLogout}>
           <LogOut className="h-4 w-4" /> Se déconnecter
         </Button>
-      </section>
+      </footer>
 
     </main>
   )
