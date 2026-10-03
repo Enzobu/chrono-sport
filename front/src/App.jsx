@@ -983,21 +983,20 @@ function App() {
     setIsConfirmOpen(true)
   }
 
-  const playDing = () => {
+  const ensureAudioContext = async () => {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext
+    if (!AudioContextClass) return null
+    if (!audioContextRef.current) audioContextRef.current = new AudioContextClass()
+    const ctx = audioContextRef.current
+    if (ctx.state === 'suspended') await ctx.resume()
+    return ctx
+  }
+
+  const playDing = async () => {
     if (!workoutSoundEnabled) return
     try {
-      const AudioContextClass = window.AudioContext || window.webkitAudioContext
-      if (!AudioContextClass) {
-        return
-      }
-      if (!audioContextRef.current) {
-        audioContextRef.current = new AudioContextClass()
-      }
-
-      const ctx = audioContextRef.current
-      if (ctx.state === 'suspended') {
-        ctx.resume()
-      }
+      const ctx = await ensureAudioContext()
+      if (!ctx) return
 
       const oscillator = ctx.createOscillator()
       const gain = ctx.createGain()
@@ -1041,7 +1040,7 @@ function App() {
       return
     }
     if (phaseToPlay?.kind === 'rest' && targetNext.kind === 'work') {
-      playDing()
+      void playDing()
     }
     setCurrentIndex(nextIndex)
     setRemaining(targetNext.duration)
@@ -1144,6 +1143,9 @@ function App() {
   const toggleRun = () => {
     if (!timeline.length) {
       return
+    }
+    if (!isRunning && workoutSoundEnabled) {
+      void ensureAudioContext()
     }
     if (isFinished) {
       setCurrentIndex(0)

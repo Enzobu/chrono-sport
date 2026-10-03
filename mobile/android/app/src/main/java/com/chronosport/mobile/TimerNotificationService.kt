@@ -12,6 +12,8 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.PowerManager
+import android.media.AudioManager
+import android.media.ToneGenerator
 import androidx.core.app.NotificationCompat
 
 class TimerNotificationService : Service() {
@@ -93,16 +95,23 @@ class TimerNotificationService : Service() {
       .filter { it > now }
       .forEach { timestamp ->
         val callback = Runnable {
+          if (soundEnabled) {
+            ToneGenerator(AudioManager.STREAM_NOTIFICATION, 100).apply {
+              startTone(ToneGenerator.TONE_PROP_BEEP, 350)
+              handler.postDelayed({ release() }, 500)
+            }
+          }
+
           notificationManager().notify(
             ALERT_NOTIFICATION_ID,
-            NotificationCompat.Builder(this, if (soundEnabled) ALERT_CHANNEL_ID else SILENT_ALERT_CHANNEL_ID)
+            NotificationCompat.Builder(this, SILENT_ALERT_CHANNEL_ID)
               .setSmallIcon(R.mipmap.ic_launcher)
               .setContentTitle("Chrono-Sport")
               .setContentText("Repos termine, on repart.")
               .setAutoCancel(true)
               .setPriority(NotificationCompat.PRIORITY_MAX)
               .setCategory(NotificationCompat.CATEGORY_ALARM)
-              .setDefaults(if (soundEnabled) Notification.DEFAULT_ALL else Notification.DEFAULT_VIBRATE)
+              .setDefaults(Notification.DEFAULT_VIBRATE)
               .setContentIntent(createLaunchPendingIntent())
               .build(),
           )

@@ -218,6 +218,9 @@ function AppContent() {
     }
 
     prepareDing()
+    if (workoutSoundEnabled) {
+      loadDingSound().catch((error) => console.error('Ding preload failed', error))
+    }
 
     return () => {
       cancelled = true
@@ -770,8 +773,7 @@ function AppContent() {
     try {
       await setCueAudioMode()
       sound = await loadDingSound()
-      await sound.setPositionAsync(0)
-      await sound.playAsync()
+      await sound.replayAsync()
     } catch (error) {
       console.error('Ding playback failed', error)
     } finally {
@@ -780,23 +782,6 @@ function AppContent() {
           // no-op
         })
       }, 350)
-
-      if (!sound) {
-        return
-      }
-
-      setTimeout(() => {
-        sound
-          .unloadAsync()
-          .catch(() => {
-            // no-op
-          })
-          .finally(() => {
-            if (soundRef.current === sound) {
-              soundRef.current = null
-            }
-          })
-      }, 900)
     }
   }
 
