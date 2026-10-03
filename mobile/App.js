@@ -4,7 +4,7 @@ import { StatusBar as ExpoStatusBar } from 'expo-status-bar'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Alert, AppState, NativeModules, PermissionsAndroid, Platform, SafeAreaView, StyleSheet, Vibration } from 'react-native'
 import { authRequest } from './src/api/auth'
-import { createHistoryEntry, fetchHistory } from './src/api/history'
+import { clearHistory, createHistoryEntry, fetchHistory } from './src/api/history'
 import {
   createSession,
   deleteSession,
@@ -79,6 +79,7 @@ function AppContent() {
   const [pendingAction, setPendingAction] = useState(null)
   const [sessionPendingDelete, setSessionPendingDelete] = useState(null)
   const [nameConflictOpen, setNameConflictOpen] = useState(false)
+  const [historyClearConfirmOpen, setHistoryClearConfirmOpen] = useState(false)
   const [toast, setToast] = useState(null)
   const [showWeightOverlay, setShowWeightOverlay] = useState(false)
 
@@ -263,6 +264,18 @@ function AppContent() {
       showToast('error', error.message || 'Impossible de rafraîchir les données')
     } finally {
       setMainRefreshing(false)
+    }
+  }
+
+  const clearWorkoutHistory = async () => {
+    if (!authToken) return
+    try {
+      await clearHistory(authToken)
+      setHistory([])
+      setHistoryClearConfirmOpen(false)
+      showToast('success', 'Historique effacé.')
+    } catch (error) {
+      showToast('error', error.message || 'Impossible d’effacer l’historique')
     }
   }
 
@@ -1425,6 +1438,7 @@ function AppContent() {
           loadingHistory={historyLoading}
           refreshing={mainRefreshing}
           onRefresh={() => refreshMainData('history')}
+          onRequestClearHistory={() => setHistoryClearConfirmOpen(true)}
         />
       ) : null}
 
@@ -1502,6 +1516,15 @@ function AppContent() {
       {['dashboard', 'sessions', 'account'].includes(screen) ? (
         <BottomNav active={screen} onChange={setScreen} />
       ) : null}
+
+      <ConfirmModal
+        visible={historyClearConfirmOpen}
+        title="Effacer l’historique ?"
+        message="Toutes tes séances terminées seront supprimées définitivement."
+        confirmLabel="Effacer"
+        onCancel={() => setHistoryClearConfirmOpen(false)}
+        onConfirm={clearWorkoutHistory}
+      />
 
       <ConfirmModal
         visible={nameConflictOpen}

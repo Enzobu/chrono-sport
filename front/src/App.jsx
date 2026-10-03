@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { authRequest } from './api/auth'
-import { createHistoryEntry, fetchHistory } from './api/history'
+import { clearHistory, createHistoryEntry, fetchHistory } from './api/history'
 import {
   createSession as createSessionApi,
   deleteSession as deleteSessionApi,
@@ -74,6 +74,7 @@ function App() {
   const [pendingAction, setPendingAction] = useState(null)
   const [sessionPendingDelete, setSessionPendingDelete] = useState(null)
   const [nameConflictOpen, setNameConflictOpen] = useState(false)
+  const [historyClearConfirmOpen, setHistoryClearConfirmOpen] = useState(false)
 
   const [toast, setToast] = useState(null)
   const [showWeightOverlay, setShowWeightOverlay] = useState(false)
@@ -153,6 +154,18 @@ function App() {
     if (!token) { setHistory([]); return }
     setIsLoadingHistory(true)
     try { setHistory(await fetchHistory(token)) } finally { setIsLoadingHistory(false) }
+  }
+
+  const clearWorkoutHistory = async () => {
+    if (!authToken) return
+    try {
+      await clearHistory(authToken)
+      setHistory([])
+      setHistoryClearConfirmOpen(false)
+      showToast('success', 'Historique effacé.')
+    } catch (error) {
+      showToast('error', error.message || 'Impossible d’effacer l’historique')
+    }
   }
 
   const refreshSessions = async (token) => {
@@ -1288,9 +1301,19 @@ function App() {
             onWorkoutSoundChange={setWorkoutSoundEnabled}
             history={history}
             isLoadingHistory={isLoadingHistory}
+            onRequestClearHistory={() => setHistoryClearConfirmOpen(true)}
           />
         ) : null}
         <BottomNav active={mainTab} onChange={setMainTab} />
+
+        <ConfirmDialog
+          open={historyClearConfirmOpen}
+          title="Effacer l’historique ?"
+          message="Toutes tes séances terminées seront supprimées définitivement."
+          confirmLabel="Effacer"
+          onCancel={() => setHistoryClearConfirmOpen(false)}
+          onConfirm={clearWorkoutHistory}
+        />
 
         <ConfirmDialog
           open={isConfirmOpen}
