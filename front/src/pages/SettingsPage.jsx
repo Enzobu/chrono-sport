@@ -194,7 +194,10 @@ export function SettingsPage({ themeMode, accent, resolvedTheme, onThemeModeChan
         <div className="theme-track mt-5 h-2 overflow-hidden rounded-full">
           <div className="theme-primary h-full w-[62%] rounded-full" />
         </div>
-        <button type="button" className="theme-primary mt-5 h-12 w-full rounded-2xl font-black text-white">
+        <button
+          type="button"
+          className="theme-accent-soft theme-accent theme-accent-border mt-5 h-11 w-full rounded-2xl border font-black"
+        >
           Action principale
         </button>
       </section>
