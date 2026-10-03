@@ -53,6 +53,7 @@ function AppContent() {
   const [sessionsError, setSessionsError] = useState('')
   const [history, setHistory] = useState([])
   const [historyLoading, setHistoryLoading] = useState(false)
+  const [mainRefreshing, setMainRefreshing] = useState(false)
 
   const [screen, setScreen] = useState('auth')
   const [flowOriginScreen, setFlowOriginScreen] = useState('dashboard')
@@ -245,6 +246,24 @@ function AppContent() {
     if (!token) { setHistory([]); return }
     setHistoryLoading(true)
     try { setHistory(await fetchHistory(token)) } finally { setHistoryLoading(false) }
+  }
+
+  const refreshMainData = async (scope = 'all') => {
+    if (!authToken || mainRefreshing) return
+    setMainRefreshing(true)
+    try {
+      if (scope === 'sessions') {
+        await refreshSessions(authToken)
+      } else if (scope === 'history') {
+        await refreshHistory(authToken)
+      } else {
+        await Promise.all([refreshSessions(authToken), refreshHistory(authToken)])
+      }
+    } catch (error) {
+      showToast('error', error.message || 'Impossible de rafraîchir les données')
+    } finally {
+      setMainRefreshing(false)
+    }
   }
 
   const refreshSessions = async (token) => {
@@ -1365,7 +1384,15 @@ function AppContent() {
       ) : null}
 
       {screen === 'dashboard' ? (
-        <DashboardScreen sessions={sessions} sessionItems={sessionItems} history={history} onOpenSessions={() => setScreen('sessions')} onOpenSession={openSession} />
+        <DashboardScreen
+          sessions={sessions}
+          sessionItems={sessionItems}
+          history={history}
+          refreshing={mainRefreshing}
+          onRefresh={() => refreshMainData('all')}
+          onOpenSessions={() => setScreen('sessions')}
+          onOpenSession={openSession}
+        />
       ) : null}
 
       {screen === 'sessions' ? (
@@ -1380,6 +1407,8 @@ function AppContent() {
           onDeleteSession={askDelete}
           sessionItems={sessionItems}
           onToggleFavorite={toggleFavorite}
+          refreshing={mainRefreshing}
+          onRefresh={() => refreshMainData('sessions')}
         />
       ) : null}
 
@@ -1394,6 +1423,8 @@ function AppContent() {
           onWorkoutSoundChange={setWorkoutSoundEnabled}
           history={history}
           loadingHistory={historyLoading}
+          refreshing={mainRefreshing}
+          onRefresh={() => refreshMainData('history')}
         />
       ) : null}
 

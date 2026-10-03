@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useTheme } from '../theme/ThemeContext'
 
 function getSuggestedSession(history, sessions) {
@@ -16,14 +16,17 @@ function getSuggestedSession(history, sessions) {
   return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null
 }
 
-export function DashboardScreen({ sessions, sessionItems = [], history = [], onOpenSessions, onOpenSession }) {
+export function DashboardScreen({ sessions, sessionItems = [], history = [], refreshing = false, onRefresh, onOpenSessions, onOpenSession }) {
   const { colors } = useTheme()
   const styles = useMemo(() => createStyles(colors), [colors])
   const count = Object.keys(sessions).length
   const suggestion = getSuggestedSession(history, sessions)
   const favorites = sessionItems.filter((session) => session.favorite && sessions[session.name])
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView
+      contentContainerStyle={styles.container}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
+    >
       <Text style={styles.eyebrow}>CHRONO-SPORT</Text>
       <Text style={styles.title}>Accueil</Text>
       <Text style={styles.subtitle}>Ton tableau de bord pour lancer rapidement la prochaine séance.</Text>

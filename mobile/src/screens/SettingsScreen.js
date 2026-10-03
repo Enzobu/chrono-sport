@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { accentPalette } from '../styles/theme'
 import { useTheme } from '../theme/ThemeContext'
 
@@ -28,6 +28,8 @@ export function SettingsScreen({
   onWorkoutSoundChange,
   history = [],
   loadingHistory = false,
+  refreshing = false,
+  onRefresh,
 }) {
   const { colors, mode, accent, resolvedScheme, setMode, setAccent } = useTheme()
   const styles = useMemo(() => createStyles(colors), [colors])
@@ -41,7 +43,10 @@ export function SettingsScreen({
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView
+      contentContainerStyle={styles.container}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
+    >
       <View style={styles.header}>
         <View style={styles.headerCopy}>
           <Text style={styles.eyebrow}>COMPTE</Text>
