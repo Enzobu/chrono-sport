@@ -70,7 +70,7 @@ export function SettingsScreen({
         ))}
         {history.length > 5 ? (
           <Pressable style={styles.settingToggle} onPress={() => setHistoryExpanded((value) => !value)}>
-            <Text style={styles.settingToggleText}>{historyExpanded ? 'Réduire l’historique' : `Afficher tout l’historique (${history.length})`}</Text>
+            <Text style={styles.settingToggleText}>{historyExpanded ? 'Réduire l’historique  ↑' : `Afficher tout l’historique (${history.length})  ↓`}</Text>
           </Pressable>
         ) : null}
       </View>
