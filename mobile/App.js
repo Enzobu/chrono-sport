@@ -55,6 +55,7 @@ function AppContent() {
   const [historyLoading, setHistoryLoading] = useState(false)
 
   const [screen, setScreen] = useState('auth')
+  const [flowOriginScreen, setFlowOriginScreen] = useState('dashboard')
   const [editingSessionId, setEditingSessionId] = useState(null)
   const [draftSessionName, setDraftSessionName] = useState('')
   const [draftExercises, setDraftExercises] = useState([createDefaultExercise()])
@@ -810,6 +811,7 @@ function AppContent() {
   }
 
   const openSession = (sessionName) => {
+    setFlowOriginScreen(screen)
     const nextSession = sessions[sessionName]
     const nextTimeline = createTimeline(nextSession)
     historyRecordedRef.current = false
@@ -843,7 +845,7 @@ function AppContent() {
   const completedSetsCount = timeline.filter((step) => step.kind === 'work').length
   const finishSummaryAt = finishedAt ?? Date.now()
   const closeWorkoutSummary = () => {
-    setScreen('dashboard')
+    setScreen(flowOriginScreen)
     setSelectedSessionName(null)
     setFinishedAt(null)
     timerClockRef.current = { currentIndex: 0, phaseEndAt: null }
@@ -1056,7 +1058,7 @@ function AppContent() {
       }
 
       await refreshSessions(authToken)
-      setScreen('dashboard')
+      setScreen(flowOriginScreen)
       setEditingSessionId(null)
       setDraftSessionName('')
       setDraftExercises([createDefaultExercise()])
@@ -1084,7 +1086,7 @@ function AppContent() {
     }
 
     if (pendingAction === 'leave-session') {
-      setScreen('dashboard')
+      setScreen(flowOriginScreen)
       setSelectedSessionName(null)
       timerClockRef.current = { currentIndex: 0, phaseEndAt: null }
       setIsRunning(false)
@@ -1094,7 +1096,7 @@ function AppContent() {
     }
 
     if (pendingAction === 'leave-editor') {
-      setScreen('dashboard')
+      setScreen(flowOriginScreen)
       setEditingSessionId(null)
       setDraftSessionName('')
       setDraftExercises([createDefaultExercise()])
@@ -1114,6 +1116,7 @@ function AppContent() {
   }
 
   const openCreate = () => {
+    setFlowOriginScreen(screen)
     const initialExercises = [createDefaultExercise()]
     setEditingSessionId(null)
     setDraftSessionName('')
@@ -1124,6 +1127,7 @@ function AppContent() {
   }
 
   const openEdit = (sessionName) => {
+    setFlowOriginScreen(screen)
     const target = sessionItems.find((session) => session.name === sessionName)
     if (!target) {
       return
@@ -1161,6 +1165,7 @@ function AppContent() {
   }
 
   const duplicateSession = (sessionName) => {
+    setFlowOriginScreen(screen)
     const target = sessionItems.find((session) => session.name === sessionName)
     if (!target) return
     const exercises = (target.exercises ?? []).map((exercise) => ({
@@ -1418,7 +1423,7 @@ function AppContent() {
             if (hasUnsavedDraftChanges) {
               openConfirm('leave-editor')
             } else {
-              setScreen('dashboard')
+              setScreen(flowOriginScreen)
               setDraftInitialSnapshot('')
             }
           }}
