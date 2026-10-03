@@ -37,6 +37,7 @@ function App() {
     window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
   )
   const [mainTab, setMainTab] = useState('home')
+  const [flowOriginTab, setFlowOriginTab] = useState('home')
   const [authToken, setAuthToken] = useState(() => localStorage.getItem('auth_token') ?? '')
   const [authMode, setAuthMode] = useState('login')
   const [authEmail, setAuthEmail] = useState('')
@@ -253,6 +254,7 @@ function App() {
   }
 
   const openCreateMode = () => {
+    setFlowOriginTab(mainTab)
     resetDraft()
     setSelectedSessionName(null)
     setIsCreateMode(true)
@@ -264,6 +266,7 @@ function App() {
   }
 
   const openEditMode = (sessionName) => {
+    setFlowOriginTab(mainTab)
     const target = sessionItems.find((session) => session.name === sessionName)
     if (!target) {
       return
@@ -302,6 +305,7 @@ function App() {
   }
 
   const duplicateSession = (sessionName) => {
+    setFlowOriginTab(mainTab)
     const target = sessionItems.find((session) => session.name === sessionName)
     if (!target) return
     const exercises = (target.exercises ?? []).map((exercise) => ({
@@ -541,6 +545,7 @@ function App() {
 
       await refreshSessions(authToken)
       closeCreateMode()
+      setMainTab(flowOriginTab)
       setDraftInitialSnapshot('')
       resetDraft()
       showToast('success', editingSessionId ? 'Seance mise a jour.' : 'Seance creee.')
@@ -933,10 +938,12 @@ function App() {
     }
     if (pendingAction === 'leave-session') {
       resetAllState()
+      setMainTab(flowOriginTab)
       return
     }
     if (pendingAction === 'leave-editor') {
       setIsCreateMode(false)
+      setMainTab(flowOriginTab)
       setEditingSessionId(null)
       setDraftInitialSnapshot('')
       setDraftError('')
@@ -957,6 +964,7 @@ function App() {
       return
     }
     closeCreateMode()
+    setMainTab(flowOriginTab)
     setDraftInitialSnapshot('')
   }
 
@@ -1095,6 +1103,7 @@ function App() {
   }, [isRunning, isFinished, remaining, timeline, currentIndex])
 
   const openSession = (sessionName) => {
+    setFlowOriginTab(mainTab)
     const nextSession = sessions[sessionName]
     const nextTimeline = createTimeline(nextSession)
     setIsCreateMode(false)
@@ -1128,7 +1137,7 @@ function App() {
   const finishSummaryAt = finishedAt ?? Date.now()
   const closeWorkoutSummary = () => {
     resetAllState()
-    setMainTab('home')
+    setMainTab(flowOriginTab)
     setFinishedAt(null)
   }
 
