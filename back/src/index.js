@@ -269,8 +269,6 @@ app.post('/sessions', authRequired, async (req, res) => {
       userId: req.userId,
       exercises: {
         create: exercises.map(toExerciseCreateData),
-          },
-        })),
       },
     },
     include: {
@@ -329,8 +327,6 @@ app.put('/sessions/:id', authRequired, async (req, res) => {
         name,
         exercises: {
           create: exercises.map(toExerciseCreateData),
-            },
-          })),
         },
       },
       include: {
