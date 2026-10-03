@@ -35,10 +35,10 @@ export function SettingsPage({ themeMode, accent, resolvedTheme, onThemeModeChan
         <p className="theme-muted mt-2">Personnalise l'app et gère ton compte.</p>
       </div>
 
-      <div className="mb-3 mt-2">
+      <section className="mb-3 mt-2">
         <p className="theme-accent text-xs font-black uppercase tracking-[0.18em]">Compte</p>
         <p className="theme-muted mt-1 text-sm">Ton activité et les actions liées à ton compte.</p>
-      </div>
+      </section>
       <section className="theme-surface mt-4 rounded-[1.6rem] border p-5 sm:p-6">
         <h2 className="theme-text text-xl font-black">Historique</h2>
         <p className="theme-muted mt-1 text-sm">Tes dernières séances terminées.</p>
@@ -62,10 +62,10 @@ export function SettingsPage({ themeMode, accent, resolvedTheme, onThemeModeChan
         ) : null}
       </section>
 
-      <div className="mb-3 mt-8">
+      <section className="mb-3 mt-8">
         <p className="theme-accent text-xs font-black uppercase tracking-[0.18em]">Paramètres</p>
         <p className="theme-muted mt-1 text-sm">Préférences et personnalisation de l’application.</p>
-      </div>
+      </section>
       <section className="theme-surface rounded-[1.6rem] border p-5 sm:p-6">
         <div className="mb-5">
           <h2 className="theme-text text-xl font-black">Apparence</h2>
