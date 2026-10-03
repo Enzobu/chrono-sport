@@ -17,7 +17,7 @@ const modes = [
   { key: 'dark', label: 'Sombre', description: 'Interface sombre en permanence', icon: Moon },
 ]
 
-export function SettingsPage({ themeMode, accent, resolvedTheme, onThemeModeChange, onAccentChange, onLogout, weightUnit = 'kg', onWeightUnitChange, workoutSoundEnabled = true, onWorkoutSoundChange, history = [], isLoadingHistory = false }) {
+export function SettingsPage({ themeMode, accent, resolvedTheme, onThemeModeChange, onAccentChange, onLogout, weightUnit = 'kg', onWeightUnitChange, workoutSoundEnabled = true, onWorkoutSoundChange, history = [], isLoadingHistory = false, onRequestClearHistory }) {
   const [confirmAppearanceReset, setConfirmAppearanceReset] = useState(false)
   const [historyExpanded, setHistoryExpanded] = useState(false)
 
@@ -59,6 +59,15 @@ export function SettingsPage({ themeMode, accent, resolvedTheme, onThemeModeChan
           <button type="button" className="theme-outline mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-black" onClick={() => setHistoryExpanded((value) => !value)}>
             {historyExpanded ? 'Réduire l’historique' : `Afficher tout l’historique (${history.length})`}
             {historyExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </button>
+        ) : null}
+        {history.length ? (
+          <button
+            type="button"
+            className="mt-4 w-full rounded-2xl border border-red-950 px-4 py-3 text-sm font-black text-red-300 hover:bg-red-950/30"
+            onClick={onRequestClearHistory}
+          >
+            Effacer l’historique
           </button>
         ) : null}
       </section>

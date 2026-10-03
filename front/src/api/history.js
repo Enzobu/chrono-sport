@@ -24,3 +24,7 @@ export async function createHistoryEntry(token, data) {
   const payload = await request('/history', token, { method: 'POST', body: JSON.stringify(data) })
   return payload.entry
 }
+
+export async function clearHistory(token) {
+  await request('/history', token, { method: 'DELETE' })
+}

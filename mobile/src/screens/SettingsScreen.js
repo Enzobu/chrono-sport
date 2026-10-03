@@ -30,6 +30,7 @@ export function SettingsScreen({
   loadingHistory = false,
   refreshing = false,
   onRefresh,
+  onRequestClearHistory,
 }) {
   const { colors, mode, accent, resolvedScheme, setMode, setAccent } = useTheme()
   const styles = useMemo(() => createStyles(colors), [colors])
@@ -76,6 +77,11 @@ export function SettingsScreen({
         {history.length > 5 ? (
           <Pressable style={styles.settingToggle} onPress={() => setHistoryExpanded((value) => !value)}>
             <Text style={styles.settingToggleText}>{historyExpanded ? 'Réduire l’historique  ↑' : `Afficher tout l’historique (${history.length})  ↓`}</Text>
+          </Pressable>
+        ) : null}
+        {history.length ? (
+          <Pressable style={styles.clearHistoryBtn} onPress={onRequestClearHistory}>
+            <Text style={styles.clearHistoryText}>Effacer l’historique</Text>
           </Pressable>
         ) : null}
       </View>
@@ -256,4 +262,6 @@ const createStyles = (colors) => StyleSheet.create({
   logoutTxt:{color:colors.danger,fontWeight:'800'},
   historyRow:{flexDirection:'row',alignItems:'center',gap:10,borderWidth:1,borderColor:colors.border,backgroundColor:colors.panel,borderRadius:14,padding:12},
   historyDuration:{color:colors.primary,fontWeight:'900',fontSize:13},
+  clearHistoryBtn:{height:44,borderRadius:14,borderWidth:1,borderColor:colors.danger,alignItems:'center',justifyContent:'center',marginTop:2},
+  clearHistoryText:{color:colors.danger,fontWeight:'800'},
 })

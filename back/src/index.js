@@ -187,6 +187,11 @@ app.post('/history', authRequired, async (req, res) => {
   return res.status(201).json({ entry })
 })
 
+app.delete('/history', authRequired, async (req, res) => {
+  await prisma.workoutHistory.deleteMany({ where: { userId: req.userId } })
+  return res.status(204).send()
+})
+
 app.get('/sessions', authRequired, async (req, res) => {
   const sessions = await prisma.workoutSession.findMany({
     where: { userId: req.userId },
