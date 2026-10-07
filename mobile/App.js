@@ -646,14 +646,13 @@ function AppContent() {
         Number(phaseEndAt),
         phaseLabel,
         seriesLabel,
-        workoutSoundEnabled,
       )
     }
 
     syncNativeTimer().catch((error) => {
       console.error('Native timer notification sync failed', error)
     })
-  }, [isRunning, isFinished, currentIndex, phaseEndAt, timeline, workoutSoundEnabled])
+  }, [isRunning, isFinished, currentIndex, phaseEndAt, timeline])
 
   useEffect(() => {
     return () => {
