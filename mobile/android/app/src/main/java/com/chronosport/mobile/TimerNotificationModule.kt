@@ -19,7 +19,6 @@ class TimerNotificationModule(
     phaseEndAt: Double,
     phaseLabel: String,
     seriesLabel: String,
-    soundEnabled: Boolean,
   ) {
     val timestamps = LongArray(restEndTimestamps.size()) { index ->
       restEndTimestamps.getDouble(index).toLong()
